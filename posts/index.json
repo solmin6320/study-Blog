@@ -20,6 +20,21 @@
       "pinned": true
     },
     {
+      "id": "2026-09-15-markdown-table",
+      "title": "메모에 표 넣기",
+      "summary": "정렬·넓은 표·셀 안에서 쓸 수 있는 것까지, 이 블로그의 표 문법을 한 장으로 정리한 메모",
+      "created": "2026-09-15T14:00:00+09:00",
+      "updated": "2026-09-15T14:00:00+09:00",
+      "tags": [
+        "마크다운",
+        "표",
+        "안내"
+      ],
+      "category": "guide",
+      "color": "mint",
+      "pinned": false
+    },
+    {
       "id": "2026-09-10-css-grid",
       "title": "CSS Grid 정리",
       "summary": "트랙·간격·자동 배치까지, 실제로 쓰는 문법만 골라 정리한 그리드 노트",

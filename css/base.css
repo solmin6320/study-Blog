@@ -140,6 +140,13 @@ input[type="checkbox"], input[type="radio"], progress { accent-color: var(--c-ac
 /* 기본 outline은 제거하되 :focus-visible은 위 규칙이 책임진다. */
 :focus:not(:focus-visible) { outline: none; }
 
+/* 스킵 링크 착지점(계약서 §3-1). <main tabindex="-1">은 Tab 순서에 끼지 않고
+   "본문 바로가기"로만 포커스를 받는다. 여기에 링을 그리면 화면 전체가 테두리에 갇힌 것처럼
+   보여 오히려 위치 파악을 방해한다 — 이동 자체(링크가 사라지고 화면이 본문으로 내려감)가
+   이미 피드백이다. tabindex="-1"을 가진 요소에만 한정하므로 실제 컨트롤의 링은 그대로다. */
+main[tabindex="-1"]:focus,
+main[tabindex="-1"]:focus-visible { outline: none; }
+
 ::selection {
   background: var(--c-selection);
   color: var(--c-text);

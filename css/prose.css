@@ -5,12 +5,15 @@
    .prose는 post.html 본문과 write.html 미리보기 두 곳에서 같은 규칙을 쓴다.
    의존: tokens.css, base.css, layout.css, components.css
    ── 이 파일의 최우선 원칙 ────────────────────────────────────────────────
-   읽기가 이긴다. 본문 17px 이상 / 행간 1.75 / 줄길이 --w-content(72ch).
+   읽기가 이긴다. 본문 17px 이상 / 행간 1.75 / 줄길이 --w-prose(45rem ≈ 72자).
    장식이 이 셋 중 하나라도 침범하면 장식을 버린다.
    ========================================================================= */
 
 .prose {
-  max-inline-size: var(--w-content);
+  /* 줄길이의 기준점. --w-content(72ch)가 아니라 rem 고정 토큰을 쓴다 —
+     ch는 요소의 폰트 크기를 따라가서 머리말(.post-head, 16px)과 본문(19px)의
+     같은 "72ch"가 78px 어긋났다(M3-5). 이 폭은 .post-head와 목차 트랙이 함께 쓴다. */
+  max-inline-size: var(--w-prose);
   font-size: var(--fs-prose);
   line-height: var(--lh-body);
   color: var(--c-text);
@@ -276,28 +279,52 @@
 .prose blockquote strong { color: var(--c-text); }
 
 /* ============================================================================
-   6. 표 — markdown.js가 .table-wrap(role=region, tabindex=0)으로 감싼다.
-   표는 모바일에서 반드시 넘친다. 페이지를 넘치게 두지 말고 표만 넘치게 한다.
+   6. 표 — 이 블로그의 일급 시민 (v2.3)
+   요구사항 #5의 "그래프"가 정식으로 제외되고 그 자리를 표가 대신한다.
+   즉 수치·비교·정리는 전부 표로 들어온다 — 표는 "본문에 낀 부록"이 아니라
+   본문과 같은 급으로 읽혀야 한다. 설계 원칙 넷:
+     1) 글자 크기를 본문에서 한 단계만 내린다(--fs-md). 예전 --fs-sm(최대 15px)은
+        본문 19px 옆에서 각주처럼 보였고, 숫자 표에서 특히 읽기 힘들었다.
+     2) 헤더 행은 "라벨"이 아니라 "열의 이름"이다 — 색면 + 굵기 + 아래 실선 + sticky.
+     3) 정렬(GFM :--- / :---: / ---:)이 화면에 실제로 보인다.
+     4) 넘치는 표는 넘친다는 사실이 눈에 보인다(가장자리 덮개/그림자 + 얇은 스크롤바).
+   markdown.js가 <div class="table-wrap" role="region" tabindex="0">로 감싼다 — 계약서 §7-1.
    ========================================================================= */
 .table-wrap {
   margin-block: var(--sp-7);
+  /* 작은 표는 내용만큼만 차지한다. 2열짜리 표를 720px로 늘리면 값과 값 사이가
+     눈으로 건널 수 없을 만큼 벌어진다. 넘치는 표는 100%에서 멈추고 스크롤로 넘어간다. */
+  inline-size: fit-content;
   max-inline-size: 100%;
-  overflow-x: auto;
+  /* 세로 상한을 넘는 긴 표만 안에서 스크롤되고, 그때 thead가 sticky로 붙는다.
+     짧은 표에는 아무 영향이 없다(내용 높이가 상한보다 작으면 스크롤 자체가 없다). */
+  max-block-size: var(--h-table-max);
+  overflow: auto;
+  /* 가로: 스크롤 체인을 끊어 표 끝에서 브라우저 뒤로가기 제스처가 발동하지 않게.
+     세로: 일부러 끊지 않는다 — 표 끝에서 페이지 스크롤로 자연스럽게 이어져야 한다. */
   overscroll-behavior-inline: contain;
   border: 1px solid var(--c-border);
   border-radius: var(--r-md);
 
-  /* 가로 스크롤 그림자.
-     local 배경(흰 덮개)이 끝에 붙어 있다가 스크롤하면 밀려나고,
-     scroll 배경(그림자)이 드러나 "옆에 더 있다"를 알린다. 자바스크립트 0줄. */
+  /* 스크롤 막대를 "있을 때만, 얇게" 보여 준다. 그림자와 함께 신호를 2중으로 건다 —
+     macOS처럼 오버레이 스크롤바를 쓰는 환경에서는 그림자가, 그 밖에서는 막대가 알린다. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--c-text) 28%, transparent) transparent;
+
+  /* 가로 스크롤 그림자(자바스크립트 0줄).
+     local 덮개가 끝에 붙어 있다가 스크롤하면 함께 밀려나고, 그 밑에 깔린
+     scroll 그림자(요소에 고정)가 드러나 "옆에 더 있다"를 알린다.
+     v2.3: 덮개 40 → 30px(내용을 덜 가린다), 그림자 14 → 22px에 알파 16% → 24%.
+     14px/16%는 얼룩말 줄무늬 위에서 사실상 보이지 않았다. */
   background:
-    linear-gradient(to right, var(--c-surface) 38%, transparent) 0 0 / 40px 100% no-repeat local,
-    linear-gradient(to left,  var(--c-surface) 38%, transparent) 100% 0 / 40px 100% no-repeat local,
-    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--c-text) 16%, transparent), transparent) 0 0 / 14px 100% no-repeat scroll,
-    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--c-text) 16%, transparent), transparent) 100% 0 / 14px 100% no-repeat scroll,
+    linear-gradient(to right, var(--c-surface) 42%, transparent) 0 0 / 30px 100% no-repeat local,
+    linear-gradient(to left,  var(--c-surface) 42%, transparent) 100% 0 / 30px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--c-text) 24%, transparent), transparent) 0 0 / 22px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--c-text) 24%, transparent), transparent) 100% 0 / 22px 100% no-repeat scroll,
     var(--c-surface);
 }
 
+/* tabindex=0으로 키보드 스크롤이 가능한 영역이다. 포커스가 어디 있는지 반드시 보여야 한다. */
 .table-wrap:focus-visible {
   outline: 2px solid var(--c-focus);
   outline-offset: 2px;
@@ -306,18 +333,11 @@
 .prose table {
   inline-size: 100%;
   border-collapse: collapse;
-  font-size: var(--fs-sm);
+  /* 본문(17~19px)에서 한 단계만 내린다(15~17px). 표는 읽는 것이지 훑는 것이 아니다. */
+  font-size: var(--fs-md);
   line-height: 1.6;
-  /* 표 안의 숫자는 자릿수가 맞아야 비교가 된다. */
+  /* 표 안의 숫자는 자릿수가 세로로 맞아야 비교가 된다(본문은 proportional). */
   font-variant-numeric: tabular-nums;
-}
-
-.prose thead th {
-  position: relative;
-  background: var(--c-surface-2);
-  font-weight: 700;
-  color: var(--c-text);
-  white-space: nowrap;
 }
 
 .prose th,
@@ -328,7 +348,24 @@
   vertical-align: top;
 }
 
-.prose thead th { border-block-end: 1px solid var(--c-border); }
+/* ── 헤더 행 ─────────────────────────────────────────────────────────────
+   sticky: .table-wrap이 세로로 스크롤될 만큼 긴 표에서만 실제로 붙는다.
+   border-collapse:collapse에서는 sticky 셀의 border가 함께 따라오지 않는 브라우저가 있어
+   아래 실선은 box-shadow로 그린다(레이아웃에 영향 0). */
+.prose thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  /* 액센트를 6%만 섞어 "그냥 회색 면"이 아니라 이 사이트의 면으로 만든다.
+     불투명해야 스크롤되는 행이 헤더를 통과해 비치지 않는다. */
+  background: color-mix(in oklab, var(--c-accent) 6%, var(--c-surface-2));
+  box-shadow: inset 0 -1px 0 var(--c-border);
+  font-weight: 700;
+  color: var(--c-text);
+  /* 열 이름은 줄바꿈하지 않는다 — 두 줄이 되면 열 경계가 흐려진다. */
+  white-space: nowrap;
+  border-block-end: 0;
+}
 
 /* zebra: 행이 5개만 넘어가도 가로로 눈이 미끄러진다. */
 .prose tbody tr:nth-child(even) {
@@ -337,7 +374,35 @@
 
 .prose tbody tr:last-child td { border-block-end: 0; }
 
+/* ── GFM 정렬 (v2.3) ──────────────────────────────────────────────────────
+   marked 12는 `|:---|:---:|---:|`를 <th align="left|center|right">로 낸다.
+   그런데 align 속성은 "표현 힌트"라 작성자 스타일시트의 `text-align: start` 한 줄에
+   무조건 진다 — 즉 지금까지 글쓴이가 지정한 정렬은 화면에 **전혀** 반영되지 않았다.
+   숫자 열을 오른쪽으로 보내는 것은 표에서 가장 자주 쓰는 정렬이라 이건 기능 하나가
+   통째로 죽어 있던 것과 같다. 속성 선택자로 같은 특이도 싸움에 올린다.
+   (논리 값을 쓰는 이유: 이 문서가 언젠가 rtl이 되어도 "숫자는 끝 정렬"이 유지된다.)
+   ⚠ markdown.js의 살균 설정에서 align 속성이 제거되면 이 규칙 전체가 무력화된다. */
+.prose th[align="left"],
+.prose td[align="left"]   { text-align: start; }
+.prose th[align="center"],
+.prose td[align="center"] { text-align: center; }
+.prose th[align="right"],
+.prose td[align="right"]  { text-align: end; }
+
+/* (숫자 정렬용 tabular-nums는 .prose table에서 이미 상속된다. 여기서 다시 쓰지 않는다.) */
+
+/* 표 안의 코드 토큰이 줄바꿈되면 열 폭 계산이 흔들린다. */
 .prose table code { white-space: nowrap; }
+
+/* 원시 HTML로 <caption>을 쓴 경우. 표 위가 아니라 아래에 둬서
+   "표를 먼저 보고 설명을 읽는" 순서를 만든다(.prose figcaption과 같은 어휘). */
+.prose table caption {
+  caption-side: bottom;
+  padding-block-start: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--c-text-mute);
+  text-align: start;
+}
 
 /* ============================================================================
    7. 코드
@@ -406,7 +471,9 @@
 .code-copy {
   grid-column: 2;
   padding-inline: var(--sp-4);
-  min-block-size: 34px;
+  /* 머리띠 높이를 결정하는 값이다(.code-lang이 stretch로 따라온다).
+     --h-control-sm은 pointer:coarse에서 44px로 올라가 모바일에서 복사 버튼이 커진다. */
+  min-block-size: var(--h-control-sm);
   color: var(--c-text-dim);
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), opacity var(--dur) var(--ease);
 }
@@ -428,9 +495,9 @@
   .code-wrap:focus-within .code-copy { opacity: 1; }
 }
 
-@media (pointer: coarse) {
-  .code-copy { min-block-size: var(--h-control); }
-}
+/* (v2.3: 여기 있던 `@media (pointer: coarse) { .code-copy { min-block-size: --h-control } }`를
+   지웠다. --h-control-sm이 이미 coarse에서 44px로 올라가므로 값이 같은 재선언이었고,
+   높이 재선언을 여러 파일에 두면 토큰을 고치는 순간 한쪽만 따라온다 — components.css §16 참조.) */
 
 .code-wrap > pre {
   grid-column: 1 / -1;
@@ -605,7 +672,8 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  min-block-size: 32px;
+  /* <summary>는 클릭으로 펼치는 컨트롤이다. 본문 안의 작은 컨트롤 토큰을 쓴다. */
+  min-block-size: var(--h-control-sm);
   color: var(--c-text);
 }
 
@@ -637,8 +705,11 @@
 
 /* ============================================================================
    11. 좁은 화면 보정 — 360px에서 가로 스크롤이 생기면 실패다.
+   분기점은 440px. layout.css의 `.site-nav` 소거와 **같은 값**을 쓴다 —
+   이 사이트의 "좁은 폰" 경계는 하나뿐이어야 한다(v2.3: 480px이 여기만 따로 놀았다).
+   440px는 현행 대형 폰(430px)까지 덮는 최소값이다. 계약서 §11-3에 등재.
    ========================================================================= */
-@media (max-width: 480px) {
+@media (max-width: 440px) {
   /* 코드 블록의 좌우 패딩이 크면 한 줄에 들어가는 글자 수가 급감한다. */
   .code-wrap > pre,
   .prose pre { padding-inline: var(--sp-4); }

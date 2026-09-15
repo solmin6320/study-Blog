@@ -36,11 +36,15 @@
 <link rel="stylesheet" href="css/animations.css">
 
 <!-- 목록 화면은 마크다운을 렌더하지 않는다(요약은 순수 텍스트).
-     그래서 marked / DOMPurify / highlight.js는 여기서 로드하지 않는다 — 상세 페이지의 몫. -->
+     그래서 marked / DOMPurify / highlight.js는 여기서 로드하지 않는다 — 상세 페이지의 몫.
+
+     js/markdown.js도 같은 이유로 뺐다. 이 화면의 스크립트(app·ui·admin) 어디에서도
+     Blog.markdown을 부르지 않는다. CDN 세 개가 없는 페이지에서 살균 설정 파일만 올려 둘 이유가 없다.
+     ※ 나중에 목록이 본문 일부를 마크다운으로 그리게 되면(예: 요약 강조) 이 줄을 되살려야 한다.
+       그때는 marked/DOMPurify CDN도 함께 올려야 한다 — markdown.js 혼자서는 렌더하지 못한다. -->
 <script defer src="js/config.js"></script>
 <script defer src="js/util.js"></script>
 <script defer src="js/store.js"></script>
-<script defer src="js/markdown.js"></script>
 <script defer src="js/ui.js"></script>
 <script defer src="js/admin.js"></script>
 <script defer src="js/app.js"></script>
@@ -70,7 +74,8 @@
   </div>
 </header>
 
-<main class="site-main" id="main">
+<!-- tabindex="-1"은 스킵 링크의 착지점이다. 없으면 스크롤만 되고 포커스는 헤더에 남는다(계약서 §3-1). -->
+<main class="site-main" id="main" tabindex="-1">
 
   <section class="hero">
     <h1 class="hero-title" data-site-title>메모 블로그</h1>
@@ -95,7 +100,7 @@
        버튼들은 nav의 직계 자식으로만 둔다 — 모바일에서 .cat-nav 자체가 가로 스크롤 컨테이너가 되어야 하므로
        중간에 래퍼를 끼우지 않는다. 목록은 app.js가 posts/categories.json으로 다시 그린다. -->
   <nav class="cat-nav" id="catNav" aria-label="카테고리">
-    <button class="cat-item is-active" type="button" data-cat="*" aria-pressed="true">
+    <button class="cat-item is-active" type="button" data-cat="*" aria-current="true">
       <span class="cat-name">전체</span><span class="cat-count">0</span>
     </button>
   </nav>

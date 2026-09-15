@@ -30,12 +30,24 @@
   }
 
   /* ?admin=1 → 켜고 저장, ?admin=0 → 끄고 저장.
-     주소창에 남기면 공유 링크에 딸려 가므로 처리 후 쿼리에서 지운다. */
+     주소창에 남기면 공유 링크에 딸려 가므로 처리 후 쿼리에서 지운다.
+
+     알아볼 수 없는 값(?admin= / ?admin=yes 등)은 "끄기"로 해석하지 않는다.
+     예전에는 전부 '0'으로 저장돼서, 주소를 한 번 잘못 치면 localhost에서도
+     수정 버튼이 영구히 사라지고 되돌리려면 ?admin=1을 알아야 했다. */
+  var ON = ['1', 'true', 'on', 'yes'];
+  var OFF = ['0', 'false', 'off', 'no'];
+
   function consumeQuery() {
     var q = U.getQuery();
     var flag = q[QUERY_KEY];
     if (flag === undefined) return;
-    write(flag === '1' ? '1' : '0');
+
+    var value = String(flag).trim().toLowerCase();
+    if (ON.indexOf(value) !== -1) write('1');
+    else if (OFF.indexOf(value) !== -1) write('0');
+    /* 그 밖의 값은 저장하지 않는다 — 판정은 기존 설정 그대로 간다. */
+
     var patch = {};
     patch[QUERY_KEY] = null;
     U.setQuery(patch, false);

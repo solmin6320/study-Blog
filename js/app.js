@@ -16,7 +16,12 @@
     sort: 'latest'
   };
 
-  var SORTS = { latest: 1, updated: 1, title: 1 };
+  /* 값 조회용 맵은 반드시 프로토타입 없는 객체로 만든다.
+     객체 리터럴이면 ?sort=constructor 같은 주소에서 SORTS[q.sort]가 Object.prototype의 멤버를 집어
+     "있는 정렬"로 통과시킨다. 그러면 <select>에 없는 값이 state에 들어가 정렬 셀렉트가 빈 값이 되고
+     오염된 값이 URL에 그대로 남아 공유된다(라운드 3 M3-12 실측).
+     이 코드베이스의 다른 맵(postCache·counts·used…)은 이미 전부 Object.create(null)이다. */
+  var SORTS = Object.assign(Object.create(null), { latest: 1, updated: 1, title: 1 });
 
   /* id → 글, id → 카테고리 slug.
      필터는 타이핑마다 돌아간다. 매번 배열을 훑거나 slug를 다시 계산하지 않도록 한 번만 만든다. */
@@ -43,6 +48,12 @@
   function postsInCat() {
     if (state.cat === '*') return state.posts;
     return state.posts.filter(function (post) { return slugById[post.id] === state.cat; });
+  }
+
+  /* 네비에 실제로 그려지는 분류인지. 등록된 카테고리 + 글만 있는 미등록 카테고리가 대상이다. */
+  function catExists(slug) {
+    if (slug === '*') return true;
+    return store.categoryList(state.posts).some(function (cat) { return cat.slug === slug; });
   }
 
   /* ---------- 정렬 / 필터 ---------- */
@@ -79,7 +90,12 @@
     return deg.toFixed(2) + 'deg';
   }
 
+  /* created가 비면(.md에 `created:` 만 남긴 경우) 날짜 칸을 아예 만들지 않는다.
+     <time datetime=""> 는 무효 마크업이고, 값 없는 "게시" 라벨은 카드에서 잡음일 뿐이다.
+     자세한 배경은 post.js fillDates() 주석 — 두 화면이 같은 규칙을 쓴다. */
   function dateNodes(post) {
+    if (!post.created) return [];
+
     var nodes = [];
     var createdRel = U.fmtRelative(post.created);
     nodes.push(U.el('time', {
@@ -139,7 +155,10 @@
       article.appendChild(ul);
     }
 
-    article.appendChild(U.el('div', { class: 'memo-meta' }, dateNodes(post)));
+    /* 날짜가 하나도 없으면 .memo-meta 자체를 만들지 않는다.
+       빈 div도 margin-block-start를 그대로 먹어서 카드 아래에 이유 없는 공백이 남는다. */
+    var dates = dateNodes(post);
+    if (dates.length) article.appendChild(U.el('div', { class: 'memo-meta' }, dates));
 
     var actions = U.el('div', { class: 'memo-actions', 'data-admin-only': '' }, [
       U.el('button', {
@@ -164,12 +183,15 @@
     sorted.forEach(function (post, i) {
       frag.appendChild(memoCard(post, i));
     });
+    /* 보드는 aria-live 영역이다. 지우고 다시 채우는 동안의 중간 상태까지 읽히면
+       정렬 한 번에 카드 수만큼 발화가 쏟아진다. 다 채운 뒤 한 번만 알리게 묶는다. */
+    dom.board.setAttribute('aria-busy', 'true');
     U.clear(dom.board);
     dom.board.appendChild(frag);
     /* 동적으로 만든 .memo-actions에도 관리자 규칙을 적용해야 한다. */
     Blog.admin.apply(dom.board);
-    applyFilter();
-    Blog.ui.reveal(U.qsa('.memo:not(.is-hidden)', dom.board));
+    applyFilter();   // reveal()은 applyFilter()가 책임진다(아래 주석)
+    dom.board.removeAttribute('aria-busy');
   }
 
   function applyFilter() {
@@ -188,6 +210,17 @@
     U.setHidden(dom.empty, visible !== 0);
     if (visible === 0) renderEmpty();
     updateCount(visible);
+    revealVisible();
+  }
+
+  /* 계약서 §4 — .is-hidden을 떼는 모든 경로에서 reveal()을 다시 부른다.
+     필터가 걸린 동안 숨어 있던 카드는 IntersectionObserver의 관찰 대상에서 빠져 있어,
+     필터를 풀어도 .is-visible을 받을 기회가 없다 → opacity:0인 빈 칸으로 영영 남는다(라운드 2 T1).
+     호출부 5곳이 각자 기억해야 하는 규칙으로 두면 여섯 번째 호출부에서 다시 깨지므로
+     applyFilter() 안에서 한 번에 처리한다.
+     이미 드러난 카드(.is-visible)를 다시 관찰하면 진입 모션이 재생되므로 제외한다. */
+  function revealVisible() {
+    Blog.ui.reveal(U.qsa('.memo:not(.is-hidden):not(.is-visible)', dom.board));
   }
 
   /* 비었을 때의 문구는 "왜 비었는지"에 따라 달라야 한다.
@@ -199,6 +232,13 @@
       return;
     }
     var filtered = state.query || state.tags.length;
+    /* ?cat= 값이 목록에 없는 slug면 네비에 활성 탭이 하나도 없어 "왜 비었는지"를 알 수 없다.
+       주소를 잘못 받은 것과 글이 아직 없는 것은 사용자가 할 일이 다르므로 문구를 나눈다. */
+    if (state.cat !== '*' && !catExists(state.cat)) {
+      setEmptyMessage('‘' + state.cat + '’ 라는 분류는 없어요',
+        '주소의 ?cat= 값이 분류 목록에 없습니다. 위 분류 탭에서 다시 골라 주세요.', true);
+      return;
+    }
     if (state.cat !== '*' && !postsInCat().length) {
       var name = store.categoryName(state.cat);
       setEmptyMessage('‘' + name + '’ 에 아직 메모가 없어요',
@@ -240,7 +280,9 @@
       type: 'button',
       'data-cat': cat.slug,
       'data-color': isReal ? cat.color : null,
-      'aria-pressed': active ? 'true' : 'false',
+      /* 계약서 §10-3: 카테고리는 단일 선택이라 aria-current, 태그 칩은 다중 선택이라 aria-pressed.
+         비활성 항목에는 aria-current="false"가 아니라 속성 자체를 두지 않는다. */
+      'aria-current': active ? 'true' : null,
       title: cat.description || null
     });
     if (isReal) btn.appendChild(U.el('span', { class: 'cat-dot', 'aria-hidden': 'true' }));
@@ -265,7 +307,8 @@
     U.qsa('.cat-item', dom.catNav).forEach(function (btn) {
       var active = btn.getAttribute('data-cat') === state.cat;
       btn.classList.toggle('is-active', active);
-      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (active) btn.setAttribute('aria-current', 'true');
+      else btn.removeAttribute('aria-current');
     });
   }
 
@@ -322,12 +365,16 @@
 
   /* ---------- URL 상태 ---------- */
 
+  /* 주소를 상태로 읽는다. 모르는 정렬값이 들어와 있었으면 true를 돌려준다 —
+     화면은 최신순으로 도는데 주소만 ?sort=constructor 라고 말하고 있으면,
+     그 주소를 공유받은 사람은 보이지도 않는 정렬을 기대하게 된다. 호출부가 주소를 정리한다. */
   function readUrl() {
     var q = U.getQuery();
     state.query = q.q || '';
     state.cat = q.cat ? String(q.cat).trim() : '*';
     state.tags = q.tags ? q.tags.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [];
     state.sort = SORTS[q.sort] ? q.sort : 'latest';
+    return Boolean(q.sort) && !SORTS[q.sort];
   }
 
   /* 검색어는 replace(타이핑마다 히스토리가 쌓이면 뒤로가기가 못 쓰게 된다),
@@ -471,6 +518,25 @@
     U.toast('내보내지 않은 초안 ' + drafts.length + '개가 남아 있어요', 'warn');
   }
 
+  /* posts/ 안의 파일이 잘못돼 있다는 경고들. 관리자(= 파일을 고칠 수 있는 사람)에게만 띄운다.
+     방문자에게는 고칠 방법이 없는 경고일 뿐이고, 화면은 폴백으로 이미 정상 동작하고 있다.
+     - categories.json이 깨지면 카테고리가 글에서 유추한 목록으로 바뀐다.
+       색·설명·순서·빈 카테고리가 조용히 사라지므로 알려 주지 않으면 원인을 찾을 수 없다.
+     - index.json에 같은 id가 두 번 있으면 뒤의 것이 버려진다(store가 먼저 것만 남긴다). */
+  function noticeDataProblems() {
+    if (!Blog.admin.isAdmin()) return;
+
+    var catErr = store.getCategoryError();
+    if (catErr) {
+      U.toast('posts/categories.json을 읽지 못해 분류를 글에서 유추했어요 — ' + (catErr.message || ''), 'warn');
+    }
+
+    var dups = store.getIndexDuplicates();
+    if (dups.length) {
+      U.toast('index.json에 중복된 id가 있어요: ' + dups.join(', ') + ' (뒤의 것은 무시)', 'warn');
+    }
+  }
+
   function showLoadError(err) {
     U.setHidden(dom.skeleton, true);
     U.clear(dom.board);
@@ -499,7 +565,8 @@
     Blog.ui.initShell();
     Blog.admin.init();
 
-    readUrl();
+    /* 첫 로드에서만 주소를 정리한다(뒤로가기로 돌아온 항목까지 고쳐 쓰면 히스토리가 흔들린다). */
+    if (readUrl()) writeUrl(false);
     syncControls();
     bind();
 
@@ -516,7 +583,7 @@
       renderBoard();
       fillStats();
       noticeDrafts();
-      Blog.ui.reveal('[data-reveal]');
+      noticeDataProblems();
     }).catch(function (err) {
       showLoadError(err);
     });

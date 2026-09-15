@@ -26,6 +26,23 @@
     document.title = title;
   }
 
+  /* 글 파일은 카테고리 폴더 안에 있다. 어디를 봐야 하는지 경로로 알려 준다. */
+  function showNotFound(id) {
+    var meta = store.findMeta(id);
+    var where = meta ? store.postPath(id, meta.category) : 'posts/<카테고리>/' + id + '.md';
+    showError('그런 메모는 없어요',
+      '"' + id + '" 에 해당하는 글을 찾지 못했습니다.',
+      where + ' 파일이 있는지 확인해 주세요. 주소가 바뀌었거나 아직 올리지 않았을 수 있어요.');
+  }
+
+  /* 사이트명의 진실은 index.json이다. 이 로직이 없으면 이름을 바꿨을 때 상세 페이지만 옛 이름으로 남는다.
+     document.title은 건드리지 않는다 — 이 페이지의 제목은 사이트명이 아니라 글 제목이다. */
+  function fillSite(site) {
+    if (!site) return;
+    U.qsa('[data-site-title]').forEach(function (node) { node.textContent = site.title; });
+    U.qsa('[data-site-sub]').forEach(function (node) { node.textContent = site.subtitle; });
+  }
+
   /* ---------- 머리말 ---------- */
 
   /* 카테고리 라벨은 같은 분류의 목록으로 가는 문이다. 표시는 이름(CSS), 링크는 폴더명(css).
@@ -39,6 +56,38 @@
     dom.cat.setAttribute('aria-label', store.categoryName(value) + ' 분류의 메모 모두 보기');
   }
 
+  /* 날짜 줄.
+
+     created가 비어 있을 수 있다 — .md에 `created:` 만 값 없이 남기면 병합 규칙($present)이
+     "파일이 그 키에 답했다"로 보고 index.json의 날짜를 덮는다. 그 규칙 자체는 옳다(.md가 진실).
+     그래서 막는 자리는 파서가 아니라 여기, 표시단이다. 그대로 그리면 두 가지가 동시에 깨진다.
+       ① <time datetime="">  — 무효 마크업이고 스크린리더가 빈 시각을 읽는다
+       ② "게시 " 만 남은 꼬리표 — 값 없는 라벨은 정보가 아니라 잡음이다
+     기준이 되는 게시일이 없으면 "최종 수정"도 무엇 대비 수정인지 말해 주지 못하므로
+     날짜 줄을 통째로 감춘다(읽기 시간은 날짜와 무관하므로 그대로 둔다). */
+  function fillDates(meta) {
+    if (!meta.created) {
+      U.setHidden(dom.date, true);
+      U.setHidden(dom.updated, true);
+      return;
+    }
+
+    var createdRel = U.fmtRelative(meta.created);
+    U.setHidden(dom.date, false);
+    dom.date.setAttribute('datetime', meta.created);
+    dom.date.textContent = '게시 ' + U.fmtKo(meta.created) + (createdRel ? ' (' + createdRel + ')' : '');
+
+    /* created와 같으면 "최종 수정"은 새 정보가 아니다. 숨긴다. */
+    if (!meta.updated || U.sameMoment(meta.created, meta.updated)) {
+      U.setHidden(dom.updated, true);
+      return;
+    }
+    var updatedRel = U.fmtRelative(meta.updated);
+    U.setHidden(dom.updated, false);
+    dom.updated.setAttribute('datetime', meta.updated);
+    dom.updated.textContent = '최종 수정 ' + U.fmtKo(meta.updated) + (updatedRel ? ' (' + updatedRel + ')' : '');
+  }
+
   function fillHead(meta, minutes) {
     document.title = meta.title;
 
@@ -49,18 +98,7 @@
     if (meta.summary) dom.summary.textContent = meta.summary;
     else U.setHidden(dom.summary, true);
 
-    var createdRel = U.fmtRelative(meta.created);
-    dom.date.setAttribute('datetime', meta.created);
-    dom.date.textContent = '게시 ' + U.fmtKo(meta.created) + (createdRel ? ' (' + createdRel + ')' : '');
-
-    /* created와 같으면 "최종 수정"은 새 정보가 아니다. 숨긴다. */
-    if (U.sameMoment(meta.created, meta.updated)) {
-      U.setHidden(dom.updated, true);
-    } else {
-      var updatedRel = U.fmtRelative(meta.updated);
-      dom.updated.setAttribute('datetime', meta.updated);
-      dom.updated.textContent = '최종 수정 ' + U.fmtKo(meta.updated) + (updatedRel ? ' (' + updatedRel + ')' : '');
-    }
+    fillDates(meta);
 
     dom.read.textContent = '약 ' + minutes + '분';
 
@@ -149,11 +187,50 @@
       ]));
     }
 
-    /* "이전"은 더 오래된 글, "다음"은 더 최신 글. 목록이 최신순이므로 방향이 뒤집히지 않게 주의. */
+    /* 기준은 보드의 기본 정렬(고정 글 먼저 · 그다음 최신순)이다. store.neighbors()가 그 순서를 쓴다.
+       "이전"은 그 줄에서 뒤쪽(대체로 더 오래된 글), "다음"은 앞쪽. 방향이 뒤집히지 않게 주의. */
     item(around.prev, 'prev', '이전');
     item(around.next, 'next', '다음');
 
     U.setHidden(dom.nav, !dom.nav.children.length);
+  }
+
+  /* ---------- index.json 어긋남 안내 ---------- */
+
+  /* 이 화면의 값은 .md가 만든다(파일이 진실). 목록 화면은 index.json만 읽는다.
+     둘이 어긋나면 보드에는 옛 제목이, 상세에는 새 제목이 보이는데 원인이 화면에 드러나지 않는다.
+     방문자는 고칠 수 없는 일이므로 관리자에게만 "index.json을 다시 내보내라"고 알린다.
+
+     indexData를 .md 값으로 덮지는 않는다 — 이 블로그는 페이지 이동이 전부 전체 새로고침이라
+     되먹여 봐야 같은 세션에서 이득을 보는 화면이 없고(목록은 다음 로드에서 index.json을 새로 읽는다),
+     그 상태를 에디터가 내보내기 원본으로 쓰면 사용자가 손대지 않은 값까지 파일에 섞여 나간다. */
+  var DRIFT_FIELDS = ['title', 'summary', 'color'];
+
+  function sameDate(a, b) {
+    if (!a || !b) return !a && !b;      // 한쪽만 비어 있으면 다른 값이다(빈 created도 알릴 가치가 있다)
+    return U.sameMoment(a, b);
+  }
+
+  function driftKeys(indexMeta, meta) {
+    var keys = DRIFT_FIELDS.filter(function (key) {
+      return String(indexMeta[key]) !== String(meta[key]);
+    });
+    /* 카테고리는 폴더명(css)과 표시 이름(CSS)이 같은 값을 가리킨다. slug로 맞춰 본다. */
+    if (store.categorySlug(indexMeta.category) !== store.categorySlug(meta.category)) keys.push('category');
+    if (indexMeta.tags.join(',') !== meta.tags.join(',')) keys.push('tags');
+    if (Boolean(indexMeta.pinned) !== Boolean(meta.pinned)) keys.push('pinned');
+    if (!sameDate(indexMeta.created, meta.created)) keys.push('created');
+    if (!sameDate(indexMeta.updated, meta.updated)) keys.push('updated');
+    return keys;
+  }
+
+  function noticeIndexDrift(meta) {
+    if (!Blog.admin.isAdmin()) return;
+    var indexMeta = store.findMeta(meta.id);
+    if (!indexMeta) return;
+    var keys = driftKeys(indexMeta, meta);
+    if (!keys.length) return;
+    U.toast('이 글의 ' + keys.join(', ') + ' 값이 index.json과 달라요 — 목록에는 옛 값이 보입니다', 'warn');
   }
 
   /* ---------- 부트스트랩 ---------- */
@@ -179,10 +256,10 @@
     headings = result.headings;
     buildToc();
     renderNav(meta.id);
+    noticeIndexDrift(meta);
 
     dom.post.classList.remove('is-loading');
     Blog.admin.apply(dom.post);
-    Blog.ui.reveal('[data-reveal]');
 
     var sync = U.rafThrottle(function () { syncProgress(); syncToc(); });
     U.on(window, 'scroll', sync, { passive: true });
@@ -225,15 +302,17 @@
       return;
     }
 
-    store.loadPost(id).then(render).catch(function (err) {
-      if (err && err.code === 'notfound') {
-        /* 글 파일은 카테고리 폴더 안에 있다. 어디를 봐야 하는지 경로로 알려 준다. */
-        var meta = store.findMeta(id);
-        var where = meta ? store.postPath(id, meta.category) : 'posts/<카테고리>/' + id + '.md';
-        showError('그런 메모는 없어요',
-          '"' + id + '" 에 해당하는 글을 찾지 못했습니다.',
-          where + ' 파일이 있는지 확인해 주세요. 주소가 바뀌었거나 아직 올리지 않았을 수 있어요.');
-      } else if (err && err.code === 'file') {
+    /* 사이트명은 본문보다 먼저 자리를 잡아야 한다. loadPost도 같은 약속을 쓰므로 요청은 늘지 않는다. */
+    store.loadIndex()
+      .then(function (data) { fillSite(data.site); })
+      .catch(function () { /* 사이트명을 못 채워도 본문 표시는 계속한다 */ });
+
+    /* loadPost는 "없는 글"을 null로 돌려주고, 읽을 수 없는 상황(file://·네트워크)만 reject한다. */
+    store.loadPost(id).then(function (post) {
+      if (!post) { showNotFound(id); return; }
+      render(post);
+    }).catch(function (err) {
+      if (err && err.code === 'file') {
         showError('로컬 서버로 열어 주세요', err.message, 'start.bat 을 실행하면 됩니다.');
       } else {
         showError('메모를 불러오지 못했어요',

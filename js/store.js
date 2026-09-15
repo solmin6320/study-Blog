@@ -14,6 +14,7 @@
   var indexData = null;
   var catPromise = null;
   var catData = null;       // { list: [...], derived: boolean }
+  var catError = null;      // categories.json이 깨졌을 때의 마지막 오류(화면단이 읽어 간다)
 
   /* ---------- 오류 ---------- */
 
@@ -32,7 +33,7 @@
     }
   }
 
-  function fetchText(url, opts) {
+  function fetchTextStrict(url, opts) {
     guardProtocol();
     return window.fetch(url, opts || { cache: 'no-cache' })
       .then(function (res) {
@@ -46,17 +47,49 @@
       });
   }
 
+  /* 공개용 래퍼. "파일이 없다"는 정상적인 탐색 결과이지 오류가 아니다 —
+     후보 경로를 직접 두드리는 쪽(에디터의 폴백)이 404마다 try/catch를 쓰지 않도록 null을 준다.
+     file:// 차단·네트워크 실패는 계속 던진다. 그 둘은 다음 후보를 시도해도 결과가 같아서
+     "없음"으로 삼켜 버리면 원인을 알려 줄 수 없기 때문이다. */
+  function fetchText(path) {
+    return Promise.resolve()
+      .then(function () { return fetchTextStrict(path); })
+      .catch(function (err) {
+        if (err && err.code === 'notfound') return null;
+        throw err;
+      });
+  }
+
   /* ---------- frontmatter 파서 ----------
      YAML 라이브러리를 쓰지 않는다. 이 블로그가 실제로 쓰는 만큼만 지원한다:
      문자열 / 숫자 / boolean / [a, b] 인라인 배열 / "-" 블록 배열 / 따옴표 값.
      값에 콜론이 들어가도(created: 2026-09-13T14:20:00+09:00) 첫 콜론만 구분자로 본다. */
 
+  /* 겹따옴표 문자열의 이스케이프를 되돌린다.
+     쓰는 쪽(yamlValue)이 \ → \\ , " → \" 로 내보내므로 읽는 쪽도 정확히 그 둘만 되돌린다.
+     이 되돌리기가 없으면 "불러오기 → 저장"을 한 번 돌 때마다 백슬래시가 한 겹씩 늘어나
+     제목이 say "hi" → say \"hi\" → say \\"hi\\" 로 되돌릴 수 없게 망가진다(라운드 3 T3-2).
+     한 번의 좌→우 훑기로 치환해야 \\" 를 \" + " 가 아니라 \ + " 로 옳게 읽는다.
+     \n·\t 같은 다른 YAML 이스케이프는 손대지 않는다 — 우리 쓰기 경로가 만들지 않는 형태라,
+     되돌리면 사용자가 본문에 직접 적은 백슬래시를 우리가 마음대로 지우는 꼴이 된다. */
+  function unescapeDoubleQuoted(text) {
+    return String(text).replace(/\\(["\\])/g, '$1');
+  }
+
+  /* 홑따옴표 문자열의 이스케이프는 YAML 규칙대로 '' → ' 하나뿐이다(백슬래시는 글자 그대로). */
+  function unescapeSingleQuoted(text) {
+    return String(text).replace(/''/g, "'");
+  }
+
   function stripQuotes(raw) {
     var s = raw.trim();
     if (s.length >= 2) {
       var head = s.charAt(0), tail = s.charAt(s.length - 1);
-      if ((head === '"' && tail === '"') || (head === "'" && tail === "'")) {
-        return { text: s.slice(1, -1), quoted: true };
+      if (head === '"' && tail === '"') {
+        return { text: unescapeDoubleQuoted(s.slice(1, -1)), quoted: true };
+      }
+      if (head === "'" && tail === "'") {
+        return { text: unescapeSingleQuoted(s.slice(1, -1)), quoted: true };
       }
     }
     return { text: s, quoted: false };
@@ -84,6 +117,12 @@
     for (var i = 0; i < inner.length; i += 1) {
       var ch = inner.charAt(i);
       if (quote) {
+        /* 겹따옴표 안의 \" 는 항목의 끝이 아니라 글자 " 다. yamlValue가 그렇게 쓴다. */
+        if (quote === '"' && ch === '\\' && i + 1 < inner.length) {
+          buf += unescapeDoubleQuoted(ch + inner.charAt(i + 1));
+          i += 1;
+          continue;
+        }
         if (ch === quote) quote = null;
         else buf += ch;
         continue;
@@ -97,6 +136,30 @@
       .map(function (item) { return String(item).trim(); })
       .filter(function (item) { return item !== ''; })
       .map(function (item) { return coerceScalar(item); });
+  }
+
+  /* "[" 로 시작하고 "]" 로 끝난다는 것만으로는 배열이 아니다.
+     summary: [초안] 이건 [임시] 처럼 대괄호를 문장부호로 쓴 값이 통째로 배열로 오인돼
+     요약이 "초안"으로 바뀌는 사고가 실제로 났다.
+     여는 괄호의 짝이 문자열의 맨 끝일 때만 배열로 본다(중첩·따옴표 안의 괄호는 세지 않는다). */
+  function looksLikeInlineArray(raw) {
+    if (raw.charAt(0) !== '[' || raw.charAt(raw.length - 1) !== ']') return false;
+    var depth = 0;
+    var quote = null;
+    for (var i = 0; i < raw.length; i += 1) {
+      var ch = raw.charAt(i);
+      if (quote) {
+        if (quote === '"' && ch === '\\') { i += 1; continue; }
+        if (ch === quote) quote = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'") { quote = ch; continue; }
+      if (ch === '[') { depth += 1; continue; }
+      if (ch !== ']') continue;
+      depth -= 1;
+      if (depth <= 0) return i === raw.length - 1;
+    }
+    return false;
   }
 
   function parseFrontmatter(text) {
@@ -141,7 +204,7 @@
         continue;
       }
 
-      if (raw.charAt(0) === '[' && raw.charAt(raw.length - 1) === ']') {
+      if (looksLikeInlineArray(raw)) {
         data[key] = parseInlineArray(raw);
         continue;
       }
@@ -182,12 +245,35 @@
     return COLOR_VALUES[Math.floor(U.hashUnit(id || 'x') * COLOR_VALUES.length) % COLOR_VALUES.length];
   }
 
+  var META_KEYS = ['id', 'title', 'summary', 'created', 'updated', 'tags', 'category', 'color', 'pinned'];
+
+  /* 정규화는 빠진 필드를 기본값으로 채운다. 그래서 결과만 보면 "원본에 있던 값"과
+     "여기서 채워 넣은 기본값"을 구분할 수 없다 — 병합(mergeMeta)이 바로 그 구분을 필요로 하므로
+     원본에 실제로 있던 키 목록을 열거 불가 속성으로 함께 남긴다.
+     열거 불가라 JSON.stringify·Object.assign·Object.keys에는 절대 새어 나가지 않는다. */
+  function markPresentKeys(target, raw) {
+    var present = Object.create(null);
+    if (raw) {
+      META_KEYS.forEach(function (key) {
+        if (Object.prototype.hasOwnProperty.call(raw, key) && raw[key] !== undefined) present[key] = true;
+      });
+    }
+    Object.defineProperty(target, '$present', { value: present, enumerable: false, writable: false });
+    return target;
+  }
+
+  function hasSourceKey(meta, key) {
+    if (!meta) return false;
+    if (meta.$present) return meta.$present[key] === true;
+    return Object.prototype.hasOwnProperty.call(meta, key) && meta[key] !== undefined;
+  }
+
   function normalizeMeta(raw, fallbackId) {
     var meta = raw || {};
     var id = String(meta.id || fallbackId || '').trim();
     var created = meta.created ? String(meta.created) : '';
     var updated = meta.updated ? String(meta.updated) : created;
-    return {
+    return markPresentKeys({
       id: id,
       title: String(meta.title || '(제목 없음)'),
       summary: String(meta.summary || ''),
@@ -197,22 +283,22 @@
       category: String(meta.category || ''),
       color: normalizeColor(meta.color, id),
       pinned: toBool(meta.pinned)
-    };
+    }, raw);
   }
 
   /* .md의 frontmatter가 index.json과 다르면 .md를 진실로 삼는다.
-     사용자가 파일을 직접 고칠 수 있고, 그 편집이 화면에 보이지 않으면 혼란스럽기 때문. */
+     사용자가 파일을 직접 고칠 수 있고, 그 편집이 화면에 보이지 않으면 혼란스럽기 때문.
+
+     판정 기준은 "값이 있는가"가 아니라 "frontmatter에 그 키가 있는가"다.
+     값으로 판정하면 사용자가 .md에서 summary를 비우거나 tags를 []로 지워도
+     "파일에 값이 없다"로 읽혀 index.json의 옛 값이 되살아난다 — 파일을 고쳐도 화면이 안 바뀐다.
+     키를 통째로 지웠을 때만 index.json이 대신 답한다. */
   function mergeMeta(indexMeta, fileMeta) {
     var merged = {};
-    var keys = ['id', 'title', 'summary', 'created', 'updated', 'tags', 'category', 'color', 'pinned'];
-    keys.forEach(function (key) {
-      var fromFile = fileMeta ? fileMeta[key] : undefined;
-      var hasFile = fromFile !== undefined && fromFile !== null && fromFile !== ''
-        && !(Array.isArray(fromFile) && fromFile.length === 0);
-      merged[key] = hasFile ? fromFile : (indexMeta ? indexMeta[key] : undefined);
+    META_KEYS.forEach(function (key) {
+      merged[key] = hasSourceKey(fileMeta, key) ? fileMeta[key] : (indexMeta ? indexMeta[key] : undefined);
     });
-    /* pinned는 false도 유효한 값이라 위 조건에서 걸러진다. 파일 값이 있으면 그대로 쓴다. */
-    if (fileMeta && typeof fileMeta.pinned === 'boolean') merged.pinned = fileMeta.pinned;
+    /* normalizeMeta가 merged를 원본으로 삼아 $present를 다시 계산한다(양쪽 중 답한 쪽의 키만 남는다). */
     return normalizeMeta(merged, merged.id);
   }
 
@@ -282,16 +368,27 @@
 
   function loadCategories(force) {
     if (catPromise && !force) return catPromise;
-    /* fetchText는 file:// 에서 동기적으로 throw한다. 호출부가 항상 Promise를 받도록 감싼다. */
+    /* fetchTextStrict는 file:// 에서 동기적으로 throw한다. 호출부가 항상 Promise를 받도록 감싼다. */
+    catError = null;
     catPromise = Promise.resolve()
-      .then(function () { return fetchText(CFG.paths.categories); })
+      .then(function () { return fetchTextStrict(CFG.paths.categories); })
       .then(function (text) {
-        var json = JSON.parse(text.replace(/^﻿/, ''));
+        var json;
+        try {
+          json = JSON.parse(text.replace(/^﻿/, ''));
+        } catch (err) {
+          throw fail('parse', 'posts/categories.json 형식이 올바르지 않습니다(쉼표나 따옴표를 확인하세요).', err);
+        }
         var list = json && Array.isArray(json.categories) ? json.categories : [];
-        if (!list.length) throw fail('parse', 'categories.json의 categories 배열이 비어 있습니다.');
+        if (!list.length) throw fail('parse', 'posts/categories.json의 categories 배열이 비어 있습니다.');
         return setCategories(list.map(normalizeCategory), false);
       })
-      .catch(function () {
+      .catch(function (err) {
+        /* 폴백은 유지하되(블로그는 계속 돌아야 한다) 무슨 일이 있었는지는 남긴다.
+           store는 화면을 모르므로 토스트를 직접 띄우지 않는다 — 알릴지 말지는 화면단의 판단이다.
+           404는 기록하지 않는다: categories.json은 선택 파일이고, 없으면 글에서 목록을 되살리는 것이
+           설계된 정상 경로다. 파싱 실패·네트워크 실패만 "사용자가 고쳐야 할 일"이다. */
+        catError = (err && err.code === 'notfound') ? null : (err || null);
         return loadIndex()
           .catch(function () { return null; })
           .then(function (data) {
@@ -300,6 +397,9 @@
       });
     return catPromise;
   }
+
+  /* 화면단이 "카테고리 파일이 깨졌다"를 안내할 수 있게 마지막 실패를 돌려준다. 없으면 null. */
+  function getCategoryError() { return catError; }
 
   function getCategoriesSync() { return catData ? catData.list.slice() : []; }
 
@@ -385,12 +485,32 @@
 
   /* ---------- index.json ---------- */
 
+  /* id는 글의 주소이자 파일명이다. index.json에 같은 id가 두 번 있으면 (손으로 고치다 복사한 경우)
+     보드에 같은 카드가 두 장 뜨고, data-id로 글을 찾는 필터·수정 버튼이 둘 중 무엇을 가리키는지
+     알 수 없게 된다. 먼저 나온 것만 남긴다 — index.json은 고정 글·최신순으로 정렬돼 있어
+     앞쪽이 사용자가 의도한 최신 기록일 가능성이 높다. 버린 개수는 화면단이 알려 줄 수 있게 남긴다. */
+  var indexDuplicates = [];
+
+  function dedupeById(posts) {
+    var seen = Object.create(null);
+    var out = [];
+    indexDuplicates = [];
+    posts.forEach(function (post) {
+      if (seen[post.id]) { indexDuplicates.push(post.id); return; }
+      seen[post.id] = true;
+      out.push(post);
+    });
+    return out;
+  }
+
+  function getIndexDuplicates() { return indexDuplicates.slice(); }
+
   function loadIndex(force) {
     if (indexPromise && !force) return indexPromise;
-    /* fetchText는 file:// 에서 동기적으로 throw한다. 그대로 두면 호출부의 .catch가 아니라
+    /* fetchTextStrict는 file:// 에서 동기적으로 throw한다. 그대로 두면 호출부의 .catch가 아니라
        스크립트 자체가 멈춰서 "로컬 서버로 열어 주세요" 안내가 뜨지 않는다. */
     indexPromise = Promise.resolve()
-      .then(function () { return fetchText(CFG.paths.index); })
+      .then(function () { return fetchTextStrict(CFG.paths.index); })
       .then(function (text) {
         var json;
         try {
@@ -405,8 +525,8 @@
             title: String(site.title || CFG.site.title),
             subtitle: String(site.subtitle || CFG.site.subtitle)
           },
-          posts: list.map(function (item) { return normalizeMeta(item, item && item.id); })
-                     .filter(function (item) { return item.id; })
+          posts: dedupeById(list.map(function (item) { return normalizeMeta(item, item && item.id); })
+                                .filter(function (item) { return item.id; }))
         };
         /* index.json의 site가 설정 기본값을 이긴다(파일이 진실). */
         CFG.site.title = indexData.site.title;
@@ -436,41 +556,50 @@
   }
 
   /* 후보 경로 목록. 정상 상태라면 첫 번째에서 끝나므로 요청은 1번이다.
-     나머지는 index.json이 없거나 폴더가 어긋났을 때만 쓰이는 구조선. */
-  function postCandidates(id, indexMeta) {
+     나머지는 index.json이 없거나 폴더가 어긋났을 때만 쓰이는 구조선.
+
+     순서: 힌트 카테고리 → 등록된 카테고리 전부 → 평면 경로 → _uncategorized.
+     _uncategorized가 맨 뒤인 이유 — 그 폴더는 "어디에도 속하지 않는다"는 마지막 착지점이라
+     제대로 된 폴더와 v1 평면 경로를 전부 두드린 뒤에 확인해야 원래 자리를 먼저 찾는다.
+     categoryHint는 slug여도 되고 .md에 적힌 표시 이름('프론트엔드')이어도 된다 —
+     postPath()가 categorySlug()로 폴더명을 되돌린다.
+
+     trusted=true면 등록 카테고리 전수 탐색을 건너뛴다. index.json이 그 글의 카테고리를 적어 두었다면
+     "선언된 폴더에 없다"는 것 자체가 답이고, 나머지 폴더를 전부 두드려도 나오지 않는다.
+     카테고리 7개 기준으로 없는 id 하나에 404가 9번 나가던 것이 3번으로 줄어든다.
+     공개 API의 기본값은 그대로 전수 탐색이다 — editor.js의 구조선이 이 목록에 기대고 있다. */
+  function postCandidates(id, categoryHint, trusted) {
     var urls = [];
     function push(url) { if (url && urls.indexOf(url) === -1) urls.push(url); }
+    if (!id) return urls;
 
-    if (indexMeta && indexMeta.category) push(postPath(id, indexMeta.category));
-    /* index.json을 못 읽었으면 폴더를 알 길이 없다. 등록된 카테고리를 훑어서라도 찾아 준다. */
-    if (!indexMeta) {
+    if (categoryHint) push(postPath(id, categoryHint));
+    if (!trusted) {
       (catData ? catData.list : []).forEach(function (c) { push(CFG.paths.post(id, c.slug)); });
     }
+    push(CFG.paths.postFlat(id));                            // v1 평면 구조 호환
     push(CFG.paths.post(id, CFG.category.fallbackSlug));
-    push(CFG.paths.postFlat(id));                 // v1 평면 구조 호환
     return urls;
   }
 
   /* 404면 다음 후보로, 그 밖의 오류(네트워크·file://)면 즉시 중단한다.
-     후자는 후보를 더 시도해도 같은 결과라 요청만 늘어난다. */
+     후자는 후보를 더 시도해도 같은 결과라 요청만 늘어난다.
+     전부 404면 null — "없는 글"은 오류가 아니라 탐색 결과다. */
   function fetchFirst(urls) {
     function attempt(i) {
-      if (i >= urls.length) {
-        return Promise.reject(fail('notfound', urls[0] + ' 파일을 찾을 수 없습니다.'));
-      }
-      return Promise.resolve()
-        .then(function () { return fetchText(urls[i]); })
-        .then(function (text) { return { text: text, url: urls[i] }; })
-        .catch(function (err) {
-          if (err && err.code === 'notfound') return attempt(i + 1);
-          throw err;
-        });
+      if (i >= urls.length) return Promise.resolve(null);
+      return fetchText(urls[i]).then(function (text) {
+        return text === null ? attempt(i + 1) : { text: text, url: urls[i] };
+      });
     }
     return attempt(0);
   }
 
-  function loadPost(id) {
-    if (!id) return Promise.reject(fail('notfound', '글 id가 없습니다.'));
+  /* id로 글 하나를 읽어 { meta, body, ... } 로 돌려준다. 후보 경로를 모두 두드려도
+     없으면 null(reject 아님). file://·네트워크 실패만 reject한다 — 그건 "없다"가 아니라
+     "읽을 수 없다"라서 화면이 다른 안내를 해야 하기 때문이다. */
+  function loadPost(id, categoryHint) {
+    if (!id) return Promise.resolve(null);
     if (postCache[id]) return Promise.resolve(postCache[id]);
 
     /* index.json은 글이 든 폴더를 알려 주고, categories.json은 표시 이름을 알려 준다.
@@ -480,9 +609,16 @@
       loadCategories()
     ])
       .then(function () {
-        return fetchFirst(postCandidates(id, findMeta(id)));
+        var indexMeta = findMeta(id);
+        var declared = String((indexMeta && indexMeta.category) || '').trim();
+        var hint = String(categoryHint || declared).trim();
+        /* index.json이 카테고리를 적어 둔 글은 어디에 있어야 하는지가 확정이다.
+           그 경우에만 전수 탐색을 접는다(자세한 근거는 postCandidates 주석). */
+        var trusted = Boolean(declared) && (!categoryHint || categorySlug(categoryHint) === categorySlug(declared));
+        return fetchFirst(postCandidates(id, hint, trusted));
       })
       .then(function (res) {
+        if (!res) return null;
         var text = res.text;
         var parsed = parseFrontmatter(text);
         var indexMeta = findMeta(id);
@@ -506,10 +642,14 @@
 
   function peekPost(id) { return postCache[id] || null; }
 
-  /* 목록 정렬 기준(최신 게시순)에서의 앞뒤 글. 이전 = 더 오래된 글. */
+  /* 보드의 기본 정렬(고정 글 먼저 · 그다음 최신 게시순)에서의 앞뒤 글.
+     created만 보고 정렬하면 보드에서 위에 붙어 있던 고정 글이 "이전/다음"에서는 중간에 끼어 있어,
+     목록 → 상세 → 다음 글로 이어 읽을 때 순서가 어긋난다.
+     비교 함수는 app.js sortPosts('latest')·buildIndexJson과 같은 규칙을 쓴다. */
   function neighbors(id) {
     if (!indexData) return { prev: null, next: null };
     var sorted = indexData.posts.slice().sort(function (a, b) {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return String(b.created).localeCompare(String(a.created));
     });
     var at = -1;
@@ -594,13 +734,15 @@
     if (s === '') return '""';
     if (/^[\w가-힣][\w가-힣 .\-+/]*$/.test(s) && !/^(true|false|null)$/i.test(s)) return s;
     if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s;    // ISO 날짜는 그대로 둬도 파서가 문자열로 읽는다
-    return '"' + s.replace(/"/g, '\\"') + '"';
+    /* 백슬래시를 먼저 escape해야 한다. 순서를 바꾸면 " → \" 로 만든 백슬래시까지 한 번 더 escape돼
+       읽는 쪽이 \\" 를 "백슬래시 + 따옴표"로 읽는다. 이 두 줄은 stripQuotes의 되돌리기와 한 쌍이다. */
+    return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
   }
 
   function toFrontmatter(meta) {
-    var order = ['id', 'title', 'summary', 'created', 'updated', 'tags', 'category', 'color', 'pinned'];
+    /* 키 목록은 META_KEYS 하나로 유지한다. 두 벌이면 필드를 늘릴 때 한쪽만 고쳐져 조용히 어긋난다. */
     var lines = ['---'];
-    order.forEach(function (key) {
+    META_KEYS.forEach(function (key) {
       lines.push(key + ': ' + yamlValue(meta[key]));
     });
     lines.push('---');
@@ -660,8 +802,14 @@
   }
 
   Blog.store = {
+    /* fetchText / postCandidates 는 에디터(js/editor.js)의 수정 모드 폴백이 쓴다.
+       글을 찾는 규칙이 store와 에디터에서 갈라지면 "보드에는 보이는데 수정은 안 되는 글"이 생긴다. */
+    fetchText: fetchText,
+    postCandidates: postCandidates,
     loadIndex: loadIndex,
     getIndexSync: getIndexSync,
+    getIndexDuplicates: getIndexDuplicates,
+    getCategoryError: getCategoryError,
     findMeta: findMeta,
     loadPost: loadPost,
     peekPost: peekPost,

@@ -37,10 +37,19 @@
 <link rel="stylesheet" href="css/animations.css">
 
 <!-- CDN 고정 버전 — config.js의 cdn 값과 일치시킨다.
-     defer 스크립트는 문서 순서대로 실행되므로 라이브러리가 항상 먼저 준비된다. -->
-<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+     defer 스크립트는 문서 순서대로 실행되므로 라이브러리가 항상 먼저 준비된다.
+     integrity(SRI): CDN이 오염되면 브라우저가 스크립트를 아예 실행하지 않는다.
+     살균기(DOMPurify) 자체가 바꿔치기당하면 다른 방어가 전부 무의미해지므로 버전과 함께 내용도 고정한다.
+     **버전을 올리면 해시도 반드시 같이 갱신한다** — 안 하면 스크립트가 통째로 차단된다. -->
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"
+        integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"
+        integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/highlight.min.js"
+        integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script defer src="js/config.js"></script>
 <script defer src="js/util.js"></script>
@@ -52,7 +61,8 @@
 </head>
 
 <body>
-<a class="sr-only" href="#postBody">본문 바로가기</a>
+<!-- 계약서 §3-1: 세 페이지 모두 #main으로 간다. #postBody는 렌더 전에는 빈 컨테이너다. -->
+<a class="sr-only" href="#main">본문 바로가기</a>
 
 <div class="bg-layer" aria-hidden="true">
   <div class="bg-mesh"></div>
@@ -80,7 +90,8 @@
   </div>
 </header>
 
-<main class="site-main" id="main">
+<!-- tabindex="-1"은 스킵 링크의 착지점이다. 없으면 스크롤만 되고 포커스는 헤더에 남는다(계약서 §3-1). -->
+<main class="site-main" id="main" tabindex="-1">
 
   <!-- is-loading은 post.js가 렌더를 마치면 떼어낸다. 빈 머리말이 깜빡이는 것을 막기 위함. -->
   <article class="post is-loading" id="post">

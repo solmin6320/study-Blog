@@ -156,18 +156,9 @@
 
 /* 스크롤로 헤더가 떠오르면 밑선이 가운데에서 좌우로 그어진다.
    layout.css의 .is-stuck은 배경·그림자만 바꾼다. 그 변화는 넓고 느려서
-   "고정됐다"는 신호로는 약하다. 1px 선이 그어지는 방향성이 그 신호를 대신한다. */
+   "고정됐다"는 신호로는 약하다. 1px 선이 그어지는 방향성이 그 신호를 대신한다.
+   선의 존재·위치·색은 layout.css로 옮겼다(v2.3, 계약서 §11) — 여기는 시간만 맡는다. */
 .site-header::after {
-  content: "";
-  position: absolute;
-  inset-block-end: -1px;
-  inset-inline: 0;
-  block-size: 1px;
-  pointer-events: none;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    color-mix(in oklab, var(--c-accent) 50%, transparent) 50%,
-    transparent 100%);
   opacity: 0;
   transform: scaleX(.25);
   transition:
@@ -206,8 +197,10 @@
    카드가 40장이어도 마지막 카드가 1.8초를 기다리지 않게 한다.
    ========================================================================= */
 @media (prefers-reduced-motion: no-preference) {
-  .memo,
-  [data-reveal] { opacity: 0; }
+  /* ⚠ 이 "보일 때까지 opacity:0"은 JS가 만든 요소에만 쓴다 — 계약서 §8-2.
+     정적 마크업에 붙이면 JS가 실패한 화면에서 콘텐츠가 영구히 안 보인다.
+     (v2.2에서 [data-reveal] 훅을 이 이유로 폐기했다.) */
+  .memo { opacity: 0; }
 
   /* :not(.is-hidden)이 필요한 이유 —
      components.css의 .memo.is-hidden{opacity:0}과 특이도가 같은데
@@ -222,11 +215,6 @@
   .memo.is-visible:not(.is-hidden) .memo-pin {
     animation: pin-drop var(--dur) var(--ease) backwards;
     animation-delay: calc(min(var(--i, 0), 8) * 46ms + 130ms);
-  }
-
-  [data-reveal].is-visible {
-    opacity: 1;
-    animation: rise-in var(--dur-slow) var(--ease) backwards;
   }
 }
 
@@ -300,7 +288,7 @@
 
 /* 내보내지 않은 변경이 있는 동안 계속 뛴다. 멈추면 = 저장됐다. */
 .editor-status.is-dirty::before {
-  animation: pulse-dot 1.8s var(--ease-out) infinite;
+  animation: pulse-dot var(--dur-loop) var(--ease-out) infinite;
 }
 
 /* ============================================================================
@@ -347,6 +335,12 @@
   transition: opacity var(--dur-fast) var(--ease);
 }
 
+/* 닫히는 220ms 동안 이 오버레이는 "거의 안 보이지만 화면 전체를 덮고 있다".
+   pointer-events를 끄지 않으면 내려받기 확인 직후의 첫 클릭이 딤에 먹혀 사라진다
+   — 사용자에게는 "버튼이 한 번 안 먹는 사이트"로 보인다(라운드 3 M3-10).
+   opacity와 짝을 이루는 규칙이라 이 파일에 둔다: 보이지 않는 동안은 만져지지도 않는다. */
+.modal:not(.is-open) { pointer-events: none; }
+
 .modal.is-open {
   opacity: 1;
   transition-duration: var(--dur);
@@ -373,17 +367,10 @@
    덮개를 translate로만 움직이므로 리플로우 0회.
    카드마다 90ms씩 어긋나게 해서 한 덩어리가 번쩍이는 느낌을 없앤다.
 
-   광택은 반드시 "바탕보다 밝아야" 한다. 그런데 tokens.css에서
-   라이트의 --c-surface는 스켈레톤 바탕보다 밝고, 다크의 --c-surface는 오히려 어둡다.
-   같은 토큰을 그대로 쓰면 다크에서 광택이 검은 띠가 되어 지나간다.
-   테마별로 "밝은 쪽" 색을 따로 잡아 준다.
+   광택의 색(--sheen-hi)은 정지 값이라 components.css의 .skeleton 블록으로 옮겼다
+   (v2.3, 계약서 §11 — 이 파일에는 색을 두지 않는다). 여기 남는 것은 그 색을 실어 나르는
+   덮개와 움직임뿐이다.
    ========================================================================= */
-.skeleton { --sheen-hi: var(--c-surface); }
-
-:root[data-theme="dark"] .skeleton {
-  --sheen-hi: color-mix(in oklab, var(--c-text) 12%, transparent);
-}
-
 .skeleton::after {
   content: "";
   position: absolute;
@@ -396,7 +383,7 @@
     var(--sheen-hi) 50%,
     transparent 100%);
   transform: translate3d(-110%, 0, 0);
-  animation: shimmer 1.9s var(--ease-out) infinite;
+  animation: shimmer var(--dur-loop) var(--ease-out) infinite;
   will-change: transform;
 }
 
@@ -459,11 +446,19 @@
 
   /* "보일 때까지 숨김"에 의존하던 것들을 즉시 보이게 한다. */
   .memo,
-  [data-reveal],
   .toast,
-  .modal,
-  .modal-panel,
   .progress-bar {
+    opacity: 1;
+  }
+
+  /* 모달만 `.is-open` 조건을 붙인다 (v2.3).
+     조건 없이 `.modal{opacity:1}`로 두면 **닫는 순간부터 DOM 제거까지 220ms 동안
+     딤이 원래 밝기 그대로 화면을 덮은 채 멈춰 있다** — 모션을 줄인 사용자에게는
+     "닫기를 눌렀는데 0.2초 동안 아무 일도 안 일어나는 화면"이 된다.
+     `.is-open`을 붙이면 닫는 즉시 사라진다(transition은 위에서 1ms로 잘려 있다).
+     열릴 때는 append 다음 프레임에 `.is-open`이 붙으므로 사실상 즉시 나타난다. */
+  .modal.is-open,
+  .modal.is-open .modal-panel {
     opacity: 1;
   }
 

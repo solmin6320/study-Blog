@@ -76,8 +76,13 @@
   }
 
   /* ---------- 진입 애니메이션 ----------
-     CSS가 .memo / [data-reveal]을 처음에 숨겨 놓고 .is-visible에서 드러낸다.
-     IO가 없거나 모션을 줄이는 설정이면 즉시 보이게 해서 "영영 안 보이는" 사고를 막는다. */
+     CSS가 .memo를 처음에 숨겨 놓고 .is-visible에서 드러낸다.
+     IO가 없거나 모션을 줄이는 설정이면 즉시 보이게 해서 "영영 안 보이는" 사고를 막는다.
+
+     계약서 v2.2 §8-2: [data-reveal] 훅은 폐기됐다(정적 마크업에 "JS가 성공해야 보임"을
+     덧씌우는 경로라 실패 모드만 늘렸다). 기본 선택자는 .memo 하나뿐이고,
+     정적 마크업의 진입 모션은 animations.css의 CSS 단독 애니메이션이 맡는다.
+     .is-hidden을 떼는 모든 경로에서 이 함수를 다시 불러야 한다(§4 — 라운드 2 치명 T1). */
 
   var observer = null;
 
@@ -94,7 +99,7 @@
   }
 
   function reveal(nodes) {
-    var list = Array.isArray(nodes) ? nodes : U.qsa(nodes || '.memo, [data-reveal]');
+    var list = Array.isArray(nodes) ? nodes : U.qsa(nodes || '.memo');
     if (!list.length) return;
     if (prefersReducedMotion() || !window.IntersectionObserver) {
       list.forEach(function (node) { node.classList.add('is-visible'); });
@@ -131,11 +136,37 @@
   var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
   var openModalState = null;
 
+  /* 모달이 열려 있는 동안 배경을 통째로 비활성화한다.
+     Tab 트랩만으로는 스크린리더의 가상 커서·터치 탐색이 뒤쪽 내용을 계속 읽는다.
+     inert는 포커스와 클릭까지 막고, aria-hidden은 inert를 모르는 브라우저를 덮는다.
+     토스트 영역은 제외한다 — 모달 안에서 낸 알림("복사했습니다")이 읽혀야 하기 때문.
+     되돌리는 함수를 돌려주고, 원래 붙어 있던 속성은 건드리지 않는다. */
+  function makeBackgroundInert(modalRoot) {
+    var changed = [];
+    Array.prototype.slice.call(document.body.children).forEach(function (node) {
+      if (node === modalRoot || node.id === 'toastArea' || node.tagName === 'SCRIPT') return;
+      var hadInert = node.hasAttribute('inert');
+      var hadHidden = node.hasAttribute('aria-hidden');
+      if (!hadInert) node.setAttribute('inert', '');
+      if (!hadHidden) node.setAttribute('aria-hidden', 'true');
+      changed.push({ node: node, inert: hadInert, hidden: hadHidden });
+    });
+    return function restore() {
+      changed.forEach(function (item) {
+        if (!item.inert) item.node.removeAttribute('inert');
+        if (!item.hidden) item.node.removeAttribute('aria-hidden');
+      });
+      changed = [];
+    };
+  }
+
   function closeModal() {
     if (!openModalState) return;
     var state = openModalState;
     openModalState = null;
     state.off.forEach(function (off) { off(); });
+    /* 포커스를 되돌리기 전에 푼다. inert 안의 요소는 focus()를 받지 못한다. */
+    if (state.restoreInert) state.restoreInert();
     state.root.classList.remove('is-open');
     document.body.classList.remove('modal-open');
     window.setTimeout(function () {
@@ -145,18 +176,21 @@
     if (typeof state.onClose === 'function') state.onClose();
   }
 
-  /* actions: [{ label, variant:'primary'|'ghost'|'danger', onClick, close:true }] */
+  /* actions: [{ label, variant:'primary'|'ghost'|'danger', onClick, close:true }]
+     opts: { title, text | bodyNodes, actions, onClose, initialFocus } */
   function modal(options) {
     var opts = options || {};
     closeModal();
 
-    var titleId = 'modalTitle_' + Date.now();
+    var uid = String(Date.now()) + String(Math.floor(Math.random() * 1000));
+    var titleId = 'modalTitle_' + uid;
+    var bodyId = 'modalBody_' + uid;
     var head = U.el('div', { class: 'modal-head' }, [
       U.el('h2', { id: titleId, text: opts.title || '알림' }),
       U.el('button', { class: 'icon-btn', type: 'button', 'aria-label': '닫기', 'data-close': '', text: '✕' })
     ]);
 
-    var body = U.el('div', { class: 'modal-body' });
+    var body = U.el('div', { class: 'modal-body', id: bodyId });
     if (opts.bodyNodes) U.append(body, opts.bodyNodes);
     else if (opts.text) {
       String(opts.text).split('\n').forEach(function (line) {
@@ -164,7 +198,14 @@
       });
     }
 
+    /* 초기 포커스 규칙 — 파괴적 버튼은 기본 포커스를 갖지 않는다.
+       모달이 뜬 순간 Enter/Space 한 번에 되돌릴 수 없는 일이 벌어지면 안 된다.
+       (실제로 초안 복구 모달이 뜨자마자 '버리기'에 포커스가 가 있었다 — M3-1.)
+       우선순위: primary 액션 → 파괴적이지 않은 첫 액션 → 닫기(✕) → 패널 안 아무 것.
+       danger 변형은 포커스 후보에서 아예 뺀다. 파괴적 동작은 반드시 눈으로 겨냥해서 눌러야 한다. */
     var foot = U.el('div', { class: 'modal-foot' });
+    var primaryBtn = null;
+    var safeBtn = null;
     (opts.actions || [{ label: '확인', variant: 'primary', close: true }]).forEach(function (action) {
       var btn = U.el('button', {
         class: 'btn' + (action.variant ? ' btn-' + action.variant : ''),
@@ -176,6 +217,8 @@
         if (typeof action.onClick === 'function') keepOpen = action.onClick() === false;
         if (action.close !== false && !keepOpen) closeModal();
       });
+      if (action.variant === 'primary' && !primaryBtn) primaryBtn = btn;
+      if (action.variant !== 'danger' && !safeBtn) safeBtn = btn;
       foot.appendChild(btn);
     });
 
@@ -184,7 +227,11 @@
       class: 'modal',
       role: 'dialog',
       'aria-modal': 'true',
-      'aria-labelledby': titleId
+      'aria-labelledby': titleId,
+      /* 제목만 이름으로 주면 본문이 낭독되지 않는다. 내보내기 안내 모달의 본문은
+         "파일을 어디에 넣어야 하는가"가 적힌 유일한 곳이라, 안 읽히면 절차가 통째로 사라진다.
+         내용이 있을 때만 연결한다(빈 영역을 가리키면 오히려 침묵한다). */
+      'aria-describedby': body.firstChild ? bodyId : null
     }, [panel]);
 
     document.body.appendChild(root);
@@ -218,10 +265,19 @@
     openModalState = {
       root: root, panel: panel, off: off,
       lastFocus: document.activeElement,
+      /* inert를 먼저 걸고 나서 모달 안으로 포커스를 옮긴다.
+         순서가 반대면 배경에 있던 포커스가 inert에 걸려 body로 튕긴 뒤 그대로 남는다. */
+      restoreInert: makeBackgroundInert(root),
       onClose: opts.onClose
     };
 
-    var initial = U.qsa(FOCUSABLE, foot)[0] || U.qsa(FOCUSABLE, panel)[0];
+    /* 입력 폼 성격의 모달은 첫 입력칸에서 시작하는 편이 빠르다(opts.initialFocus).
+       그 밖에는 위 규칙대로 primary → 안전한 액션 → 닫기 순으로 고른다. */
+    var initial = (opts.initialFocus && panel.contains(opts.initialFocus) ? opts.initialFocus : null)
+      || primaryBtn
+      || safeBtn
+      || U.qsa('[data-close]', head)[0]
+      || U.qsa(FOCUSABLE, panel)[0];
     if (initial) initial.focus();
 
     return { root: root, body: body, close: closeModal };
@@ -242,8 +298,12 @@
     var here = window.location.pathname.split('/').pop() || 'index.html';
     U.qsa('.site-nav .nav-link').forEach(function (link) {
       var target = (link.getAttribute('href') || '').split('?')[0];
-      link.classList.toggle('is-active', target === here);
-      if (target === here) link.setAttribute('aria-current', 'page');
+      var isHere = target === here;
+      link.classList.toggle('is-active', isHere);
+      /* 붙이기만 하고 지우지 않으면, 정적 마크업에 aria-current가 적혀 있는 페이지에서
+         "현재 페이지"가 둘이 된다. 상태는 언제나 양방향으로 쓴다. */
+      if (isHere) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
     });
   }
 

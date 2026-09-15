@@ -45,12 +45,33 @@
   box-shadow: var(--sh-sm);
 }
 
+/* 헤더 밑선의 "생김새"(존재·위치·크기·색)는 골격이라 여기 산다 — 계약서 §11.
+   가운데에서 좌우로 그어지는 시간(opacity/transform + transition)만 animations.css가 맡는다.
+   v2.3 이관: 이 선이 animations.css에만 있으면 그 파일이 없을 때 밑선 자체가 사라진다. */
+.site-header::after {
+  content: "";
+  position: absolute;
+  inset-block-end: -1px;
+  inset-inline: 0;
+  block-size: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--c-accent) 50%, transparent) 50%,
+    transparent 100%);
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
   min-inline-size: 0;          /* 좁은 화면에서 형제 요소를 밀어내지 않게 */
   flex: 0 1 auto;
+  /* .brand는 440px 이하에서 .site-nav "메모" 링크의 유일한 대체 경로다(§3-2).
+     내용물 높이(마크 26px)에 맡기면 터치 타깃이 26px에 그친다 — 그 링크가
+     사라지는 화면이 하필 손가락으로 쓰는 화면이다. .nav-link와 같은 토큰을 써서
+     coarse에서 함께 44px로 올라가게 한다(64px 헤더 안에 그대로 들어간다). */
+  min-block-size: var(--h-nav);
   font-weight: 700;
   letter-spacing: var(--ls-tight);
 }
@@ -318,7 +339,10 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 
-  max-inline-size: var(--w-content);
+  /* 본문(.prose)과 "같은 픽셀"이어야 한다. --w-content(72ch)를 쓰면 이 상자의 폰트(16px)와
+     본문 폰트(19px)에서 72ch가 다르게 풀려 파선이 본문보다 78px 짧게 끝났다(M3-5).
+     줄길이 기준은 .prose가 갖고, 머리말은 그 폭을 그대로 빌려 쓴다. */
+  max-inline-size: var(--w-prose);
   padding-block-end: var(--sp-7);
   margin-block-end: var(--sp-9);
   border-block-end: 1px dashed var(--c-border);
@@ -335,18 +359,8 @@
 /* inline-flex가 그리드 아이템이 되면 기본 stretch로 전폭을 먹는다. 글자 폭만 쓰게 되돌린다. */
 .post-head > .post-cat { justify-self: start; }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin-block-end: var(--sp-5);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--c-text-mute);
-  transition: color var(--dur-fast) var(--ease), translate var(--dur) var(--ease);
-}
-
-.back-link:hover { color: var(--c-accent); translate: -3px 0; }
+/* .back-link의 생김새(글꼴·색·hover)는 components.css §9에 있다 — 계약서 §11-1.
+   여기 남는 것은 위 .post-head 그리드 안의 "자리"(1행 1열)뿐이다. */
 
 .post-title {
   margin-block-start: var(--sp-3);
@@ -408,49 +422,16 @@
   margin-block-start: var(--sp-11);
   padding-block-start: var(--sp-7);
   border-block-start: 1px dashed var(--c-border);
+  /* 이 파선은 .post-head의 파선과 "짝"이다 — 글의 위아래를 닫는 두 줄.
+     폭이 다르면 같은 역할의 선 두 개가 서로 다른 물건으로 보인다.
+     v2.3: 컨테이너 전폭(1120px)이던 것을 본문 글줄 폭에 맞춰 720px에서 끝낸다.
+     이 화면의 가로 기준선은 --w-prose 하나뿐이어야 한다. */
+  max-inline-size: var(--w-prose);
 }
 
-.post-nav-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  padding: var(--sp-5);
-  border: 1px solid var(--c-border-soft);
-  border-radius: var(--r-lg);
-  background: color-mix(in oklab, var(--c-surface) 70%, transparent);
-  transition:
-    transform var(--dur) var(--ease),
-    border-color var(--dur) var(--ease),
-    box-shadow var(--dur) var(--ease);
-}
-
-.post-nav-item:hover {
-  border-color: var(--c-accent);
-  box-shadow: var(--sh-md);
-  transform: translateY(-2px);
-}
-
-.post-nav-item.is-next { text-align: end; }
-
-.post-nav-label {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: var(--ls-wide);
-  color: var(--c-accent);
-}
-
-.post-nav-title {
-  font-size: var(--fs-md);
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--c-text);
-  /* 두 줄까지만 — 카드 높이가 들쭉날쭉해지는 것을 막는다. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+/* .post-nav-item / .post-nav-label / .post-nav-title의 생김새는 components.css §9에 있다.
+   여기(layout.css)는 .post-nav 그리드 골격만 책임진다 — 계약서 §11-1.
+   반응형 열 전환은 이 파일 아래쪽 @media (min-width: 768px)에 있다. */
 
 .post-error {
   max-inline-size: 46ch;
@@ -564,8 +545,11 @@
    기준: 360 / 768 / 1024 / 1440
    ========================================================================= */
 
-/* 아주 좁은 화면: 헤더의 보조 내비가 브랜드와 중복되므로 접는다.
-   (브랜드 자체가 index.html 링크라 이동 경로는 유지된다) */
+/* 아주 좁은 화면: 헤더에서 브랜드·내비·테마·새 메모 4덩이가 경쟁하면 전부 잘린다.
+   보조 내비를 통째로 접되, 두 항목 모두 대체 경로가 있어야 접을 수 있다 — 계약서 §3-2.
+     "메모"(index.html) → .brand가 같은 곳을 가리킨다
+     "쓰기"(write.html) → .header-actions의 "새 메모" 버튼
+   .site-nav에 항목을 추가할 때는 여기서 사라진다는 것을 먼저 확인한다. */
 @media (max-width: 440px) {
   .site-nav { display: none; }
   .hero-stats { gap: var(--sp-4); }
@@ -578,14 +562,27 @@
 }
 
 @media (min-width: 1024px) {
+  /* 1열은 "남는 폭 전부"가 아니라 "본문 글줄 폭까지"다.
+     1fr로 두면 1440px에서 트랙이 816px까지 자라는데 .prose는 720px에서 멈춘다.
+     그 차이 96px + gap 64px = 목차 폭의 3분의 2에 달하는 죽은 띠가 본문과 목차 사이에
+     생겨 "목차가 본문을 색인한다"는 관계가 눈에서 끊겼다(M3-6, 실측 162px).
+     트랙을 본문 폭에 묶으면 남는 폭은 목차 바깥(오른쪽 여백)으로 빠지고,
+     본문과 목차는 항상 gap 하나만큼만 떨어져 있다. */
   .post-body {
-    grid-template-columns: minmax(0, 1fr) var(--w-toc);
+    grid-template-columns: minmax(0, var(--w-prose)) var(--w-toc);
+    justify-content: start;
     gap: var(--sp-10);
     align-items: start;
   }
   /* 계약서 DOM 순서는 목차 → 본문. 화면에서는 목차를 오른쪽에 둔다. */
   .post-body > .toc   { grid-column: 2; grid-row: 1; }
   .post-body > .prose { grid-column: 1; grid-row: 1; }
+
+  /* 제목이 2개 미만이면 post.js가 .toc에 [hidden]을 붙인다 — 짧은 메모에서는 그게 기본값이다.
+     그런데 hidden은 "요소를 빼는 것"이지 "트랙을 접는 것"이 아니라서,
+     선언된 2열(240px + gap 64px = 304px)이 유령 칸으로 남아 본문이 왼쪽으로 쏠렸다(M3-4).
+     :has()를 못 읽는 브라우저는 이전과 똑같이 동작한다(퇴행 없음). */
+  .post-body:has(> .toc[hidden]) { grid-template-columns: minmax(0, var(--w-prose)); }
 
   .editor-split[data-mode="split"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
