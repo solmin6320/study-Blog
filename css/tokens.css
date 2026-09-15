@@ -1,0 +1,302 @@
+/* ============================================================================
+   tokens.css — 디자인 토큰 단일 출처
+   이 파일 외의 CSS에는 리터럴 색상값(#hex / rgb())을 쓰지 않는다.
+   다크모드는 :root[data-theme="dark"]에서 "값만" 재정의한다(규칙을 다시 쓰지 않는다).
+   로드 순서: tokens → base → layout → components → prose → animations
+   ========================================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* ── 색: 표면 ───────────────────────────────────────────────────────────
+     순백 대신 미세하게 따뜻한 종이색. 메모지 메타포의 바탕이며
+     장시간 독서 시 순백보다 눈부심이 덜하다. */
+  --c-bg:          #f4f1ea;   /* 책상(보드) 바닥 */
+  --c-bg-2:        #ece7dc;   /* 바닥보다 한 단계 낮은 홈 */
+  --c-surface:     #fffdf8;   /* 카드/패널 — 종이 */
+  --c-surface-2:   #f3efe5;   /* 카드 안쪽 오목한 면(인풋, 코드, 표 헤더) */
+  --c-border:      #ddd5c5;   /* 실선 경계 */
+  --c-border-soft: #ebe5d8;   /* 구분만 하는 약한 경계 */
+
+  /* ── 색: 글자 ───────────────────────────────────────────────────────────
+     순흑 대신 따뜻한 먹색. --c-text / --c-bg 대비 약 14:1. */
+  --c-text:      #211e18;
+  --c-text-dim:  #57503f;     /* 보조 문장 — --c-bg 대비 7.1:1 */
+  /* 메타/캡션. 이 색이 놓이는 최악의 바닥은 --c-bg가 아니라 "메모지 6색" 중
+     가장 어두운 lilac(#e8e2f7)이다. 거기서도 4.5:1을 넘겨야 .memo-meta(날짜)가 읽힌다.
+     측정: bg 5.23 / surface 5.80 / surface-2 5.14 / 6색 종이 4.68~5.11 — 전부 AA 통과.
+     (이전 값 #7c7361은 종이 위에서 3.72~4.06:1로 전 구간 AA 미달이었다.) */
+  --c-text-mute: #6b644f;
+
+  /* ── 색: 액센트 ─────────────────────────────────────────────────────────
+     깊은 청록 잉크. 따뜻한 종이 위에서 채도가 튀지 않으면서
+     6색 파스텔 메모지 어느 것과도 충돌하지 않는 중립 유채색. */
+  --c-accent:      #1b6b62;
+  --c-accent-2:    #b05f35;   /* 보조(테라코타) — 그라디언트 두 번째 정지점 */
+  --c-accent-soft: #dcefea;   /* 액센트 배경 틴트 */
+
+  --c-danger: #b03f2c;
+  --c-warn:   #9a6a12;        /* [계약서 추가분] .editor-status.is-dirty 경고색 */
+  --c-ok:     #38724a;
+
+  /* ── 색: 보조 역할 ─────────────────────────────────────────────────── */
+  --c-on-accent:  #fffdf8;    /* [계약서 추가분] accent/danger 채움 위의 글자색 */
+  --c-focus:      #1b6b62;    /* 포커스 링 */
+  --c-scrim:      #2a251c;    /* 모달 딤 바탕 (알파는 사용처에서 조합) */
+  --c-shadow-rgb: 38 30 18;   /* 그림자 기본색(따뜻한 회갈) */
+  --c-selection:  #cfe7e1;    /* ::selection */
+
+  /* ── 색: 메모지 6종 ─────────────────────────────────────────────────────
+     라이트 = 파스텔 배경 + 진한 잉크 글자.
+     탁해지지 않도록 명도는 높게 유지하되 채도는 20% 내외로 억제한다. */
+  --memo-amber:     #fbeecb;  --memo-amber-ink: #6d4c0f;
+  --memo-mint:      #dcf0e5;  --memo-mint-ink:  #14573f;
+  --memo-sky:       #dbe9f7;  --memo-sky-ink:   #1a4a70;
+  --memo-rose:      #fbe1e2;  --memo-rose-ink:  #7c2f3b;
+  --memo-lilac:     #e8e2f7;  --memo-lilac-ink: #453576;
+  --memo-lime:      #e7f2d0;  --memo-lime-ink:  #46601d;
+
+  /* ── 배경 레이어 ───────────────────────────────────────────────────────
+     메시 그라디언트 색 덩어리. 채도를 낮춰 본문을 방해하지 않게 한다. */
+  --mesh-1: #bfe0d7;
+  --mesh-2: #f2dcc2;
+  --mesh-3: #d9d5ef;
+  --mesh-alpha: .55;          /* 덩어리 자체 불투명도 */
+  --mesh-blur: 60px;
+  --grain-alpha: .045;        /* 종이 노이즈 — 0.03~0.05 범위 */
+
+  /* ── 코드 하이라이팅 ────────────────────────────────────────────────────
+     highlight.js 기본 테마를 쓰지 않고 여기서 직접 정의한다. */
+  --code-bg:     #f7f3ea;
+  --code-border: #e4dcca;
+  --code-text:   #2c2820;
+  --hl-comment:  #6b6558;     /* 코드 배경 대비 약 4.9:1 — 주석도 읽혀야 한다 */
+  --hl-keyword:  #9a3a68;
+  --hl-string:   #2e7345;
+  --hl-number:   #a85a24;
+  --hl-literal:  #a85a24;
+  --hl-function: #21568f;
+  --hl-title:    #21568f;
+  --hl-attr:     #7d5d12;
+  --hl-builtin:  #0f6a7d;
+  --hl-type:     #0f6a7d;
+  --hl-variable: #9a4526;
+  --hl-tag:      #9a3a68;
+  --hl-name:     #9a3a68;
+  --hl-selector: #21568f;
+  --hl-meta:     #6b6558;
+  --hl-addition: #2e7345;
+  --hl-deletion: #b03f2c;
+
+  /* ── 타이포 ────────────────────────────────────────────────────────────
+     외부 웹폰트 금지. 한글 폴백을 명시적으로 넣는다. */
+  --ff-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+             "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕",
+             system-ui, sans-serif;
+  --ff-display: var(--ff-sans);
+  --ff-mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono",
+             "Cascadia Mono", Consolas, "D2Coding", "Noto Sans Mono CJK KR",
+             monospace;
+
+  /* 유동 타이포: 360px→1440px 사이 선형 증가. 미디어쿼리 없이 스케일한다. */
+  --fs-xs:  clamp(0.75rem,   0.728rem + 0.10vw, 0.8125rem); /* 12 → 13 */
+  --fs-sm:  clamp(0.8125rem, 0.781rem + 0.14vw, 0.9375rem); /* 13 → 15 */
+  --fs-md:  clamp(0.9375rem, 0.906rem + 0.14vw, 1.0625rem); /* 15 → 17 */
+  --fs-lg:  clamp(1.0625rem, 1.031rem + 0.14vw, 1.1875rem); /* 17 → 19 */
+  --fs-xl:  clamp(1.1875rem, 1.109rem + 0.35vw, 1.4375rem); /* 19 → 23 */
+  --fs-2xl: clamp(1.375rem,  1.219rem + 0.69vw, 1.875rem);  /* 22 → 30 */
+  --fs-3xl: clamp(1.75rem,   1.469rem + 1.25vw, 2.625rem);  /* 28 → 42 */
+  --fs-4xl: clamp(2.125rem,  1.594rem + 2.36vw, 3.75rem);   /* 34 → 60 */
+
+  /* 본문 전용: 최소 17px 보장 */
+  --fs-prose: clamp(1.0625rem, 1.031rem + 0.14vw, 1.1875rem);
+
+  --lh-tight: 1.18;           /* 큰 제목 */
+  --lh-head:  1.35;           /* 소제목 */
+  --lh-body:  1.75;           /* 한글 본문 — 받침 때문에 라틴보다 넉넉해야 한다 */
+  --ls-tight: -0.02em;
+  --ls-wide:  0.06em;
+
+  /* ── 간격: 4px 배수 ──────────────────────────────────────────────────── */
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-7: 32px;  --sp-8: 40px;
+  --sp-9: 48px;  --sp-10: 64px; --sp-11: 80px; --sp-12: 96px;
+
+  /* ── 반경 ──────────────────────────────────────────────────────────── */
+  --r-sm: 6px;  --r-md: 10px;  --r-lg: 16px;  --r-xl: 24px;  --r-full: 999px;
+
+  /* ── 컨트롤 치수 ────────────────────────────────────────────────────────
+     버튼·인풋의 높이를 한 곳에서 잡아야 툴바에서 줄이 맞는다.
+     아래 @media (pointer: coarse)에서 44px로 올려 터치 타깃 기준을 만족시킨다. */
+  --h-control: 40px;          /* 버튼 / 인풋 / 셀렉트 공통 높이 */
+  --h-nav:     36px;          /* 헤더 내비 알약 — 헤더(64px) 안에서 숨 쉴 여백 확보 */
+  --w-modal:   34rem;         /* 모달 패널 최대 폭 — 본문 2~3문단이 편히 들어가는 길이 */
+  --w-toast:   22rem;         /* 토스트 최대 폭 — 한 문장이 두 줄을 넘지 않는 선 */
+  --memo-grain: .05;          /* 메모지 표면 노이즈 세기 */
+
+  /* ── 그림자 ────────────────────────────────────────────────────────────
+     단일 그림자 대신 다층(근/중/원)으로 쌓아 실제 종이의 접지 그림자를 흉내낸다. */
+  --sh-sm:
+    0 1px 2px rgb(var(--c-shadow-rgb) / .06),
+    0 1px 1px rgb(var(--c-shadow-rgb) / .04);
+  --sh-md:
+    0 1px 2px rgb(var(--c-shadow-rgb) / .05),
+    0 4px 8px -2px rgb(var(--c-shadow-rgb) / .08),
+    0 12px 20px -12px rgb(var(--c-shadow-rgb) / .14);
+  --sh-lg:
+    0 2px 4px rgb(var(--c-shadow-rgb) / .05),
+    0 10px 20px -6px rgb(var(--c-shadow-rgb) / .10),
+    0 30px 50px -24px rgb(var(--c-shadow-rgb) / .22);
+  --sh-memo:
+    0 1px 1px rgb(var(--c-shadow-rgb) / .05),
+    0 2px 3px rgb(var(--c-shadow-rgb) / .05),
+    0 8px 14px -8px rgb(var(--c-shadow-rgb) / .12),
+    0 18px 30px -20px rgb(var(--c-shadow-rgb) / .16);
+  --sh-memo-hover:
+    0 2px 3px rgb(var(--c-shadow-rgb) / .06),
+    0 10px 18px -6px rgb(var(--c-shadow-rgb) / .12),
+    0 30px 46px -22px rgb(var(--c-shadow-rgb) / .26);
+  --sh-ring: inset 0 0 0 1px rgb(var(--c-shadow-rgb) / .06);
+
+  /* ── 모션 ──────────────────────────────────────────────────────────── */
+  --ease:        cubic-bezier(.16, 1, .3, 1);  /* 빠르게 시작해 부드럽게 정착 */
+  --ease-out:    cubic-bezier(.33, 1, .68, 1);
+  --ease-in:     cubic-bezier(.32, 0, .67, 0);
+  /* 무한 루프 전용. 가감속 커브를 무한 반복하면 0%↔100% 이음매에서 속도가 꺾여
+     "툭" 끊기는 것이 보인다. 앰비언트 배경은 등속이라야 이음매가 사라진다. */
+  --ease-ambient: linear;
+  --dur-fast:    160ms;
+  --dur:         260ms;
+  --dur-slow:    420ms;
+  --dur-ambient: 52s;         /* 배경 메시 드리프트 — 인지되지 않을 만큼 느리게 */
+
+  /* ── 레이아웃 ──────────────────────────────────────────────────────── */
+  --w-content: 72ch;          /* 사용처 폰트 기준 72자 — 한글은 36자 내외 */
+  --w-page:    1200px;
+  --h-header:  64px;
+  --w-toc:     15rem;
+  --gutter:    clamp(16px, 4.2vw, 40px);
+  --memo-min:  280px;         /* board 그리드 최소 트랙 */
+
+  /* ── z-index 스케일 ────────────────────────────────────────────────── */
+  --z-bg:       -1;
+  --z-base:      1;
+  --z-sticky:   20;
+  --z-header:   40;
+  --z-progress: 45;
+  --z-modal:    60;
+  --z-toast:    80;
+}
+
+/* ============================================================================
+   다크 테마 — 반전이 아니라 재설계.
+   순흑/순백을 쓰지 않고, 채도를 낮춘 뒤 "표면 밝기"로 층위를 만든다.
+   ========================================================================= */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --c-bg:          #16150f;
+  --c-bg-2:        #100f0b;
+  --c-surface:     #201e18;
+  --c-surface-2:   #2a271f;
+  --c-border:      #3b372c;
+  --c-border-soft: #2d2a22;
+
+  --c-text:      #ece7da;     /* 순백 금지 — 눈부심과 헤일로를 줄인다 */
+  --c-text-dim:  #b6afa0;     /* --c-bg 대비 8.4:1 */
+  /* 라이트와 같은 이유로 올린다. 다크의 최악 바닥은 --c-surface-2(#2a271f)와
+     가장 밝은 다크 종이 amber(#2a2317)다. 측정: 4.83~6.21 — 전부 AA 통과.
+     (이전 값 #8a8272는 surface-2 위에서 3.92:1로 미달이었다.) */
+  --c-text-mute: #9a9281;
+
+  --c-accent:      #62cfbe;   /* 어두운 바탕에선 명도를 올려 대비 7:1 확보 */
+  --c-accent-2:    #dd9468;
+  --c-accent-soft: #16332f;
+
+  --c-danger: #e4735c;
+  --c-warn:   #dcb15c;
+  --c-ok:     #74c189;
+
+  --c-on-accent:  #16150f;    /* 다크에서는 밝은 액센트 위에 어두운 글자 */
+  --c-focus:      #62cfbe;
+  --c-scrim:      #080705;
+  --c-shadow-rgb: 0 0 0;      /* 어두운 배경에선 순수 검정 그림자가 가장 자연스럽다 */
+  --c-selection:  #1f4a44;
+
+  /* 메모지: 어두운 화면에 파스텔 덩어리는 눈이 아프다.
+     배경은 색 기운만 남긴 어두운 면, 색은 ink(테두리·핀·라벨)로만 드러난다. */
+  --memo-amber:     #2a2317;  --memo-amber-ink: #e8c477;
+  --memo-mint:      #17261f;  --memo-mint-ink:  #7ed8b4;
+  --memo-sky:       #17212d;  --memo-sky-ink:   #86c0e8;
+  --memo-rose:      #2a1a1d;  --memo-rose-ink:  #e79ca6;
+  --memo-lilac:     #201d2e;  --memo-lilac-ink: #b3a6e8;
+  --memo-lime:      #202717;  --memo-lime-ink:  #b7d582;
+
+  /* 배경: 색 덩어리 명도를 낮추고 노이즈는 약간 올린다(밴딩 억제 효과도 있다). */
+  --mesh-1: #15403a;
+  --mesh-2: #3a2a18;
+  --mesh-3: #262247;
+  --mesh-alpha: .62;
+  --mesh-blur: 68px;
+  --grain-alpha: .055;
+
+  --code-bg:     #1a1813;
+  --code-border: #332f26;
+  --code-text:   #ddd7c8;
+  --hl-comment:  #8b8477;     /* 코드 배경 대비 약 4.9:1 */
+  --hl-keyword:  #e59cc2;
+  --hl-string:   #92d69e;
+  --hl-number:   #ecaa6c;
+  --hl-literal:  #ecaa6c;
+  --hl-function: #7cb9f0;
+  --hl-title:    #7cb9f0;
+  --hl-attr:     #e7c97c;
+  --hl-builtin:  #71d4d1;
+  --hl-type:     #71d4d1;
+  --hl-variable: #f0a385;
+  --hl-tag:      #e59cc2;
+  --hl-name:     #e59cc2;
+  --hl-selector: #7cb9f0;
+  --hl-meta:     #8b8477;
+  --hl-addition: #92d69e;
+  --hl-deletion: #e4735c;
+
+  /* 어두운 바탕에선 그림자가 잘 보이지 않으므로 알파를 키운다. */
+  --sh-sm:
+    0 1px 2px rgb(var(--c-shadow-rgb) / .32),
+    0 1px 1px rgb(var(--c-shadow-rgb) / .22);
+  --sh-md:
+    0 1px 2px rgb(var(--c-shadow-rgb) / .28),
+    0 4px 10px -2px rgb(var(--c-shadow-rgb) / .38),
+    0 14px 24px -12px rgb(var(--c-shadow-rgb) / .50);
+  --sh-lg:
+    0 2px 4px rgb(var(--c-shadow-rgb) / .30),
+    0 12px 24px -6px rgb(var(--c-shadow-rgb) / .45),
+    0 36px 60px -26px rgb(var(--c-shadow-rgb) / .70);
+  --sh-memo:
+    0 1px 1px rgb(var(--c-shadow-rgb) / .30),
+    0 2px 4px rgb(var(--c-shadow-rgb) / .24),
+    0 10px 18px -8px rgb(var(--c-shadow-rgb) / .45),
+    0 24px 40px -22px rgb(var(--c-shadow-rgb) / .60);
+  --sh-memo-hover:
+    0 2px 4px rgb(var(--c-shadow-rgb) / .30),
+    0 12px 22px -6px rgb(var(--c-shadow-rgb) / .45),
+    0 34px 54px -24px rgb(var(--c-shadow-rgb) / .70);
+  --sh-ring: inset 0 0 0 1px color-mix(in oklab, var(--c-text) 6%, transparent);
+}
+
+/* 다크에서는 표면이 어두워 노이즈가 덜 읽힌다. 세기를 조금 올려 질감을 유지하고
+   동시에 넓은 단색 면의 그라디언트 밴딩을 흩뜨린다. */
+:root[data-theme="dark"] { --memo-grain: .07; }
+
+/* ============================================================================
+   입력 장치 — 손가락은 커서보다 부정확하다.
+   coarse 포인터에서만 컨트롤 높이를 44px로 올려 터치 타깃 기준을 맞춘다.
+   (데스크톱에서 모든 버튼을 44px로 키우면 툴바가 비대해진다.)
+   ========================================================================= */
+@media (pointer: coarse) {
+  :root {
+    --h-control: 44px;
+    --h-nav:     44px;
+  }
+}

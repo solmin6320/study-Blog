@@ -1,0 +1,653 @@
+/* ============================================================================
+   prose.css — 마크다운이 만든 본문
+   .prose 안의 요소는 클래스를 붙일 수 없다(marked 출력 + DOMPurify 살균 결과).
+   그래서 전부 태그 셀렉터로 다룬다. 계약서 §5 참조.
+   .prose는 post.html 본문과 write.html 미리보기 두 곳에서 같은 규칙을 쓴다.
+   의존: tokens.css, base.css, layout.css, components.css
+   ── 이 파일의 최우선 원칙 ────────────────────────────────────────────────
+   읽기가 이긴다. 본문 17px 이상 / 행간 1.75 / 줄길이 --w-content(72ch).
+   장식이 이 셋 중 하나라도 침범하면 장식을 버린다.
+   ========================================================================= */
+
+.prose {
+  max-inline-size: var(--w-content);
+  font-size: var(--fs-prose);
+  line-height: var(--lh-body);
+  color: var(--c-text);
+  /* 한글 어절 보존은 base.css의 body에서 상속. 여기서는 문단 끝 고아 단어만 정리한다. */
+  text-wrap: pretty;
+  /* 숫자가 섞인 문단에서 자릿수가 흔들리지 않게 */
+  font-variant-numeric: proportional-nums;
+}
+
+/* 블록 요소의 위아래 여백은 "형제 사이"에만 준다.
+   첫/마지막 요소의 여백까지 남으면 컨테이너 패딩과 겹쳐 위치가 어긋난다. */
+.prose > :first-child { margin-block-start: 0; }
+.prose > :last-child  { margin-block-end: 0; }
+
+/* ============================================================================
+   1. 제목 — 위계가 "크기"만이 아니라 "무게·색·여백"으로 동시에 구분되게
+   h2는 굵고 크며 위 여백이 가장 넓다(새 장의 시작).
+   h3는 h2보다 한 단계 작고 위 여백이 절반.
+   h4는 크기를 더 줄이는 대신 색을 낮춰 "문단 안의 소항목"으로 읽히게 한다.
+   ========================================================================= */
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  /* 고정 헤더 아래로 제목이 숨지 않게. TOC 클릭·해시 이동의 정확도를 좌우한다. */
+  scroll-margin-top: calc(var(--h-header) + var(--sp-6));
+  letter-spacing: var(--ls-tight);
+  text-wrap: balance;
+  color: var(--c-text);
+}
+
+.prose h1 {
+  margin-block: var(--sp-10) var(--sp-5);
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+}
+
+.prose h2 {
+  margin-block: var(--sp-10) var(--sp-5);
+  padding-block-end: var(--sp-3);
+  font-size: var(--fs-2xl);
+  font-weight: 750;
+  line-height: var(--lh-head);
+  /* 밑줄 대신 왼쪽 28px짜리 짧은 액센트 선. background로 그려서
+     border를 쓸 때처럼 레이아웃을 건드리지 않는다. */
+  background-image: linear-gradient(90deg, var(--c-accent), var(--c-accent-2));
+  background-size: 28px 3px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+}
+
+.prose h3 {
+  margin-block: var(--sp-8) var(--sp-4);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: var(--lh-head);
+}
+
+/* h4는 --fs-lg이고 본문(--fs-prose)도 --fs-lg과 같은 clamp다 = 크기가 완전히 같다.
+   여기에 색까지 --c-text-dim으로 내리면 "본문보다 작아 보이는 굵은 줄"이 되어
+   제목이 아니라 캡션으로 읽힌다. 위계를 낮추려고 쓴 색이 위계를 뒤집는다.
+   → 색은 본문색으로 되돌리고, 등급 차이는 "짧은 액센트 선"으로 표시한다.
+     이 사이트는 이미 그 어휘를 쓰고 있다 — .hero::before(선으로 시작),
+     .prose h2(선이 아래에), .memo-cat / .post-cat(선이 앞에).
+     h2=아래 선 / h3=선 없음 / h4=앞 선 으로 세 등급의 지문이 전부 달라진다.
+   (360px에서 h3:h4 크기비가 1.12배까지 좁아지는데, 그 구간을 이 선이 메운다.) */
+.prose h4 {
+  margin-block: var(--sp-7) var(--sp-3);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: var(--lh-head);
+  color: var(--c-text);
+}
+
+.prose h4::before {
+  content: "";
+  display: inline-block;
+  inline-size: 12px;
+  block-size: 2px;
+  margin-inline-end: var(--sp-2);
+  vertical-align: 0.3em;       /* 대문자 중간 높이 — 한글 글자의 시각 중심과 맞는다 */
+  border-radius: var(--r-full);
+  background: var(--c-accent);
+}
+
+.prose h5,
+.prose h6 {
+  margin-block: var(--sp-6) var(--sp-3);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--c-text-mute);
+}
+
+/* 제목 바로 다음 요소는 제목에 붙어 있어야 한 덩어리로 읽힌다. */
+.prose h1 + *,
+.prose h2 + *,
+.prose h3 + *,
+.prose h4 + *,
+.prose h5 + *,
+.prose h6 + * { margin-block-start: 0; }
+
+/* ============================================================================
+   2. 문단 / 인라인 강조
+   ========================================================================= */
+.prose p { margin-block: var(--sp-5); }
+
+.prose strong,
+.prose b {
+  font-weight: 700;
+  /* 본문색과 같으면 굵기만으로 구분된다. 한글 고딕은 굵기 대비가 약해서
+     아주 살짝 더 진하게 눌러 줘야 강조로 읽힌다. */
+  color: color-mix(in oklab, var(--c-text) 92%, var(--c-accent));
+}
+
+.prose em,
+.prose i {
+  font-style: italic;
+  color: color-mix(in oklab, var(--c-text) 88%, var(--c-accent-2));
+}
+
+.prose del,
+.prose s {
+  color: var(--c-text-mute);
+  text-decoration-thickness: 1px;
+}
+
+.prose small { font-size: var(--fs-sm); color: var(--c-text-mute); }
+
+.prose mark {
+  padding: .08em .3em;
+  border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--c-accent-2) 26%, transparent);
+  color: var(--c-text);
+}
+
+.prose sup,
+.prose sub { font-size: .72em; line-height: 0; }
+
+.prose abbr[title] {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  cursor: help;
+}
+
+/* ============================================================================
+   3. 링크 — 밑줄은 지우지 않는다. 흐리게 두었다가 hover에서 또렷해진다.
+   text-decoration-color/-thickness는 애니메이션 가능하고,
+   background-size 트릭과 달리 두 줄로 넘어가는 링크에서도 끊기지 않는다.
+   ========================================================================= */
+.prose a {
+  color: var(--c-accent);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in oklab, var(--c-accent) 36%, transparent);
+  text-underline-offset: 0.22em;
+  transition:
+    text-decoration-color var(--dur) var(--ease),
+    text-decoration-thickness var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.prose a:hover {
+  color: color-mix(in oklab, var(--c-accent) 84%, var(--c-text));
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+}
+
+/* markdown.js가 외부 링크에 target=_blank를 붙인다. 새 창임을 미리 알린다. */
+.prose a[target="_blank"]::after {
+  content: "↗";
+  margin-inline-start: 0.15em;
+  font-size: .78em;
+  vertical-align: 0.15em;
+  text-decoration: none;
+  opacity: .65;
+}
+
+/* 제목 안 링크는 제목 색을 유지한다(액센트 제목은 위계를 망친다). */
+.prose h1 a, .prose h2 a, .prose h3 a, .prose h4 a { color: inherit; }
+
+/* ============================================================================
+   4. 목록 — 중첩 2단계까지 마커를 바꿔 깊이를 눈으로 구분한다.
+   base.css가 list-style을 지웠으므로 여기서 되살린다.
+   ========================================================================= */
+.prose ul,
+.prose ol {
+  margin-block: var(--sp-5);
+  padding-inline-start: 1.35em;
+}
+
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+
+/* 2단계 */
+.prose ul ul { list-style: circle; }
+.prose ol ol { list-style: lower-alpha; }
+/* 3단계 이상은 의미 전달보다 혼란이 크다. 최소한 구분만 유지한다. */
+.prose ul ul ul { list-style: square; }
+.prose ol ol ol { list-style: lower-roman; }
+
+.prose li { margin-block: var(--sp-2); }
+
+/* 중첩 목록은 부모 항목에 붙여 한 덩어리로 보이게 한다. */
+.prose li > ul,
+.prose li > ol { margin-block: var(--sp-2); }
+
+/* 마커에 액센트를 줘 스캔할 때 목록 항목의 시작점이 즉시 잡히게 한다. */
+.prose li::marker {
+  color: color-mix(in oklab, var(--c-accent) 72%, var(--c-text-mute));
+  font-weight: 600;
+}
+
+/* ── 체크리스트(GFM `- [ ]`) ──────────────────────────────────────────────
+   marked는 li 첫 자식으로 disabled input[type=checkbox]를 넣는다(클래스 없음). */
+.prose li > input[type="checkbox"] {
+  inline-size: 1.05em;
+  block-size: 1.05em;
+  margin-inline-end: var(--sp-2);
+  vertical-align: -0.14em;
+  accent-color: var(--c-accent);
+  /* disabled라도 흐려지면 체크 여부가 안 읽힌다. base.css의 .5 opacity를 되돌린다. */
+  opacity: 1;
+  cursor: default;
+}
+
+@supports selector(li:has(> input)) {
+  /* 체크박스가 있는 항목은 마커를 지운다. 불릿과 체크박스가 겹쳐 보이면 지저분하다. */
+  .prose li:has(> input[type="checkbox"]) {
+    list-style: none;
+    margin-inline-start: -1.35em;
+  }
+  /* 끝난 일은 흐려져야 남은 일이 눈에 들어온다. */
+  .prose li:has(> input[type="checkbox"]:checked) {
+    color: var(--c-text-mute);
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in oklab, var(--c-text-mute) 55%, transparent);
+  }
+}
+
+/* ============================================================================
+   5. 인용
+   ========================================================================= */
+.prose blockquote {
+  margin-block: var(--sp-7);
+  padding: var(--sp-4) var(--sp-6);
+  border-inline-start: 3px solid color-mix(in oklab, var(--c-accent) 60%, transparent);
+  border-start-end-radius: var(--r-md);
+  border-end-end-radius: var(--r-md);
+  background: color-mix(in oklab, var(--c-accent-soft) 55%, transparent);
+  color: var(--c-text-dim);
+}
+
+.prose blockquote > :first-child { margin-block-start: 0; }
+.prose blockquote > :last-child  { margin-block-end: 0; }
+.prose blockquote p { margin-block: var(--sp-3); }
+
+/* 인용 안의 강조는 인용 자체가 이미 눌린 색이라 본문색으로 되돌려야 보인다. */
+.prose blockquote strong { color: var(--c-text); }
+
+/* ============================================================================
+   6. 표 — markdown.js가 .table-wrap(role=region, tabindex=0)으로 감싼다.
+   표는 모바일에서 반드시 넘친다. 페이지를 넘치게 두지 말고 표만 넘치게 한다.
+   ========================================================================= */
+.table-wrap {
+  margin-block: var(--sp-7);
+  max-inline-size: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+
+  /* 가로 스크롤 그림자.
+     local 배경(흰 덮개)이 끝에 붙어 있다가 스크롤하면 밀려나고,
+     scroll 배경(그림자)이 드러나 "옆에 더 있다"를 알린다. 자바스크립트 0줄. */
+  background:
+    linear-gradient(to right, var(--c-surface) 38%, transparent) 0 0 / 40px 100% no-repeat local,
+    linear-gradient(to left,  var(--c-surface) 38%, transparent) 100% 0 / 40px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--c-text) 16%, transparent), transparent) 0 0 / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--c-text) 16%, transparent), transparent) 100% 0 / 14px 100% no-repeat scroll,
+    var(--c-surface);
+}
+
+.table-wrap:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.prose table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  /* 표 안의 숫자는 자릿수가 맞아야 비교가 된다. */
+  font-variant-numeric: tabular-nums;
+}
+
+.prose thead th {
+  position: relative;
+  background: var(--c-surface-2);
+  font-weight: 700;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.prose th,
+.prose td {
+  padding: var(--sp-3) var(--sp-4);
+  border-block-end: 1px solid var(--c-border-soft);
+  text-align: start;
+  vertical-align: top;
+}
+
+.prose thead th { border-block-end: 1px solid var(--c-border); }
+
+/* zebra: 행이 5개만 넘어가도 가로로 눈이 미끄러진다. */
+.prose tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--c-surface-2) 45%, transparent);
+}
+
+.prose tbody tr:last-child td { border-block-end: 0; }
+
+.prose table code { white-space: nowrap; }
+
+/* ============================================================================
+   7. 코드
+   인라인 코드와 블록 코드는 "다른 물건"이다. 인라인은 문장 속 토큰,
+   블록은 독립된 판. 배경·테두리·글자크기를 모두 다르게 준다.
+   ========================================================================= */
+
+/* ── 인라인 코드 ─────────────────────────────────────────────────────────── */
+.prose code {
+  font-family: var(--ff-mono);
+  font-size: 0.88em;
+  /* 모노 폰트는 x-height가 커서 같은 px여도 본문보다 커 보인다. 0.88em이 시각적 등가. */
+  padding: 0.12em 0.38em;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-soft);
+  background: color-mix(in oklab, var(--c-surface-2) 80%, transparent);
+  color: var(--c-accent);
+  letter-spacing: 0;
+  word-break: break-all;
+}
+
+/* 링크·제목 안의 코드는 부모 색을 따라가야 한 덩어리로 읽힌다. */
+.prose a code,
+.prose h1 code, .prose h2 code, .prose h3 code, .prose h4 code { color: inherit; }
+
+/* ── 코드 블록 ───────────────────────────────────────────────────────────
+   markdown.js가 만드는 구조(DOM 순서 고정):
+     .code-wrap > .code-lang , .code-copy , pre > code.hljs
+   그리드로 "머리띠 1행 + 코드 1행"을 만든다. 절대배치 + padding 꼼수를 쓰지 않아
+   긴 언어 이름이나 큰 글꼴에서도 라벨이 코드를 덮지 않는다. */
+.code-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-block: var(--sp-7);
+  border: 1px solid var(--code-border);
+  border-radius: var(--r-md);
+  background: var(--code-bg);
+  overflow: hidden;           /* pre의 가로 스크롤이 라운드 코너를 삐져나오지 않게 */
+  box-shadow: var(--sh-sm);
+}
+
+.code-lang,
+.code-copy {
+  grid-row: 1;
+  align-self: stretch;        /* 둘이 합쳐 머리띠 한 줄을 꽉 채운다 */
+  display: inline-flex;
+  align-items: center;
+  border-block-end: 1px solid var(--code-border);
+  background: color-mix(in oklab, var(--c-surface-2) 55%, var(--code-bg));
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+}
+
+.code-lang {
+  grid-column: 1;
+  padding: var(--sp-2) var(--sp-4);
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--c-text-mute);
+  font-family: var(--ff-mono);
+}
+
+.code-copy {
+  grid-column: 2;
+  padding-inline: var(--sp-4);
+  min-block-size: 34px;
+  color: var(--c-text-dim);
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.code-copy:hover {
+  background: color-mix(in oklab, var(--c-accent) 16%, var(--code-bg));
+  color: var(--c-accent);
+}
+
+.code-copy:active { background: color-mix(in oklab, var(--c-accent) 26%, var(--code-bg)); }
+
+.code-copy:focus-visible { outline-offset: -3px; }
+
+/* 터치 기기에는 hover가 없다. 복사 버튼을 hover로만 드러내면 영영 못 누른다.
+   → 기본은 "항상 보임". hover가 되는 기기에서만 평소 흐리게 두었다가 또렷해진다. */
+@media (hover: hover) and (pointer: fine) {
+  .code-copy { opacity: .5; }
+  .code-wrap:hover .code-copy,
+  .code-wrap:focus-within .code-copy { opacity: 1; }
+}
+
+@media (pointer: coarse) {
+  .code-copy { min-block-size: var(--h-control); }
+}
+
+.code-wrap > pre {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--sp-5);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+/* .code-wrap 밖에 남은 pre(JS 실패 시)도 최소한의 꼴은 갖춘다. */
+.prose pre {
+  margin-block: var(--sp-7);
+  padding: var(--sp-5);
+  border-radius: var(--r-md);
+  background: var(--code-bg);
+  overflow-x: auto;
+}
+
+.code-wrap > pre { border-radius: 0; }
+
+.prose pre code {
+  display: block;
+  /* 본문 17~19px에 대해 코드 16~17px. 여기서 --fs-sm(최대 15px)로 떨어뜨리면
+     코드 읽기가 갑자기 힘들어진다. em으로 본문에 비례시킨다. */
+  font-family: var(--ff-mono);
+  font-size: 0.92em;
+  line-height: 1.72;
+  letter-spacing: 0;
+  color: var(--code-text);
+  /* 인라인 코드 규칙 되돌리기 */
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 0;
+  white-space: pre;
+  word-break: normal;
+  tab-size: 2;
+}
+
+/* ============================================================================
+   8. highlight.js 테마 — 외부 테마 CSS를 로드하지 않는다.
+   색은 전부 tokens.css의 --hl-* 에서 오고, 다크 테마는 값만 바뀐다.
+   주석까지 코드 배경 대비 4.5:1을 넘긴다("주석은 읽지 말라"는 테마를 쓰지 않는다).
+   ========================================================================= */
+.hljs { background: transparent; color: var(--code-text); }
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-doctag      { color: var(--hl-keyword); font-weight: 600; }
+
+.hljs-string,
+.hljs-quote,
+.hljs-regexp      { color: var(--hl-string); }
+
+.hljs-comment     { color: var(--hl-comment); font-style: italic; }
+
+.hljs-number      { color: var(--hl-number); }
+.hljs-literal     { color: var(--hl-literal); }
+
+.hljs-function,
+.hljs-title       { color: var(--hl-function); font-weight: 600; }
+.hljs-title.class_,
+.hljs-title.function_ { color: var(--hl-title); }
+
+.hljs-attr,
+.hljs-attribute   { color: var(--hl-attr); }
+
+.hljs-built_in    { color: var(--hl-builtin); }
+.hljs-type        { color: var(--hl-type); font-weight: 600; }
+
+.hljs-variable,
+.hljs-template-variable { color: var(--hl-variable); }
+
+.hljs-params      { color: var(--code-text); }
+
+.hljs-tag         { color: var(--hl-tag); }
+.hljs-name        { color: var(--hl-name); font-weight: 600; }
+
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-selector-attr,
+.hljs-selector-pseudo { color: var(--hl-selector); }
+
+.hljs-meta,
+.hljs-meta .hljs-keyword { color: var(--hl-meta); }
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link        { color: var(--hl-variable); }
+
+.hljs-section     { color: var(--hl-title); font-weight: 700; }
+.hljs-strong      { font-weight: 700; }
+.hljs-emphasis    { font-style: italic; }
+
+/* diff: 글자색만 바꾸면 줄 단위 변화가 안 보인다. 줄 전체에 옅은 면을 깐다. */
+.hljs-addition {
+  color: var(--hl-addition);
+  background: color-mix(in oklab, var(--hl-addition) 14%, transparent);
+  display: inline-block;
+  inline-size: 100%;
+}
+
+.hljs-deletion {
+  color: var(--hl-deletion);
+  background: color-mix(in oklab, var(--hl-deletion) 14%, transparent);
+  display: inline-block;
+  inline-size: 100%;
+}
+
+/* ============================================================================
+   9. 이미지 / 구분선 / 키캡 / 접기
+   ========================================================================= */
+.prose img {
+  margin-block: var(--sp-7);
+  margin-inline: auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border-soft);
+  background: var(--c-surface-2);   /* 로딩 중 빈칸이 배경 메시를 그대로 드러내지 않게 */
+  box-shadow: var(--sh-md);
+}
+
+.prose figure { margin-block: var(--sp-7); }
+.prose figure img { margin-block: 0; }
+
+.prose figcaption {
+  margin-block-start: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--c-text-mute);
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* 구분선은 "선"이 아니라 "쉼표 세 개"에 가깝다. 얇은 실선보다 호흡이 길어진다. */
+.prose hr {
+  margin-block: var(--sp-10);
+  block-size: 3px;
+  background:
+    radial-gradient(circle, var(--c-border) 1.5px, transparent 1.6px) repeat-x center / 14px 3px;
+}
+
+.prose kbd {
+  display: inline-block;
+  padding: 0.12em 0.45em;
+  font-family: var(--ff-mono);
+  font-size: 0.84em;
+  line-height: 1.5;
+  border: 1px solid var(--c-border);
+  border-block-end-width: 2px;
+  border-radius: var(--r-sm);
+  background: var(--c-surface-2);
+  box-shadow: var(--sh-sm);
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+/* 사용자가 원시 HTML로 <details>를 쓸 수 있다(DOMPurify html 프로파일 허용). */
+.prose details {
+  margin-block: var(--sp-6);
+  padding: var(--sp-3) var(--sp-5);
+  border: 1px solid var(--c-border-soft);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--c-surface) 62%, transparent);
+}
+
+.prose summary {
+  font-weight: 700;
+  cursor: pointer;
+  /* 기본 마커는 브라우저마다 위치가 제각각이라 직접 그린다. */
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-block-size: 32px;
+  color: var(--c-text);
+}
+
+.prose summary::-webkit-details-marker { display: none; }
+
+.prose summary::before {
+  content: "";
+  flex: none;
+  inline-size: 0;
+  block-size: 0;
+  border-block: 5px solid transparent;
+  border-inline-start: 7px solid var(--c-accent);
+  transition: rotate var(--dur) var(--ease);
+}
+
+.prose details[open] > summary::before { rotate: 90deg; }
+.prose details[open] > summary { margin-block-end: var(--sp-3); }
+
+/* ============================================================================
+   10. 미리보기 패널 안의 .prose
+   write.html은 좁은 칸에 같은 규칙을 쓴다. 여백만 압축해 두 배 스크롤을 막는다.
+   ========================================================================= */
+.preview-pane .prose h1,
+.preview-pane .prose h2 { margin-block-start: var(--sp-7); }
+.preview-pane .prose h3 { margin-block-start: var(--sp-6); }
+.preview-pane .prose .code-wrap,
+.preview-pane .prose .table-wrap,
+.preview-pane .prose img { margin-block: var(--sp-5); }
+
+/* ============================================================================
+   11. 좁은 화면 보정 — 360px에서 가로 스크롤이 생기면 실패다.
+   ========================================================================= */
+@media (max-width: 480px) {
+  /* 코드 블록의 좌우 패딩이 크면 한 줄에 들어가는 글자 수가 급감한다. */
+  .code-wrap > pre,
+  .prose pre { padding-inline: var(--sp-4); }
+  .prose blockquote { padding-inline: var(--sp-4); }
+  .prose th,
+  .prose td { padding: var(--sp-3); }
+  .prose ul,
+  .prose ol { padding-inline-start: 1.2em; }
+  @supports selector(li:has(> input)) {
+    .prose li:has(> input[type="checkbox"]) { margin-inline-start: -1.2em; }
+  }
+}

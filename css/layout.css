@@ -1,0 +1,599 @@
+/* ============================================================================
+   layout.css — 화면 골격
+   .site-header / .site-main / .site-footer / .hero / .toolbar / .board /
+   .post·.post-body / .editor
+   재사용 컴포넌트(버튼·칩·메모카드 등)는 components.css가 담당한다.
+   의존: tokens.css, base.css
+   ========================================================================= */
+
+/* ============================================================================
+   1. 헤더
+   ========================================================================= */
+.site-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-header);
+
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+
+  block-size: var(--h-header);
+  /* 바 자체는 화면 끝까지, 내용물은 --w-page 그리드에 정렬시킨다.
+     계약서 마크업에 내부 래퍼가 없으므로 padding으로 중앙 정렬을 흉내낸다. */
+  padding-inline: max(var(--gutter), calc((100% - var(--w-page)) / 2 + var(--gutter)));
+
+  /* 기본 상태는 투명 — 배경 메시가 그대로 보여야 한다. */
+  background: transparent;
+  border-block-end: 1px solid transparent;
+  /* backdrop-filter는 transition 목록에 넣지 않는다.
+     none → blur(14px)는 보간되지 않고 첫 프레임에 튀는데(= 부드러움 0),
+     대신 260ms 동안 매 프레임 뒤 배경을 다시 블러 처리하라고 컴포지터에 시킨다.
+     얻는 것 없이 스크롤 중 가장 비싼 작업만 260ms 연장하는 선언이다. */
+  transition:
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+/* 스크롤 시 JS가 붙인다. 배경을 반투명 + 블러로 띄워 본문과 분리한다. */
+.site-header.is-stuck {
+  background: color-mix(in oklab, var(--c-bg) 80%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-block-end-color: var(--c-border-soft);
+  box-shadow: var(--sh-sm);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;          /* 좁은 화면에서 형제 요소를 밀어내지 않게 */
+  flex: 0 1 auto;
+  font-weight: 700;
+  letter-spacing: var(--ls-tight);
+}
+
+/* 브랜드 마크: 오른쪽 아래 모서리가 접힌 메모지. 로고 이미지 없이 CSS로만. */
+.brand-mark {
+  inline-size: 26px;
+  block-size: 26px;
+  flex: none;
+  border-radius: 7px;
+  background: linear-gradient(145deg, var(--c-accent), var(--c-accent-2));
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%);
+  rotate: -3deg;
+  transition: rotate var(--dur) var(--ease), scale var(--dur) var(--ease);
+}
+
+.brand:hover .brand-mark { rotate: 3deg; scale: 1.06; }
+
+.brand-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-md);
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-inline-size: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.site-nav::-webkit-scrollbar { display: none; }
+
+.nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--h-nav);
+  padding-inline: var(--sp-3);
+  border-radius: var(--r-full);
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text-dim);
+  transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+/* .site-nav는 overflow-x:auto라 세로축도 auto로 계산된다 = 바깥쪽 outline이 잘린다.
+   64px 헤더 안에서 36~44px 알약의 링이 위아래로 깎여 "포커스가 어디 있는지" 사라진다.
+   .cat-item과 같은 해법으로 링을 안쪽에 그린다. */
+.nav-link:focus-visible { outline-offset: -2px; }
+
+.nav-link:hover { color: var(--c-text); background: var(--c-surface-2); }
+
+.nav-link.is-active {
+  color: var(--c-accent);
+  background: var(--c-accent-soft);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-inline-start: auto;   /* 오른쪽 고정 */
+  flex: none;
+}
+
+/* ============================================================================
+   2. 메인 / 푸터
+   ========================================================================= */
+.site-main {
+  flex: 1 1 auto;
+  inline-size: 100%;
+  max-inline-size: var(--w-page);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  padding-block: var(--sp-7) var(--sp-11);
+}
+
+.site-footer {
+  inline-size: 100%;
+  max-inline-size: var(--w-page);
+  margin-inline: auto;
+  padding: var(--sp-8) var(--gutter) var(--sp-9);
+  border-block-start: 1px dashed var(--c-border);
+  color: var(--c-text-mute);
+  font-size: var(--fs-sm);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.site-footer a { color: var(--c-text-dim); text-decoration: underline; }
+.site-footer a:hover { color: var(--c-accent); }
+
+/* ============================================================================
+   3. 히어로
+   ========================================================================= */
+.hero {
+  position: relative;
+  max-inline-size: var(--w-content);
+  padding-block: clamp(var(--sp-7), 5vw, var(--sp-11)) var(--sp-9);
+}
+
+/* 제목 위 짧은 액센트 바 — 로고 없이 페이지의 시작점을 표시한다. */
+.hero::before {
+  content: "";
+  display: block;
+  inline-size: 44px;
+  block-size: 3px;
+  margin-block-end: var(--sp-5);
+  border-radius: var(--r-full);
+  background: linear-gradient(90deg, var(--c-accent), var(--c-accent-2));
+}
+
+.hero-title {
+  font-size: var(--fs-4xl);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  font-weight: 800;
+}
+
+.hero-sub {
+  margin-block-start: var(--sp-4);
+  max-inline-size: 54ch;
+  font-size: var(--fs-lg);
+  line-height: 1.65;
+  color: var(--c-text-dim);
+}
+
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--sp-6);
+  margin-block-start: var(--sp-7);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-inline-start: var(--sp-4);
+  border-inline-start: 2px solid var(--c-border);
+}
+
+.stat-num {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: var(--ls-tight);
+  /* 카운트업 애니메이션 중 숫자 폭이 흔들리지 않게 */
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--ls-wide);
+  color: var(--c-text-mute);
+}
+
+/* ============================================================================
+   4. 툴바 (검색 / 태그칩 / 정렬)
+   스크롤해도 필터가 손에 닿게 헤더 바로 아래에 고정한다.
+   ========================================================================= */
+.toolbar {
+  position: sticky;
+  inset-block-start: var(--h-header);
+  z-index: var(--z-sticky);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sp-3) var(--sp-4);
+  align-items: center;
+
+  /* 배경을 뷰포트 좌우 끝까지 흘려보낸다.
+     거터만큼(-16~-40px)만 빼면 .site-main의 1200px 상자 안에서 배경이 끊겨,
+     1280px 이상에서 고정되는 순간 화면 한가운데에 "블러 처리된 1200px 띠"가
+     세로 경계선 두 줄을 그리며 떠오른다. 그 경계선이 시선을 툴바가 아니라
+     아무 의미 없는 수직선으로 끌고 간다.
+       margin  : 50%(=.site-main 콘텐츠 폭의 절반) - 50vw → 폭이 정확히 100vw가 된다
+       padding : .site-header와 같은 공식으로 내용물을 다시 --w-page 격자에 맞춘다
+     100vw는 스크롤바 폭만큼 넘칠 수 있지만 base.css의 overflow-x:clip이 잘라낸다. */
+  margin-inline: calc(50% - 50vw);
+  padding-block: var(--sp-3);
+  padding-inline: max(var(--gutter), calc((100% - var(--w-page)) / 2 + var(--gutter)));
+  margin-block-end: var(--sp-7);
+
+  background: color-mix(in oklab, var(--c-bg) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border-block-end: 1px solid var(--c-border-soft);
+}
+
+/* 행까지 못박는다. grid-column만 주면 배치가 DOM 순서에 끌려다닌다 —
+   .chips(1/-1)가 .select보다 먼저 오면 auto-placement 커서가 2행 끝까지 밀려
+   .select가 3행으로 튕겨 나가고 툴바 높이가 한 줄 더 늘어난다.
+   행을 고정하면 마크업 순서가 어떻든 "1행: 검색 | 정렬 / 2행: 태그"가 유지된다.
+   (계약서 §4의 DOM 순서 search → select → chips는 시각 순서·탭 순서를 맞추기 위한 것이고,
+    이 규칙은 그 순서가 흐트러져도 레이아웃이 무너지지 않게 하는 안전장치다.) */
+.toolbar .search  { grid-column: 1;      grid-row: 1; }
+.toolbar .select  { grid-column: 2;      grid-row: 1; }
+.toolbar .chips   { grid-column: 1 / -1; grid-row: 2; }
+
+/* ============================================================================
+   5. 보드 (메모지 그리드)
+   CSS columns가 아니라 Grid — 시각 순서 = DOM 순서를 보장해야 한다.
+   min()으로 트랙 최소값을 컨테이너 폭 이하로 묶어 360px에서도 넘치지 않는다.
+   ========================================================================= */
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--memo-min), 100%), 1fr));
+  gap: var(--sp-7) var(--sp-6);
+  align-items: start;
+  /* 카드가 뜨거나 테이프가 위로 삐져나올 여유 */
+  padding-block-start: var(--sp-2);
+}
+
+.board-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--memo-min), 100%), 1fr));
+  gap: var(--sp-7) var(--sp-6);
+}
+
+.board-empty {
+  max-inline-size: 46ch;
+  margin: var(--sp-10) auto;
+  padding: var(--sp-9) var(--sp-6);
+  text-align: center;
+  color: var(--c-text-dim);
+  background: color-mix(in oklab, var(--c-surface) 60%, transparent);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--r-lg);
+  text-wrap: balance;
+}
+
+.board-empty strong { color: var(--c-text); }
+
+/* ============================================================================
+   6. 글 상세
+   ========================================================================= */
+.progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--z-progress);
+  block-size: 3px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.post { display: block; }
+
+/* .post-head의 자식은 .back-link(inline-flex) / 수정 버튼(inline-flex) /
+   .post-cat(inline-flex) / h1 / p / div / ul 이 섞여 있다.
+   블록 흐름에 그대로 두면 앞의 셋이 한 줄에 들어가 붙어 버리고,
+   .back-link의 margin-block-end는 인라인 레벨이라 아예 무시된다(= 세로 여백이 사라진다).
+   그리드로 "1행: 목록으로 | 수정 / 나머지: 전폭 1열"을 못박는다.
+   래퍼 요소를 추가하지 않아도 되므로 계약서 §5 마크업을 건드리지 않는다. */
+.post-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+
+  max-inline-size: var(--w-content);
+  padding-block-end: var(--sp-7);
+  margin-block-end: var(--sp-9);
+  border-block-end: 1px dashed var(--c-border);
+}
+
+.post-head > * { grid-column: 1 / -1; }
+
+.post-head > .back-link { grid-column: 1; grid-row: 1; justify-self: start; }
+
+/* .post-head 안의 .btn은 관리자용 "수정" 하나뿐이다(계약서 §5).
+   admin.js가 지워도 2열이 0폭으로 접혀 1행 레이아웃이 그대로 남는다. */
+.post-head > .btn { grid-column: 2; grid-row: 1; justify-self: end; }
+
+/* inline-flex가 그리드 아이템이 되면 기본 stretch로 전폭을 먹는다. 글자 폭만 쓰게 되돌린다. */
+.post-head > .post-cat { justify-self: start; }
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-block-end: var(--sp-5);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text-mute);
+  transition: color var(--dur-fast) var(--ease), translate var(--dur) var(--ease);
+}
+
+.back-link:hover { color: var(--c-accent); translate: -3px 0; }
+
+.post-title {
+  margin-block-start: var(--sp-3);
+  font-size: var(--fs-3xl);
+  line-height: var(--lh-tight);
+  font-weight: 800;
+}
+
+.post-summary {
+  margin-block-start: var(--sp-4);
+  font-size: var(--fs-lg);
+  line-height: 1.7;
+  color: var(--c-text-dim);
+}
+
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  margin-block-start: var(--sp-6);
+  font-size: var(--fs-sm);
+  color: var(--c-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 메타 항목 사이 점 구분자 — 마크업 추가 없이 구분한다. */
+.post-meta > * + *::before {
+  content: "";
+  display: inline-block;
+  inline-size: 3px;
+  block-size: 3px;
+  margin-inline-end: var(--sp-3);
+  vertical-align: middle;
+  border-radius: var(--r-full);
+  background: var(--c-border);
+}
+
+.post-updated { color: var(--c-text-dim); }
+
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-5);
+}
+
+/* 본문 + 목차 2단. 1024px 미만에서는 목차가 본문 위 카드로 접힌다. */
+.post-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-7);
+}
+
+.post-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-4);
+  margin-block-start: var(--sp-11);
+  padding-block-start: var(--sp-7);
+  border-block-start: 1px dashed var(--c-border);
+}
+
+.post-nav-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+  border: 1px solid var(--c-border-soft);
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--c-surface) 70%, transparent);
+  transition:
+    transform var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.post-nav-item:hover {
+  border-color: var(--c-accent);
+  box-shadow: var(--sh-md);
+  transform: translateY(-2px);
+}
+
+.post-nav-item.is-next { text-align: end; }
+
+.post-nav-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--c-accent);
+}
+
+.post-nav-title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--c-text);
+  /* 두 줄까지만 — 카드 높이가 들쭉날쭉해지는 것을 막는다. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.post-error {
+  max-inline-size: 46ch;
+  margin: var(--sp-11) auto;
+  padding: var(--sp-9) var(--sp-6);
+  text-align: center;
+  color: var(--c-text-dim);
+  background: color-mix(in oklab, var(--c-surface) 60%, transparent);
+  border: 1px dashed var(--c-danger);
+  border-radius: var(--r-lg);
+}
+
+/* ============================================================================
+   7. 에디터 (write.html)
+   ========================================================================= */
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.editor-head {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  background: color-mix(in oklab, var(--c-surface) 88%, transparent);
+  border: 1px solid var(--c-border-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+}
+
+.editor-title {
+  inline-size: 100%;
+  padding-block: var(--sp-2);
+  font-family: var(--ff-display);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: var(--ls-tight);
+  border-block-end: 1px dashed var(--c-border);
+  background: transparent;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.editor-title:focus { border-block-end-color: var(--c-accent); }
+
+.editor-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.editor-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-5);
+  align-items: stretch;
+}
+
+/* 3상태. 1024px 미만에서는 split이라도 세로로 쌓인다. */
+.editor-split[data-mode="write"]   .preview-pane { display: none; }
+.editor-split[data-mode="preview"] .editor-pane  { display: none; }
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  border: 1px solid var(--c-border-soft);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  box-shadow: var(--sh-sm);
+  overflow: hidden;
+}
+
+.editor-area {
+  flex: 1 1 auto;
+  min-block-size: clamp(320px, 52vh, 680px);
+  padding: var(--sp-5);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  letter-spacing: 0;
+  background: transparent;
+  border: 0;
+  resize: vertical;
+  tab-size: 2;
+}
+
+.editor-area:focus-visible { outline-offset: -2px; }
+
+.preview-pane {
+  min-inline-size: 0;
+  padding: var(--sp-6);
+  border: 1px solid var(--c-border-soft);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  box-shadow: var(--sh-sm);
+  overflow: auto;
+  /* 에디터와 나란히 볼 때 한쪽만 길어져도 화면을 밀지 않게 */
+  max-block-size: calc(100dvh - var(--h-header) - var(--sp-10));
+}
+
+/* ============================================================================
+   8. 반응형 — 미디어쿼리는 "배치 전환"에만 쓴다(크기는 clamp이 담당).
+   기준: 360 / 768 / 1024 / 1440
+   ========================================================================= */
+
+/* 아주 좁은 화면: 헤더의 보조 내비가 브랜드와 중복되므로 접는다.
+   (브랜드 자체가 index.html 링크라 이동 경로는 유지된다) */
+@media (max-width: 440px) {
+  .site-nav { display: none; }
+  .hero-stats { gap: var(--sp-4); }
+}
+
+@media (min-width: 768px) {
+  .post-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 이전 글이 없을 때 다음 글이 오른쪽 칸을 지키게 */
+  .post-nav-item.is-next:only-child { grid-column: 2; }
+}
+
+@media (min-width: 1024px) {
+  .post-body {
+    grid-template-columns: minmax(0, 1fr) var(--w-toc);
+    gap: var(--sp-10);
+    align-items: start;
+  }
+  /* 계약서 DOM 순서는 목차 → 본문. 화면에서는 목차를 오른쪽에 둔다. */
+  .post-body > .toc   { grid-column: 2; grid-row: 1; }
+  .post-body > .prose { grid-column: 1; grid-row: 1; }
+
+  .editor-split[data-mode="split"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  /* 넓은 화면에서는 보드 카드를 조금 더 크게 잡아 한 줄에 4장 이상 밀어넣지 않는다.
+     메모지는 '많이'보다 '읽히게' 보여야 한다. */
+  .board, .board-skeleton { --memo-min: 300px; }
+}

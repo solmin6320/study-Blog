@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지).
+     'blogTheme' 문자열은 config.js의 storageKeys.theme과 반드시 같아야 한다. -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('blogTheme');
+      var dark = saved
+        ? saved === 'dark'
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (err) {
+      /* 시크릿 모드 등에서 localStorage가 막혀도 기본 테마로 계속 그린다. */
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+
+<title>메모 블로그</title>
+<meta name="description" content="공부한 내용을 메모지처럼 붙여 두는 개인 학습 블로그.">
+<meta name="color-scheme" content="light dark">
+<!-- 파비콘 404 요청을 만들지 않기 위한 빈 아이콘 -->
+<link rel="icon" href="data:,">
+
+<!-- 로드 순서 고정: tokens → base → layout → components → prose → animations -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/prose.css">
+<link rel="stylesheet" href="css/animations.css">
+
+<!-- 목록 화면은 마크다운을 렌더하지 않는다(요약은 순수 텍스트).
+     그래서 marked / DOMPurify / highlight.js는 여기서 로드하지 않는다 — 상세 페이지의 몫. -->
+<script defer src="js/config.js"></script>
+<script defer src="js/util.js"></script>
+<script defer src="js/store.js"></script>
+<script defer src="js/markdown.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/admin.js"></script>
+<script defer src="js/app.js"></script>
+</head>
+
+<body>
+<a class="sr-only" href="#main">본문 바로가기</a>
+
+<div class="bg-layer" aria-hidden="true">
+  <div class="bg-mesh"></div>
+  <div class="bg-grain"></div>
+</div>
+
+<header class="site-header" id="siteHeader">
+  <a class="brand" href="index.html">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-text" data-site-title>메모 블로그</span>
+  </a>
+  <!-- write.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
+  <nav class="site-nav" aria-label="주요 메뉴">
+    <a class="nav-link is-active" href="index.html">메모</a>
+    <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
+  </nav>
+  <div class="header-actions">
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
+    <a class="btn btn-primary" href="write.html" data-admin-only>새 메모</a>
+  </div>
+</header>
+
+<main class="site-main" id="main">
+
+  <section class="hero">
+    <h1 class="hero-title" data-site-title>메모 블로그</h1>
+    <p class="hero-sub" data-site-sub>공부한 것을 메모지처럼 붙여두는 곳</p>
+    <div class="hero-stats">
+      <div class="stat">
+        <b class="stat-num" data-stat="posts" data-count="0">0</b>
+        <span class="stat-label">메모</span>
+      </div>
+      <div class="stat">
+        <b class="stat-num" data-stat="tags" data-count="0">0</b>
+        <span class="stat-label">태그</span>
+      </div>
+      <div class="stat">
+        <b class="stat-num" data-stat="cats" data-count="0">0</b>
+        <span class="stat-label">분류</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 계약서 10-3. 카테고리는 단일 선택이라 .chip(다중)이 아니라 .cat-item을 쓴다.
+       버튼들은 nav의 직계 자식으로만 둔다 — 모바일에서 .cat-nav 자체가 가로 스크롤 컨테이너가 되어야 하므로
+       중간에 래퍼를 끼우지 않는다. 목록은 app.js가 posts/categories.json으로 다시 그린다. -->
+  <nav class="cat-nav" id="catNav" aria-label="카테고리">
+    <button class="cat-item is-active" type="button" data-cat="*" aria-pressed="true">
+      <span class="cat-name">전체</span><span class="cat-count">0</span>
+    </button>
+  </nav>
+
+  <!-- DOM 순서 = 그리드 배치 순서. layout.css가 .search→1열, .select→2열, .chips→전체폭이라
+       select를 chips보다 먼저 두어야 첫 줄에 나란히 놓인다. -->
+  <section class="toolbar" aria-label="검색과 필터">
+    <div class="search">
+      <label class="sr-only" for="searchInput">메모 검색</label>
+      <input class="search-input" id="searchInput" type="search"
+             placeholder="제목 · 요약 · 태그 검색  ( / )"
+             autocomplete="off" enterkeyhint="search">
+      <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
+    </div>
+    <select class="select" id="sortSelect" aria-label="정렬 기준">
+      <option value="latest">최신순</option>
+      <option value="updated">수정순</option>
+      <option value="title">제목순</option>
+    </select>
+    <div class="chips" id="tagFilters" role="group" aria-label="태그 필터">
+      <button class="chip is-active" type="button" data-tag="*" aria-pressed="true">전체</button>
+    </div>
+  </section>
+
+  <noscript>
+    <!-- JS가 꺼져 있으면 스켈레톤이 영영 남는다. 색·간격 토큰을 쓰지 않는 최소 규칙만 둔다. -->
+    <style>#boardSkeleton { display: none; }</style>
+    <div class="board-empty">
+      <p><strong>자바스크립트가 꺼져 있어요</strong></p>
+      <p>이 블로그는 메모 목록을 자바스크립트로 불러옵니다. 브라우저 설정에서 자바스크립트를 켜 주세요.</p>
+    </div>
+  </noscript>
+
+  <section class="board" id="board" aria-live="polite" aria-label="메모 목록"></section>
+
+  <div class="board-empty" id="boardEmpty" hidden>
+    <p><strong>아직 메모가 없어요</strong></p>
+    <p>write.html 에디터로 첫 메모를 쓰고 posts/&lt;카테고리&gt;/ 폴더에 넣어 보세요.</p>
+  </div>
+
+  <div class="board-skeleton" id="boardSkeleton" aria-hidden="true">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
+  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+</footer>
+
+<div class="toast-area" id="toastArea" aria-live="polite"></div>
+</body>
+</html>

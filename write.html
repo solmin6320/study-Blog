@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지).
+     'blogTheme' 문자열은 config.js의 storageKeys.theme과 반드시 같아야 한다. -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('blogTheme');
+      var dark = saved
+        ? saved === 'dark'
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (err) {
+      /* 시크릿 모드 등에서 localStorage가 막혀도 기본 테마로 계속 그린다. */
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+
+<title>새 메모 쓰기 · 메모 블로그</title>
+<meta name="description" content="마크다운으로 메모를 쓰고 .md와 index.json 파일로 내보내는 작성 도구.">
+<meta name="color-scheme" content="light dark">
+<!-- 작성 도구는 검색 결과에 뜰 이유가 없다(공개돼도 무해하지만 색인은 불필요). -->
+<meta name="robots" content="noindex, nofollow">
+<!-- 파비콘 404 요청을 만들지 않기 위한 빈 아이콘 -->
+<link rel="icon" href="data:,">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+<!-- 로드 순서 고정: tokens → base → layout → components → prose → animations
+     highlight.js의 테마 CSS는 로드하지 않는다. 코드블록 배색은 prose.css가 토큰으로 직접 그린다. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/prose.css">
+<link rel="stylesheet" href="css/animations.css">
+
+<!-- 미리보기는 post.html과 똑같은 경로(marked → DOMPurify → highlight.js)로 그려야
+     "보이는 대로 저장된다"가 성립한다. 그래서 상세 페이지와 같은 고정 버전을 그대로 싣는다.
+     CDN 버전은 config.js의 cdn 값과 일치시킨다.
+     defer 스크립트는 문서 순서대로 실행되므로 라이브러리가 항상 먼저 준비된다. -->
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<!-- 의존 순서: config → util → store → markdown → ui → admin → editor -->
+<script defer src="js/config.js"></script>
+<script defer src="js/util.js"></script>
+<script defer src="js/store.js"></script>
+<script defer src="js/markdown.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/admin.js"></script>
+<script defer src="js/editor.js"></script>
+</head>
+
+<body>
+<a class="sr-only" href="#main">본문 바로가기</a>
+
+<div class="bg-layer" aria-hidden="true">
+  <div class="bg-mesh"></div>
+  <div class="bg-grain"></div>
+</div>
+
+<header class="site-header" id="siteHeader">
+  <a class="brand" href="index.html">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-text" data-site-title>메모 블로그</span>
+  </a>
+  <!-- index.html / post.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
+  <nav class="site-nav" aria-label="주요 메뉴">
+    <a class="nav-link" href="index.html">메모</a>
+    <a class="nav-link is-active" href="write.html" data-admin-only>쓰기</a>
+  </nav>
+  <div class="header-actions">
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
+    <!-- 수정 모드(?id=)에서 빈 편집기로 돌아오는 길. 방문자에겐 admin.js가 DOM에서 지운다. -->
+    <a class="btn btn-primary" href="write.html" data-admin-only>새 메모</a>
+  </div>
+</header>
+
+<main class="site-main" id="main">
+
+  <!-- 관리자 스위치가 꺼져 있을 때 editor.js가 hidden을 푼다(editor.js의 #editorVisitor).
+       에디터 자체를 막지는 않는다 — 정적 사이트라 막을 수도 없고, 막는 시늉을 할 이유도 없다. -->
+  <div class="editor-visitor" id="editorVisitor" hidden>
+    <p><strong>이 페이지는 블로그 주인의 작성 도구입니다.</strong></p>
+    <p>자유롭게 써 보셔도 됩니다. 다만 내보낸 파일을 저장소에 커밋할 수 있는 사람만 실제로 글을 올릴 수 있고,
+       여기서 쓴 내용은 이 브라우저에만 임시로 남습니다.</p>
+  </div>
+
+  <noscript>
+    <!-- 에디터는 전부 자바스크립트다. 꺼져 있으면 빈 입력칸만 남아 이유를 알 수 없다. -->
+    <div class="editor-visitor">
+      <p><strong>자바스크립트가 꺼져 있어요</strong></p>
+      <p>미리보기 · 임시저장 · 파일 내보내기가 모두 자바스크립트로 동작합니다.
+         브라우저 설정에서 자바스크립트를 켜고 새로고침해 주세요.</p>
+    </div>
+  </noscript>
+
+  <div class="editor">
+    <div class="editor-head">
+      <label class="sr-only" for="fTitle">제목</label>
+      <input class="editor-title" id="fTitle" type="text" placeholder="제목" title="제목"
+             autocomplete="off" spellcheck="false" maxlength="120">
+
+      <!-- 수정 모드(?id=)에서만 editor.js가 문구를 채우고 hidden을 푼다.
+           게시일(created)이 보존된다는 사실을 화면에서 확인할 수 있어야 한다. -->
+      <p class="editor-mode" id="editorMode" hidden></p>
+
+      <!-- 카테고리 = 글이 실제로 들어갈 폴더(posts/<slug>/). 계약서 10-4.
+           목록은 posts/categories.json에서 온다. 그 파일이 아직 없어도 에디터는 살아 있어야 하므로
+           editor.js는 "빈 목록 + 새 카테고리 버튼"만으로도 글을 끝까지 쓸 수 있게 만든다. -->
+      <div class="cat-picker">
+        <label class="sr-only" for="fCategory">카테고리 (글이 저장될 폴더)</label>
+        <select class="field" id="fCategory" title="카테고리 — posts/&lt;폴더명&gt;/ 에 저장됩니다"></select>
+        <button class="btn btn-ghost" type="button" id="btnNewCat"
+                aria-expanded="false" aria-controls="catNew">+ 새 카테고리</button>
+      </div>
+
+      <!-- 표시 이름과 폴더명을 나눠 받는다. 한글 이름은 폴더명이 될 수 없어서
+           slug는 사용자가 영문으로 직접 짓는다(비면 editor.js가 막는다). -->
+      <div class="cat-new" id="catNew" hidden role="group" aria-label="새 카테고리 만들기">
+        <label class="sr-only" for="fNewCatName">새 카테고리 표시 이름</label>
+        <input class="field" id="fNewCatName" type="text" placeholder="표시 이름 (예: 알고리즘)"
+               title="새 카테고리 표시 이름" autocomplete="off" maxlength="40">
+
+        <label class="sr-only" for="fNewCatSlug">새 카테고리 폴더명 (영문 소문자·숫자·하이픈)</label>
+        <input class="field" id="fNewCatSlug" type="text" placeholder="폴더명 (영문: algorithm)"
+               title="폴더명 — posts/&lt;폴더명&gt;/ 이 됩니다. 영문 소문자·숫자·하이픈만"
+               autocomplete="off" spellcheck="false" inputmode="latin">
+
+        <label class="sr-only" for="fNewCatColor">새 카테고리 기본 메모지 색</label>
+        <select class="field" id="fNewCatColor" title="카테고리 기본 메모지 색"></select>
+
+        <button class="btn" type="button" id="btnAddCat">추가</button>
+        <button class="btn btn-ghost" type="button" id="btnCancelCat">취소</button>
+      </div>
+
+      <div class="editor-fields">
+        <label class="sr-only" for="fSummary">한 줄 요약</label>
+        <input class="field" id="fSummary" type="text" placeholder="한 줄 요약" title="한 줄 요약"
+               autocomplete="off" maxlength="160">
+
+        <label class="sr-only" for="fTags">태그 (쉼표로 구분)</label>
+        <input class="field" id="fTags" type="text" placeholder="태그: css, 레이아웃"
+               title="태그 (쉼표로 구분)" autocomplete="off">
+
+        <label class="sr-only" for="fId">파일 id (파일명으로 쓰입니다)</label>
+        <input class="field" id="fId" type="text" placeholder="파일 id (제목에서 자동 생성)"
+               title="파일 id — posts/&lt;카테고리&gt;/&lt;id&gt;.md 의 파일명이 됩니다"
+               autocomplete="off" spellcheck="false">
+
+        <label class="sr-only" for="fColor">메모지 색</label>
+        <!-- 색 목록은 config.js의 colors 배열이 진실. editor.js가 option을 채운다. -->
+        <select class="field" id="fColor" title="메모지 색"></select>
+
+        <label class="switch">
+          <input type="checkbox" id="fPinned"><span class="switch-ui" aria-hidden="true"></span>고정
+        </label>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn" type="button" id="btnPreviewToggle" title="나란히 · 작성만 · 미리보기만 전환">미리보기</button>
+        <button class="btn btn-primary" type="button" id="btnExport"
+                title="파일로 내보내기 (Ctrl+S)" aria-keyshortcuts="Control+S">파일로 내보내기</button>
+      </div>
+
+      <!-- 내보내지 않은 변경이 있으면 editor.js가 .is-dirty를 붙인다. -->
+      <p class="editor-status" id="editorStatus" role="status" aria-live="polite">준비 중…</p>
+    </div>
+
+    <div class="editor-split" id="editorSplit" data-mode="split">
+      <div class="editor-pane">
+        <div class="md-toolbar" id="mdToolbar" role="group" aria-label="마크다운 서식">
+          <button class="md-btn" type="button" data-md="bold" aria-label="굵게" title="굵게 (Ctrl+B)" aria-keyshortcuts="Control+B">B</button>
+          <button class="md-btn" type="button" data-md="italic" aria-label="기울임" title="기울임 (Ctrl+I)" aria-keyshortcuts="Control+I">I</button>
+          <button class="md-btn" type="button" data-md="heading" aria-label="제목" title="제목">H2</button>
+          <button class="md-btn" type="button" data-md="link" aria-label="링크" title="링크">링크</button>
+          <button class="md-btn" type="button" data-md="code" aria-label="인라인 코드" title="인라인 코드">코드</button>
+          <button class="md-btn" type="button" data-md="codeblock" aria-label="코드 블록" title="코드 블록">코드블록</button>
+          <button class="md-btn" type="button" data-md="list" aria-label="목록" title="목록">목록</button>
+          <button class="md-btn" type="button" data-md="quote" aria-label="인용" title="인용">인용</button>
+          <button class="md-btn" type="button" data-md="table" aria-label="표" title="표">표</button>
+          <button class="md-btn" type="button" data-md="hr" aria-label="구분선" title="구분선">구분선</button>
+        </div>
+
+        <label class="sr-only" for="fBody">본문 (마크다운)</label>
+        <textarea class="editor-area" id="fBody" spellcheck="false" autocomplete="off"
+                  placeholder="여기에 마크다운으로 씁니다. Tab은 들여쓰기, Ctrl+B 굵게, Ctrl+S 내보내기."></textarea>
+      </div>
+
+      <!-- 미리보기는 상세 페이지와 같은 .prose 안에서 그린다. 여기 보이는 모습이 곧 글의 모습이다. -->
+      <div class="preview-pane" role="region" aria-label="미리보기">
+        <div class="prose" id="preview"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
+  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+</footer>
+
+<div class="toast-area" id="toastArea" aria-live="polite"></div>
+</body>
+</html>

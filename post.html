@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지).
+     'blogTheme' 문자열은 config.js의 storageKeys.theme과 반드시 같아야 한다. -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('blogTheme');
+      var dark = saved
+        ? saved === 'dark'
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (err) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+
+<title>메모 · 메모 블로그</title>
+<meta name="description" content="메모 상세 — 공부한 내용을 정리한 글.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+<!-- 로드 순서 고정: tokens → base → layout → components → prose → animations
+     highlight.js의 테마 CSS는 로드하지 않는다. 코드블록 배색은 prose.css가 토큰으로 직접 그린다. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/prose.css">
+<link rel="stylesheet" href="css/animations.css">
+
+<!-- CDN 고정 버전 — config.js의 cdn 값과 일치시킨다.
+     defer 스크립트는 문서 순서대로 실행되므로 라이브러리가 항상 먼저 준비된다. -->
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script defer src="js/config.js"></script>
+<script defer src="js/util.js"></script>
+<script defer src="js/store.js"></script>
+<script defer src="js/markdown.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/admin.js"></script>
+<script defer src="js/post.js"></script>
+</head>
+
+<body>
+<a class="sr-only" href="#postBody">본문 바로가기</a>
+
+<div class="bg-layer" aria-hidden="true">
+  <div class="bg-mesh"></div>
+  <div class="bg-grain"></div>
+</div>
+
+<div class="progress">
+  <div class="progress-bar" id="progressBar" role="progressbar"
+       aria-label="읽기 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+</div>
+
+<header class="site-header" id="siteHeader">
+  <a class="brand" href="index.html">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-text" data-site-title>메모 블로그</span>
+  </a>
+  <!-- write.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
+  <nav class="site-nav" aria-label="주요 메뉴">
+    <a class="nav-link" href="index.html">메모</a>
+    <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
+  </nav>
+  <div class="header-actions">
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
+    <a class="btn btn-primary" href="write.html" data-admin-only>새 메모</a>
+  </div>
+</header>
+
+<main class="site-main" id="main">
+
+  <!-- is-loading은 post.js가 렌더를 마치면 떼어낸다. 빈 머리말이 깜빡이는 것을 막기 위함. -->
+  <article class="post is-loading" id="post">
+    <header class="post-head">
+      <a class="back-link" href="index.html">← 목록으로</a>
+      <a class="btn btn-ghost" id="postEdit" href="write.html" data-admin-only>수정</a>
+
+      <!-- 계약서 §5는 span이지만, 카테고리에서 같은 분류의 글 목록으로 건너갈 수 있어야 해서 a로 둔다.
+           base.css의 a{color:inherit}가 있어 .post-cat 스타일은 그대로 적용된다. -->
+      <a class="post-cat" id="postCat" href="index.html"></a>
+      <h1 class="post-title" id="postTitle">메모를 불러오는 중…</h1>
+      <p class="post-summary" id="postSummary"></p>
+
+      <div class="post-meta">
+        <time class="post-date" id="postDate"></time>
+        <time class="post-updated" id="postUpdated"></time>
+        <span class="post-read" id="postRead"></span>
+      </div>
+
+      <ul class="post-tags" id="postTags"></ul>
+    </header>
+
+    <div class="post-body">
+      <!-- 제목이 2개 미만이면 post.js가 계속 감춰 둔다. 그래서 시작 상태도 hidden이다. -->
+      <aside class="toc" id="toc" hidden>
+        <p class="toc-title">목차</p>
+        <nav class="toc-list" aria-label="본문 목차"></nav>
+      </aside>
+
+      <div class="prose" id="postBody"></div>
+    </div>
+
+    <nav class="post-nav" id="postNav" aria-label="이전 글 · 다음 글" hidden></nav>
+  </article>
+
+  <!-- 없는 글 id · 네트워크 실패 · file:// 접근 — post.js가 문구를 바꿔 끼운다.
+       JS가 문구를 채우지 못하더라도 목록으로 돌아갈 길은 마크업에 남겨 둔다. -->
+  <div class="post-error" id="postError" hidden>
+    <p><strong>메모를 찾을 수 없어요</strong></p>
+    <p>주소의 글 id가 바뀌었거나 파일이 아직 posts/&lt;카테고리&gt;/ 폴더에 없을 수 있습니다.</p>
+    <a class="btn btn-primary" href="index.html">메모 보드로 돌아가기</a>
+  </div>
+
+  <noscript>
+    <div class="post-error">
+      <p><strong>자바스크립트가 꺼져 있어요</strong></p>
+      <p>본문은 마크다운 파일을 읽어 그립니다. 브라우저 설정에서 자바스크립트를 켜 주세요.</p>
+      <a class="btn btn-primary" href="index.html">메모 보드로 돌아가기</a>
+    </div>
+  </noscript>
+
+</main>
+
+<footer class="site-footer">
+  <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
+  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+</footer>
+
+<div class="toast-area" id="toastArea" aria-live="polite"></div>
+</body>
+</html>

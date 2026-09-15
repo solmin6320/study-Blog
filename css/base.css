@@ -1,0 +1,276 @@
+/* ============================================================================
+   base.css — 리셋, 루트 타이포, 링크·폼 기본, 포커스 링, 배경 레이어
+   의존: tokens.css (먼저 로드되어야 한다)
+   ========================================================================= */
+
+/* ── 리셋 ────────────────────────────────────────────────────────────────
+   최소한만 건드린다. 마크다운이 만드는 태그는 prose.css가 다시 정의하므로
+   여기서는 "구조적으로 위험한 기본값"만 제거한다. */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+* { margin: 0; }
+
+html {
+  /* rem 기준 유지 — 유동 타이포는 clamp()가 담당한다. */
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* 고정 헤더에 가려지지 않게 해시 이동 여백 확보 */
+  scroll-padding-top: calc(var(--h-header) + var(--sp-6));
+  /* transform으로 기울인 메모지가 뷰포트 밖으로 1~2px 새는 것을 막는다.
+     clip은 hidden과 달리 스크롤 컨테이너를 만들지 않아 sticky가 살아남는다. */
+  overflow-x: clip;
+  /* 스크롤바 자리를 항상 비워 둔다. 모달이 열려 스크롤을 잠글 때(components.css)와
+     짧은 페이지↔긴 페이지를 오갈 때 본문이 좌우로 튀는 것을 막는다. */
+  scrollbar-gutter: stable;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+
+  font-family: var(--ff-sans);
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  color: var(--c-text);
+  background: var(--c-bg);
+
+  /* 한글 자간을 살짝 좁혀 단어 덩어리가 뭉치게 한다(가독성 향상). */
+  letter-spacing: -0.003em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  /* 한글은 단어 단위 줄바꿈이 어색할 때가 많아 keep-all로 어절 보존 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* 제목 기본값 — 위계는 각 컴포넌트/prose에서 다시 지정한다. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  line-height: var(--lh-head);
+  letter-spacing: var(--ls-tight);
+  text-wrap: balance;
+}
+
+p { text-wrap: pretty; }
+
+ul, ol { padding: 0; list-style: none; }
+
+img, picture, svg, video, canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: var(--c-border-soft);
+}
+
+address { font-style: normal; }
+
+/* [hidden] 속성은 컴포넌트의 display 선언에 덮이므로 전역에서 못박는다.
+   .search-clear / .board-empty / .post-error 가 이 속성으로 토글된다. */
+[hidden] { display: none !important; }
+
+/* ── 링크 ──────────────────────────────────────────────────────────────── */
+a {
+  color: inherit;
+  text-decoration: none;
+  /* 링크 밑줄이 한글 받침을 자르지 않게 */
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: from-font;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+a:hover { color: var(--c-accent); }
+
+/* ── 폼 기본 ─────────────────────────────────────────────────────────────
+   폼 요소는 폰트를 상속하지 않으므로 명시적으로 물려준다. */
+input, button, textarea, select {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+button { cursor: pointer; }
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+textarea { resize: vertical; }
+
+/* 검색 인풋의 브라우저 기본 X 버튼 제거 — .search-clear로 대체한다. */
+input[type="search"] { -webkit-appearance: none; appearance: none; }
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+::placeholder { color: var(--c-text-mute); opacity: 1; }
+
+/* 체크박스·라디오·진행바의 액센트를 테마와 일치시킨다. */
+input[type="checkbox"], input[type="radio"], progress { accent-color: var(--c-accent); }
+
+/* ── 포커스 링 ───────────────────────────────────────────────────────────
+   전 컴포넌트 공통. :focus-visible만 쓰므로 마우스 클릭에는 나타나지 않는다.
+   outline-offset로 요소와 링 사이를 띄워 어떤 배경에서도 링이 읽힌다. */
+/* border-radius를 여기서 주면 안 된다 —
+   포커스가 들어오는 순간 요소의 "모양"이 바뀐다(알약 버튼이 각지는 식).
+   요즘 브라우저의 outline은 요소 자신의 border-radius를 알아서 따라 그린다. */
+:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 3px;
+}
+
+/* 기본 outline은 제거하되 :focus-visible은 위 규칙이 책임진다. */
+:focus:not(:focus-visible) { outline: none; }
+
+::selection {
+  background: var(--c-selection);
+  color: var(--c-text);
+}
+
+/* ── 스크롤바 ────────────────────────────────────────────────────────────
+   표/코드블록의 가로 스크롤이 자주 보이므로 테마에 맞춘다. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-border) transparent;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: var(--r-full);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--c-text-mute); background-clip: padding-box; }
+
+/* ── 관리자 전용 요소 안전장치 ────────────────────────────────────────────
+   JS가 DOM에서 제거하는 것이 원칙이지만, 제거 전 한 프레임의 깜빡임과
+   JS 실패 시의 노출을 막는 2중 방어. */
+.admin-off [data-admin-only] { display: none !important; }
+
+/* ============================================================================
+   배경 레이어 — 단색 배경 금지 원칙
+   .bg-layer  : 고정 컨테이너(색 덩어리를 가두는 클리핑 박스)
+   .bg-mesh   : 아주 느리게 떠다니는 radial-gradient 색 덩어리 3개
+   .bg-grain  : feTurbulence 기반 미세 노이즈 = 종이 질감
+   세 레이어 모두 z-index:-1 / pointer-events:none 이라 본문 상호작용에 영향 없음.
+   ========================================================================= */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg);
+  pointer-events: none;
+  overflow: hidden;
+  /* 바닥 자체도 단색이 아니라 미세한 수직 그라디언트 */
+  background:
+    linear-gradient(180deg,
+      var(--c-bg) 0%,
+      var(--c-bg-2) 100%);
+  contain: strict;
+}
+
+.bg-mesh,
+.bg-grain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg);
+  pointer-events: none;
+}
+
+/* 색 덩어리 3개: .bg-mesh 자신 + ::before + ::after.
+   각 덩어리는 개별 transform 애니메이션(animations.css)으로 서로 다른 궤도를 돈다.
+   레이아웃 속성이 아니라 transform만 움직이므로 리플로우가 없다. */
+.bg-mesh { overflow: hidden; contain: strict; }
+
+.bg-mesh::before,
+.bg-mesh::after {
+  content: "";
+  position: absolute;
+  border-radius: var(--r-full);
+  opacity: var(--mesh-alpha);
+  filter: blur(var(--mesh-blur));
+  will-change: transform;
+}
+
+/* 덩어리 1 — 좌상단, 가장 큼 */
+.bg-mesh::before {
+  inline-size: clamp(340px, 52vw, 760px);
+  block-size:  clamp(340px, 52vw, 760px);
+  inset-block-start: -14vh;
+  inset-inline-start: -12vw;
+  background: radial-gradient(circle at 50% 50%,
+    var(--mesh-1) 0%,
+    color-mix(in oklab, var(--mesh-1) 55%, transparent) 42%,
+    transparent 68%);
+}
+
+/* 덩어리 2 — 우측 중단, 따뜻한 톤 */
+.bg-mesh::after {
+  inline-size: clamp(300px, 46vw, 680px);
+  block-size:  clamp(300px, 46vw, 680px);
+  inset-block-start: 22vh;
+  inset-inline-end: -16vw;
+  background: radial-gradient(circle at 50% 50%,
+    var(--mesh-2) 0%,
+    color-mix(in oklab, var(--mesh-2) 55%, transparent) 42%,
+    transparent 68%);
+}
+
+/* 덩어리 3 — 하단 중앙. .bg-layer의 의사요소를 빌려 세 번째 레이어를 만든다. */
+.bg-layer::before {
+  content: "";
+  position: absolute;
+  inline-size: clamp(320px, 50vw, 720px);
+  block-size:  clamp(320px, 50vw, 720px);
+  inset-block-end: -22vh;
+  inset-inline-start: 28vw;
+  border-radius: var(--r-full);
+  opacity: calc(var(--mesh-alpha) * .85);
+  filter: blur(var(--mesh-blur));
+  background: radial-gradient(circle at 50% 50%,
+    var(--mesh-3) 0%,
+    color-mix(in oklab, var(--mesh-3) 55%, transparent) 42%,
+    transparent 68%);
+  will-change: transform;
+}
+
+/* 노이즈: SVG feTurbulence를 data-URI로. 외부 이미지 요청이 없다.
+   baseFrequency가 높을수록 입자가 곱다(0.82 = 종이 섬유 수준).
+   saturate 0으로 무채색화해 어떤 테마에서도 색을 오염시키지 않는다. */
+.bg-grain {
+  opacity: var(--grain-alpha);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 220px 220px;
+  /* 라이트에서는 어둡게 눌러 종이결, 다크에서는 밝게 띄워 입자감을 낸다. */
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme="dark"] .bg-grain { mix-blend-mode: overlay; }
+
+/* 저사양 환경 배려: blur 3개는 GPU 부하가 있다.
+   투명도 감소 선호 시 덩어리를 걷어내고 노이즈만 남긴다. */
+@media (prefers-reduced-transparency: reduce) {
+  .bg-mesh::before,
+  .bg-mesh::after,
+  .bg-layer::before { display: none; }
+}

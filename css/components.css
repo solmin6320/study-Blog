@@ -1,0 +1,1553 @@
+/* ============================================================================
+   components.css — 재사용 부품
+   메모지 / 버튼 / 칩 / 태그 / 검색 / 셀렉트 / 토스트 / 모달 / 스켈레톤 /
+   목차 / 진행바 / 글 내비 / 에디터 폼 부품 / 접근성 유틸
+   의존: tokens.css, base.css, layout.css
+   ── 이 파일의 규칙 ─────────────────────────────────────────────────────────
+   · 리터럴 색상값 금지. tokens.css 변수 + color-mix()만 쓴다.
+   · 움직임은 transform / translate / rotate / scale / opacity 로만 만든다.
+   · "상태의 등장·퇴장 모션"은 animations.css가 가져간다. 여기는 정지 상태의 생김새.
+   · 변형 속성 분업:
+       transform            → 진입 애니메이션 전용 (animations.css)
+       translate/rotate/scale → 상호작용(hover/active) 전용 (이 파일)
+     둘을 나눠 써야 진입 애니메이션과 hover가 서로를 덮어쓰지 않는다.
+   ========================================================================= */
+
+/* ============================================================================
+   1. 메모지 — 이 블로그의 얼굴
+   ----------------------------------------------------------------------------
+   지역 변수 2개로 6색을 돌린다.
+     --paper : 종이 바탕색
+     --ink   : 그 종이에 맞는 잉크색(카테고리·핀·태그·링크 hover)
+   --ink는 상속되므로 .tag 같은 하위 부품이 var(--ink, var(--c-accent))로
+   "메모 안이면 메모 색, 밖이면 사이트 액센트"를 자동으로 고른다.
+   ========================================================================= */
+.memo {
+  --paper: var(--c-surface);
+  --ink:   var(--c-accent);
+  /* 종이 윗면 광택. 라이트에서는 흰 종이결, 다크에서는 미세한 빛번짐으로 뒤집는다. */
+  --sheen: color-mix(in oklab, var(--c-surface) 55%, transparent);
+
+  position: relative;
+  display: grid;
+  /* 마지막 줄(메타 | 수정버튼)만 2열이 되도록 자동 배치에 맡긴다.
+     .memo-actions가 관리자 모드에서 제거돼도 2열이 0폭으로 접혀 레이아웃이 그대로다. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in oklab, var(--ink) 18%, transparent);
+  color: var(--c-text);
+  box-shadow: var(--sh-memo), var(--sh-ring);
+
+  /* 종이 표면 = 바탕색 + 대각선 광택 + 윗변에서 내려오는 밝기 차.
+     단색 면을 만들지 않는 것이 이 블로그의 배경 원칙이고, 카드도 예외가 아니다. */
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(158deg, var(--sheen) 0%, transparent 44%),
+    radial-gradient(120% 72% at 50% 0%, var(--sheen) 0%, transparent 62%);
+
+  /* 기울기는 JS가 글 id 해시로 계산해 인라인 --rot으로 넣는다(±0.6deg).
+     난수를 쓰면 새로고침마다 각도가 바뀌어 보드 전체가 흔들려 보인다. */
+  rotate: var(--rot, 0deg);
+  transform-origin: 50% 0%;    /* 압정이 박힌 윗변을 축으로 돈다 */
+
+  transition:
+    translate var(--dur) var(--ease),
+    rotate    var(--dur) var(--ease),
+    scale     var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+:root[data-theme="dark"] .memo {
+  --sheen: color-mix(in oklab, var(--c-text) 6%, transparent);
+}
+
+/* 종이 섬유(노이즈). base.css의 .bg-grain과 같은 feTurbulence를 입자만 곱게 써서
+   카드 표면에도 질감을 준다. 세기는 --memo-grain 하나로 테마별 조정된다.
+   외부 이미지 요청 0회, 그리고 넓은 단색 면의 그라디언트 밴딩을 흩뜨리는 효과도 있다. */
+.memo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--memo-grain);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* 다크에서는 눌러서 어둡게 하면 질감이 사라진다. 띄워서 입자감을 만든다. */
+:root[data-theme="dark"] .memo::before { mix-blend-mode: overlay; }
+
+/* 오른쪽 아래가 살짝 들리는 그림자 쐐기. hover에서만 켜서 "종이를 집어 든" 느낌을 준다. */
+.memo::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  inline-size: 56px;
+  block-size: 56px;
+  border-end-end-radius: inherit;
+  background: linear-gradient(315deg, color-mix(in oklab, var(--c-text) 13%, transparent) 0%, transparent 54%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease);
+}
+
+/* ::before가 절대배치라 내용물이 그 아래 깔릴 수 있다. 위치만 잡아 주면 나중에 그려진다. */
+.memo > * { position: relative; }
+
+/* 6색 — tokens.css의 파스텔/다크 표면값을 그대로 받는다. */
+.memo[data-color="amber"] { --paper: var(--memo-amber); --ink: var(--memo-amber-ink); }
+.memo[data-color="mint"]  { --paper: var(--memo-mint);  --ink: var(--memo-mint-ink); }
+.memo[data-color="sky"]   { --paper: var(--memo-sky);   --ink: var(--memo-sky-ink); }
+.memo[data-color="rose"]  { --paper: var(--memo-rose);  --ink: var(--memo-rose-ink); }
+.memo[data-color="lilac"] { --paper: var(--memo-lilac); --ink: var(--memo-lilac-ink); }
+.memo[data-color="lime"]  { --paper: var(--memo-lime);  --ink: var(--memo-lime-ink); }
+
+/* 압정. 카드 윗변 바깥으로 절반쯤 튀어나온다 → .memo에 overflow:hidden을 걸면 안 된다. */
+.memo-pin {
+  position: absolute;
+  inset-block-start: -8px;
+  inset-inline-end: var(--sp-6);
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--r-full);
+  /* 하이라이트(왼쪽 위) + 본체 그라디언트 = 금속 핀 머리의 최소 표현 */
+  background:
+    radial-gradient(circle at 34% 30%,
+      color-mix(in oklab, var(--c-surface) 88%, transparent) 0 16%,
+      transparent 46%),
+    radial-gradient(circle at 62% 70%,
+      color-mix(in oklab, var(--ink) 76%, var(--c-text)) 0%,
+      var(--ink) 72%);
+  box-shadow:
+    0 2px 4px color-mix(in oklab, var(--c-text) 30%, transparent),
+    0 6px 10px -4px color-mix(in oklab, var(--c-text) 26%, transparent);
+  transition: scale var(--dur) var(--ease);
+}
+
+/* 카테고리 — 카드에서 가장 먼저 읽히는 한 단어. 짧은 선으로 눈의 출발점을 만든다. */
+.memo-cat {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.memo-cat::before {
+  content: "";
+  flex: none;
+  inline-size: 14px;
+  block-size: 2px;
+  border-radius: var(--r-full);
+  background: currentColor;
+}
+
+.memo-title {
+  grid-column: 1 / -1;
+  margin-block-start: var(--sp-3);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.42;
+  letter-spacing: var(--ls-tight);
+  /* 제목이 아무리 길어도 카드 높이가 무너지지 않게 3줄에서 자른다. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 카드 전체를 클릭 영역으로. 제목 글자만 누르게 하면 모바일에서 타깃이 너무 작다. */
+.memo-link { color: inherit; }
+
+.memo-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.memo-link:hover { color: var(--ink); }
+
+.memo-summary {
+  grid-column: 1 / -1;
+  margin-block-start: var(--sp-3);
+  font-size: var(--fs-sm);
+  line-height: 1.68;
+  /* 제목(--c-text)과 명확히 다른 층으로 내려 보내되 4.5:1은 지킨다. */
+  color: color-mix(in oklab, var(--c-text) 74%, transparent);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.memo-tags {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-4);
+}
+
+.memo-meta {
+  grid-column: 1;
+  align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sp-3);
+  margin-block-start: var(--sp-5);
+  font-size: var(--fs-xs);
+  color: var(--c-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 날짜 사이 점 구분자 — 마크업을 늘리지 않고 두 time을 분리한다. */
+.memo-meta > * + *::before {
+  content: "";
+  display: inline-block;
+  inline-size: 3px;
+  block-size: 3px;
+  margin-inline-end: var(--sp-3);
+  vertical-align: middle;
+  border-radius: var(--r-full);
+  background: currentColor;
+  opacity: .6;
+}
+
+.memo-updated { color: color-mix(in oklab, var(--ink) 62%, var(--c-text-mute)); }
+
+.memo-actions {
+  grid-column: 2;
+  align-self: center;
+  z-index: 2;                 /* 카드 전체를 덮는 .memo-link::after 위로 올린다 */
+  display: flex;
+  gap: var(--sp-1);
+  margin-block-start: var(--sp-5);
+  margin-inline-start: var(--sp-3);
+}
+
+.memo-act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 30px;
+  padding-inline: var(--sp-3);
+  border-radius: var(--r-full);
+  border: 1px solid color-mix(in oklab, var(--ink) 26%, transparent);
+  background: color-mix(in oklab, var(--c-surface) 55%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink);
+  transition: background-color var(--dur-fast) var(--ease), scale var(--dur-fast) var(--ease);
+}
+
+.memo-act:hover { background: color-mix(in oklab, var(--ink) 14%, var(--c-surface)); }
+.memo-act:active { scale: .96; }
+
+/* 고정 글 — 더 세게 눌러 박은 압정 + 진한 테두리 + 한 단계 높은 층위. */
+.memo.is-pinned {
+  border-color: color-mix(in oklab, var(--ink) 40%, transparent);
+  box-shadow: var(--sh-memo-hover), var(--sh-ring);
+}
+
+.memo.is-pinned .memo-pin { scale: 1.18; }
+
+.memo.is-pinned .memo-pin::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: var(--r-full);
+  border: 1.5px solid color-mix(in oklab, var(--ink) 42%, transparent);
+}
+
+/* 검색·태그로 걸러진 카드. display:none이라야 그리드 트랙이 실제로 접힌다.
+   퇴장 페이드는 animations.css가 allow-discrete로 얹는다(미지원 브라우저는 즉시 사라짐). */
+.memo.is-hidden {
+  display: none;
+  opacity: 0;
+  scale: .96;
+  pointer-events: none;
+}
+
+/* 포커스: 제목 글자에만 링을 그리면 카드가 선택된 게 보이지 않는다. 카드째 링을 준다. */
+@supports selector(:has(*)) {
+  .memo:has(.memo-link:focus-visible) {
+    outline: 2px solid var(--c-focus);
+    outline-offset: 3px;
+    rotate: 0deg;
+  }
+  .memo:has(.memo-link:focus-visible) .memo-link:focus-visible { outline: none; }
+}
+
+/* hover가 있는 기기에서만 "기울기가 펴지며 떠오르기". 터치 기기에선 hover가 고착된다. */
+@media (hover: hover) and (pointer: fine) {
+  .memo:hover {
+    rotate: 0deg;
+    translate: 0 -5px;
+    scale: 1.012;
+    box-shadow: var(--sh-memo-hover), var(--sh-ring);
+    border-color: color-mix(in oklab, var(--ink) 34%, transparent);
+  }
+  .memo:hover::after,
+  .memo:focus-within::after { opacity: 1; }
+  .memo:hover .memo-pin { scale: 1.1; }
+
+  /* 수정 버튼은 평소엔 종이 위의 군더더기다. 카드에 손이 올라올 때만 꺼낸다. */
+  .memo-actions {
+    opacity: 0;
+    translate: 0 -4px;
+    transition: opacity var(--dur) var(--ease), translate var(--dur) var(--ease);
+  }
+  .memo:hover .memo-actions,
+  .memo:focus-within .memo-actions { opacity: 1; translate: 0 0; }
+}
+
+/* ============================================================================
+   2. 버튼
+   ========================================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  /* --h-control은 coarse 포인터에서 tokens.css가 44px로 올린다(터치 타깃). */
+  min-block-size: var(--h-control);
+  padding-inline: var(--sp-5);
+  border-radius: var(--r-full);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  box-shadow: var(--sh-sm);
+
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--c-text);
+
+  transition:
+    translate var(--dur-fast) var(--ease),
+    scale var(--dur-fast) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.btn:hover {
+  translate: 0 -1px;
+  border-color: color-mix(in oklab, var(--c-accent) 45%, var(--c-border));
+  box-shadow: var(--sh-md);
+}
+
+.btn:active { translate: 0 0; scale: .985; box-shadow: var(--sh-sm); }
+
+.btn-primary {
+  border-color: transparent;
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  /* 채움 버튼은 위쪽에 얇은 하이라이트를 넣어야 납작해 보이지 않는다. */
+  box-shadow: var(--sh-md), inset 0 1px 0 color-mix(in oklab, var(--c-on-accent) 22%, transparent);
+}
+
+.btn-primary:hover {
+  background: color-mix(in oklab, var(--c-accent) 88%, var(--c-text));
+  border-color: transparent;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--c-text-dim);
+}
+
+.btn-ghost:hover {
+  background: var(--c-surface-2);
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--c-text);
+}
+
+.btn-danger {
+  border-color: transparent;
+  background: var(--c-danger);
+  color: var(--c-on-accent);
+  box-shadow: var(--sh-md), inset 0 1px 0 color-mix(in oklab, var(--c-on-accent) 22%, transparent);
+}
+
+.btn-danger:hover {
+  background: color-mix(in oklab, var(--c-danger) 88%, var(--c-text));
+  border-color: transparent;
+}
+
+/* 아이콘 전용 정사각 버튼. 글자 라벨이 없으므로 HTML이 aria-label을 반드시 준다. */
+.icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--h-control);
+  block-size: var(--h-control);
+  flex: none;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: var(--fs-sm);
+  color: var(--c-text-dim);
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    scale var(--dur-fast) var(--ease);
+}
+
+.icon-btn:hover {
+  background: var(--c-surface-2);
+  border-color: var(--c-border-soft);
+  color: var(--c-text);
+}
+
+.icon-btn:active { scale: .94; }
+
+/* ── 테마 토글 아이콘 ───────────────────────────────────────────────────────
+   ui.js가 버튼 내용을 비워 두므로 아이콘은 여기서 그린다(SVG 파일 요청 0회).
+   라이트 = 광선 8개 달린 해, 다크 = 마스크로 베어 낸 초승달. 둘 다 currentColor. */
+#themeToggle::before {
+  content: "";
+  inline-size: 15px;
+  block-size: 15px;
+  border-radius: var(--r-full);
+  background: currentColor;
+  transition: box-shadow var(--dur) var(--ease), scale var(--dur) var(--ease);
+}
+
+:root:not([data-theme="dark"]) #themeToggle::before {
+  scale: .62;
+  /* spread를 음수로 줄여 4px짜리 광선 점 8개를 만든다. */
+  box-shadow:
+    0 -13px 0 -3.5px currentColor,  0 13px 0 -3.5px currentColor,
+    -13px 0 0 -3.5px currentColor,  13px 0 0 -3.5px currentColor,
+    -9px -9px 0 -4px currentColor,  9px -9px 0 -4px currentColor,
+    -9px 9px 0 -4px currentColor,   9px 9px 0 -4px currentColor;
+}
+
+:root[data-theme="dark"] #themeToggle::before {
+  scale: 1;
+  box-shadow: none;
+  -webkit-mask-image: radial-gradient(circle at 116% -6%, transparent 54%, currentColor 56%);
+  mask-image: radial-gradient(circle at 116% -6%, transparent 54%, currentColor 56%);
+}
+
+/* ============================================================================
+   3. 칩 / 태그
+   ========================================================================= */
+
+/* 칩 줄은 항상 1줄 + 가로 스크롤. 줄바꿈을 허용하면 sticky 툴바 높이가
+   태그 개수에 따라 널뛰어 본문이 위아래로 밀린다. */
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  /* 포커스 링이 잘리지 않게 위아래 여유를 준다(스크롤 컨테이너는 outline을 자른다). */
+  padding-block: var(--sp-1);
+  scroll-padding-inline: var(--sp-4);
+}
+
+.chips::-webkit-scrollbar { display: none; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+  min-block-size: var(--h-control);
+  padding-inline: var(--sp-4);
+  border-radius: var(--r-full);
+  border: 1px solid var(--c-border);
+  background: color-mix(in oklab, var(--c-surface) 70%, transparent);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--c-text-dim);
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    scale var(--dur-fast) var(--ease);
+}
+
+/* .chips는 overflow-x:auto → 세로축도 auto로 계산되어 바깥쪽 outline을 잘라 먹는다.
+   padding-block: 4px로는 링(2px + offset 3px = 5px)이 1px 모자라고,
+   줄의 첫 칩·마지막 칩은 좌우로도 잘린다. 패딩으로는 못 고치는 문제라
+   .cat-item과 같은 해법(링을 안쪽에 그리기)으로 통일한다. */
+.chip:focus-visible { outline-offset: -2px; }
+
+.chip:hover { color: var(--c-text); border-color: color-mix(in oklab, var(--c-accent) 40%, var(--c-border)); }
+.chip:active { scale: .96; }
+
+.chip.is-active {
+  background: var(--c-accent-soft);
+  border-color: color-mix(in oklab, var(--c-accent) 55%, transparent);
+  color: color-mix(in oklab, var(--c-accent) 82%, var(--c-text));
+}
+
+/* 태그. 메모 안에서는 종이 잉크색, 바깥(글 상세)에서는 사이트 액센트를 쓴다. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 24px;
+  padding-inline: var(--sp-3);
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--ink, var(--c-accent)) 13%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: color-mix(in oklab, var(--ink, var(--c-accent)) 88%, var(--c-text));
+}
+
+.tag::before {
+  content: "#";
+  margin-inline-end: 1px;
+  opacity: .55;
+}
+
+/* 글 상세의 태그는 링크다(post.js). 터치 타깃을 확보하고 hover를 살린다. */
+.post-tags .tag { min-block-size: 30px; padding: 0; }
+
+.post-tags .tag > a {
+  display: inline-flex;
+  align-items: center;
+  block-size: 100%;
+  padding-inline: var(--sp-3);
+  border-radius: inherit;
+  color: inherit;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.post-tags .tag > a:hover {
+  background: color-mix(in oklab, var(--c-accent) 18%, transparent);
+  color: inherit;
+}
+
+/* ============================================================================
+   4. 검색 / 셀렉트
+   ========================================================================= */
+.search {
+  position: relative;
+  display: block;
+  min-inline-size: 0;
+  color: var(--c-text-mute);   /* 돋보기·X 글리프가 이 색을 currentColor로 받는다 */
+}
+
+/* 돋보기: 렌즈(::before) + 손잡이(::after). 아이콘 파일 요청 없이 2px 선으로 그린다. */
+.search::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset-inline-start: var(--sp-4);
+  inset-block-start: calc(50% - 8px);
+  inline-size: 11px;
+  block-size: 11px;
+  border: 2px solid currentColor;
+  border-radius: var(--r-full);
+  opacity: .6;
+  pointer-events: none;
+}
+
+.search::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset-inline-start: calc(var(--sp-4) + 10px);
+  inset-block-start: calc(50% + 2px);
+  inline-size: 2px;
+  block-size: 7px;
+  border-radius: var(--r-full);
+  background: currentColor;
+  rotate: -45deg;
+  transform-origin: 50% 0%;
+  opacity: .6;
+  pointer-events: none;
+}
+
+.search-input {
+  inline-size: 100%;
+  block-size: var(--h-control);
+  padding-inline: calc(var(--sp-4) + 22px) calc(var(--sp-2) + 36px);
+  border-radius: var(--r-full);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  box-shadow: var(--sh-sm);
+  font-size: var(--fs-sm);
+  color: var(--c-text);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.search-input:hover { border-color: color-mix(in oklab, var(--c-accent) 35%, var(--c-border)); }
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--c-accent);
+  box-shadow: var(--sh-sm), 0 0 0 3px color-mix(in oklab, var(--c-accent) 20%, transparent);
+}
+
+/* 입력이 있을 때만 JS가 hidden을 떼어 낸다. 내용은 비어 있으므로 X를 CSS로 그린다. */
+.search-clear {
+  position: absolute;
+  z-index: 2;
+  inset-inline-end: var(--sp-2);
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--r-full);
+  background: var(--c-surface-2);
+  color: var(--c-text-dim);
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), scale var(--dur-fast) var(--ease);
+}
+
+.search-clear::before,
+.search-clear::after {
+  content: "";
+  position: absolute;
+  inline-size: 11px;
+  block-size: 1.5px;
+  border-radius: var(--r-full);
+  background: currentColor;
+}
+
+.search-clear::before { rotate: 45deg; }
+.search-clear::after  { rotate: -45deg; }
+
+.search-clear:hover {
+  background: color-mix(in oklab, var(--c-danger) 16%, var(--c-surface-2));
+  color: var(--c-danger);
+}
+
+.search-clear:active { scale: .9; }
+
+/* 셀렉트: 네이티브 화살표를 지우고 그라디언트 두 장으로 caret을 그린다.
+   select에는 의사요소를 붙일 수 없어 background-image가 유일하게 안전한 방법이다. */
+.select,
+select.field {
+  -webkit-appearance: none;
+  appearance: none;
+  min-block-size: var(--h-control);
+  padding-inline: var(--sp-4) calc(var(--sp-4) + 18px);
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
+  background-color: var(--c-surface);
+  box-shadow: var(--sh-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text);
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right var(--sp-4) top calc(50% - 2px), right calc(var(--sp-4) - 5px) top calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.select:hover,
+select.field:hover { border-color: color-mix(in oklab, var(--c-accent) 35%, var(--c-border)); }
+
+.select:focus,
+select.field:focus {
+  outline: none;
+  border-color: var(--c-accent);
+  box-shadow: var(--sh-sm), 0 0 0 3px color-mix(in oklab, var(--c-accent) 20%, transparent);
+}
+
+/* ============================================================================
+   5. 토스트
+   등장/퇴장 모션(.is-visible)은 animations.css가 담당한다.
+   ========================================================================= */
+.toast-area {
+  position: fixed;
+  z-index: var(--z-toast);
+  inset-block-end: var(--sp-5);
+  inset-inline-end: var(--sp-5);
+  inset-inline-start: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  pointer-events: none;        /* 빈 영역이 본문 클릭을 가로채지 않게 */
+}
+
+.toast {
+  --toast-accent: var(--c-text-dim);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-inline-size: min(38ch, 100%);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
+  border-inline-start: 3px solid var(--toast-accent);
+  background: color-mix(in oklab, var(--c-surface) 92%, transparent);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  box-shadow: var(--sh-lg);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--c-text);
+  text-wrap: pretty;
+}
+
+.toast::before {
+  content: "";
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: var(--r-full);
+  background: var(--toast-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--toast-accent) 22%, transparent);
+}
+
+.toast.is-ok   { --toast-accent: var(--c-ok); }
+.toast.is-warn { --toast-accent: var(--c-warn); }
+.toast.is-err  { --toast-accent: var(--c-danger); }
+
+@media (min-width: 768px) {
+  .toast-area { inset-inline-start: auto; max-inline-size: var(--w-toast); }
+}
+
+/* ============================================================================
+   6. 모달
+   열림/닫힘 모션은 animations.css. 여기는 상자와 배치만.
+   ========================================================================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: color-mix(in oklab, var(--c-scrim) 58%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  inline-size: min(var(--w-modal), 100%);
+  max-block-size: min(80dvh, 42rem);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  box-shadow: var(--sh-lg);
+  overflow: hidden;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4) var(--sp-6);
+  border-block-end: 1px solid var(--c-border-soft);
+}
+
+.modal-head > h2 {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  min-inline-size: 0;
+}
+
+.modal-body {
+  padding: var(--sp-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  color: var(--c-text-dim);
+}
+
+.modal-body > p + p { margin-block-start: var(--sp-3); }
+.modal-body strong { color: var(--c-text); font-weight: 700; }
+
+.modal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-6) var(--sp-5);
+  border-block-start: 1px solid var(--c-border-soft);
+  background: color-mix(in oklab, var(--c-surface-2) 55%, transparent);
+}
+
+/* 배경 스크롤 잠금.
+   base.css에서 html이 overflow-x:clip이라 "스크롤 컨테이너는 html"이다.
+   body에만 overflow:hidden을 걸면 잠기지 않으므로 :has로 html까지 잠근다.
+   (base.css의 scrollbar-gutter:stable 덕에 잠금 순간 본문이 옆으로 튀지 않는다) */
+body.modal-open { overflow: hidden; }
+:root:has(body.modal-open) { overflow: hidden; }
+
+/* ============================================================================
+   7. 스켈레톤 / 빈 상태 / 오류 상태
+   ========================================================================= */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--c-surface-2) 80%, var(--c-bg));
+  border: 1px solid var(--c-border-soft);
+}
+
+/* 카드 자리표시자는 실제 메모지와 비슷한 높이여야 로드 후 화면이 튀지 않는다. */
+.board-skeleton .skeleton {
+  block-size: clamp(168px, 24vh, 208px);
+  border-radius: var(--r-md);
+}
+
+/* 빈 상태·오류 상태의 상자 자체는 layout.css가 그린다. 여기서는 내용물만. */
+.board-empty p,
+.post-error p { margin-block-start: var(--sp-2); }
+
+.board-empty > p:first-child,
+.post-error > p:first-child { margin-block-start: 0; }
+
+.board-empty strong,
+.post-error strong {
+  display: block;
+  margin-block-end: var(--sp-2);
+  font-family: var(--ff-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.board-empty .btn,
+.post-error .btn { margin-block-start: var(--sp-6); }
+
+/* ============================================================================
+   8. 목차
+   ========================================================================= */
+.toc {
+  min-inline-size: 0;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-3);
+  border: 1px solid var(--c-border-soft);
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--c-surface) 62%, transparent);
+}
+
+.toc-title {
+  margin-inline-start: var(--sp-3);
+  margin-block-end: var(--sp-3);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--c-text-mute);
+}
+
+.toc-list {
+  display: flex;
+  flex-direction: column;
+  /* 모바일에서는 본문 위에 얹히므로 높이를 제한해 스크롤로 접는다. */
+  max-block-size: 38vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.toc-item {
+  display: block;
+  padding: var(--sp-2) var(--sp-3);
+  border-inline-start: 2px solid var(--c-border-soft);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--c-text-mute);
+  transition:
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+/* .toc-list는 overflow-y:auto → 가로축도 auto로 계산되어 링의 좌우가 잘린다. */
+.toc-item:focus-visible { outline-offset: -2px; }
+
+.toc-item:hover {
+  color: var(--c-text);
+  background: color-mix(in oklab, var(--c-surface-2) 70%, transparent);
+  border-inline-start-color: var(--c-border);
+}
+
+.toc-item.is-h3 {
+  padding-inline-start: var(--sp-6);
+  font-size: var(--fs-xs);
+}
+
+/* 현재 위치. 왼쪽 2px 레일이 통째로 액센트로 바뀌어 "여기까지 읽었다"를 알린다. */
+.toc-item.is-active {
+  color: color-mix(in oklab, var(--c-accent) 85%, var(--c-text));
+  border-inline-start-color: var(--c-accent);
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .toc {
+    position: sticky;
+    inset-block-start: calc(var(--h-header) + var(--sp-6));
+  }
+  .toc-list { max-block-size: calc(100dvh - var(--h-header) - var(--sp-12)); }
+}
+
+/* ============================================================================
+   9. 진행바 / 글 내비 / 목록으로
+   ========================================================================= */
+.progress-bar {
+  inline-size: 0;
+  block-size: 100%;
+  border-start-end-radius: var(--r-full);
+  border-end-end-radius: var(--r-full);
+  background: linear-gradient(90deg, var(--c-accent), var(--c-accent-2));
+  box-shadow: 0 0 12px color-mix(in oklab, var(--c-accent) 45%, transparent);
+  /* JS가 매 rAF마다 width를 갱신하므로 transition은 걸지 않는다(이중 보간 = 지연). */
+}
+
+/* 화살표는 마크업이 아니라 방향 클래스에서 파생시킨다. */
+.post-nav-item.is-prev .post-nav-label::before { content: "← "; }
+.post-nav-item.is-next .post-nav-label::after  { content: " →"; }
+
+/* layout.css가 배치를 끝냈다. 여기서는 터치 타깃만 보강한다. */
+.back-link {
+  min-block-size: 36px;
+  padding-block: var(--sp-2);
+  padding-inline-end: var(--sp-2);
+}
+
+/* 계약서 §5의 .post-cat — 제목 위 카테고리 라벨. */
+.post-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--c-accent);
+}
+
+.post-cat::before {
+  content: "";
+  inline-size: 16px;
+  block-size: 2px;
+  border-radius: var(--r-full);
+  background: currentColor;
+  transform-origin: 0 50%;
+  transition: scale var(--dur) var(--ease);
+}
+
+/* ── .post-cat이 링크일 때 (계약서 §5, v3) ────────────────────────────────
+   post.html은 이 라벨을 같은 분류의 목록으로 가는 <a>로 쓴다.
+   그런데 base.css의 a:hover는 --c-accent이고 .post-cat의 평상시 색도 --c-accent다.
+   → 마우스를 올려도 픽셀 하나 바뀌지 않는다. 링크인 줄 알 방법이 없다.
+   또 글자 높이(≈14px)가 전부라 WCAG 2.5.8(터치 타깃)도 통과하지 못한다.
+
+   그래서 세 가지를 동시에 준다. 하나만으로는 약하다.
+     1) 색이 깊어진다 — .prose a:hover와 같은 어휘(액센트를 본문색 쪽으로 당긴다)
+     2) 앞머리 막대가 자란다 — .memo-cat / .hero::before와 같은 "짧은 액센트 선" 어휘
+     3) 알약 틴트가 깔린다 — .nav-link:hover와 같은 어휘
+   막대는 inline-size가 아니라 scale로 늘린다(레이아웃 재계산 0회). */
+a.post-cat {
+  /* 세로 여백은 터치 타깃용. 음수 마진으로 되돌려 제목과의 간격은 그대로 둔다. */
+  min-block-size: 32px;
+  padding-block: var(--sp-2);
+  padding-inline: var(--sp-3);
+  margin-block: calc(var(--sp-2) * -1);
+  /* 글자가 아니라 앞머리 막대의 왼쪽 끝이 h1의 왼쪽 선과 맞아야 한다. */
+  margin-inline-start: calc(var(--sp-3) * -1);
+  border-radius: var(--r-full);
+  transition:
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+a.post-cat:hover,
+a.post-cat:focus-visible {
+  color: color-mix(in oklab, var(--c-accent) 78%, var(--c-text));
+  background: var(--c-accent-soft);
+}
+
+a.post-cat:hover::before,
+a.post-cat:focus-visible::before { scale: 1.75 1; }
+
+a.post-cat:active { background: color-mix(in oklab, var(--c-accent) 18%, transparent); }
+
+@media (pointer: coarse) {
+  a.post-cat { min-block-size: var(--h-control); }
+}
+
+.post-read { font-variant-numeric: tabular-nums; }
+
+/* 본문을 받아오기 전 상태. 반쯤 눌러 두면 "곧 채워질 자리"로 읽힌다. */
+.post.is-loading { opacity: .38; pointer-events: none; }
+.post.is-loading .post-body { min-block-size: 46vh; }
+
+/* 탈출구는 잠그지 않는다.
+   .is-loading은 post.js가 렌더를 끝낼 때 뗀다. 그런데 CDN이 막히거나 fetch가
+   응답하지 않아 post.js가 그 지점까지 못 가면 이 클래스가 영영 남고,
+   pointer-events:none 때문에 "← 목록으로"까지 죽어 사용자가 페이지에 갇힌다.
+   로딩 중이라도 뒤로 나가는 길 하나는 항상 살아 있어야 한다. */
+.post.is-loading .back-link { pointer-events: auto; }
+
+/* ============================================================================
+   10. 에디터 부품
+   ========================================================================= */
+.field {
+  min-inline-size: 0;
+  min-block-size: var(--h-control);
+  padding-inline: var(--sp-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+  font-size: var(--fs-sm);
+  color: var(--c-text);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.field:hover { border-color: color-mix(in oklab, var(--c-accent) 32%, var(--c-border)); }
+
+.field:focus {
+  outline: none;
+  background: var(--c-surface);
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--c-accent) 20%, transparent);
+}
+
+/* ── 스위치 ────────────────────────────────────────────────────────────────
+   체크박스는 시각적으로만 감춘다. 제거하면 키보드·스크린리더에서 사라진다. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-block-size: var(--h-control);
+  padding-inline: var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch > input[type="checkbox"] {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.switch-ui {
+  position: relative;
+  flex: none;
+  inline-size: 42px;
+  block-size: 24px;
+  border-radius: var(--r-full);
+  background: var(--c-border);
+  box-shadow: inset 0 1px 2px color-mix(in oklab, var(--c-text) 16%, transparent);
+  transition: background-color var(--dur) var(--ease);
+}
+
+.switch-ui::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: var(--r-full);
+  background: var(--c-surface);
+  box-shadow: var(--sh-sm);
+  transition: translate var(--dur) var(--ease);
+}
+
+.switch > input:checked + .switch-ui { background: var(--c-accent); }
+.switch > input:checked + .switch-ui::before { translate: 18px 0; }
+.switch > input:checked ~ * { color: var(--c-text); }
+
+.switch > input:focus-visible + .switch-ui {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 3px;
+}
+
+/* ── 마크다운 툴바 ───────────────────────────────────────────────────────── */
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border-block-end: 1px solid var(--c-border-soft);
+  background: color-mix(in oklab, var(--c-surface-2) 70%, transparent);
+}
+
+.md-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 34px;
+  min-block-size: 34px;
+  padding-inline: var(--sp-2);
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text-dim);
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    scale var(--dur-fast) var(--ease);
+}
+
+.md-btn:hover {
+  background: var(--c-surface);
+  border-color: var(--c-border-soft);
+  color: var(--c-accent);
+}
+
+.md-btn:active { scale: .92; }
+
+/* ── 저장 상태 ────────────────────────────────────────────────────────────
+   기본은 "저장됨"(초록 점), .is-dirty는 "내보내지 않음"(경고색 + 맥동). */
+.editor-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--c-text-mute);
+  transition: color var(--dur) var(--ease);
+}
+
+.editor-status::before {
+  content: "";
+  flex: none;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-full);
+  background: var(--c-ok);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--c-ok) 20%, transparent);
+  transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.editor-status.is-dirty { color: var(--c-warn); }
+
+.editor-status.is-dirty::before {
+  background: var(--c-warn);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--c-warn) 24%, transparent);
+}
+
+/* 수정 모드 안내 배지(editor.js #editorMode). */
+.editor-mode {
+  display: inline-flex;
+  align-items: center;
+  align-self: start;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-full);
+  background: var(--c-accent-soft);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: color-mix(in oklab, var(--c-accent) 85%, var(--c-text));
+}
+
+/* ============================================================================
+   11. 카테고리 네비게이션 (계약서 §10-3) — index.html의 1차 축
+   ----------------------------------------------------------------------------
+   ⚠ 이 블록의 최우선 목표는 "칩(.chip)과 절대 헷갈리지 않는 것"이다.
+      카테고리 = 단일 선택 / 태그 = 다중 선택. 두 축이 비슷하게 생기면
+      사용자는 "왜 하나만 켜지지?"를 매번 실험으로 알아내야 한다.
+      그래서 다섯 가지를 전부 다르게 만든다.
+
+        축      | .cat-item (카테고리)          | .chip (태그)
+        --------|-------------------------------|---------------------------
+        그릇    | 음각 레일 위에 놓인 탭          | 그릇 없음, 낱개로 떠 있음
+        윤곽    | 사각 라운드(--r-md), 테두리 없음 | 완전 알약(--r-full), 1px 실선
+        글자    | --fs-md / 700                  | --fs-sm / 600
+        색 신호 | 카테고리 색 점 + 색 밑줄        | 없음
+        선택    | 종이가 떠오름(흰 면 + 그림자)   | 액센트 틴트가 채워짐
+
+   위치: .hero 다음, .toolbar 앞. "분류를 고른 뒤 그 안에서 검색·태그"라는
+         순서가 DOM 순서와 시선 순서 양쪽에서 같아야 한다.
+   ========================================================================= */
+.cat-nav {
+  /* 레일 색을 변수로 한 번만 잡는다 — 스크롤 그림자의 '덮개' 색과 같아야 하기 때문.
+     --tab-up / --tab-hover는 자식 .cat-item이 상속해서 쓴다. */
+  --rail:      var(--c-surface-2);
+  --tab-up:    var(--c-surface);
+  --tab-hover: color-mix(in oklab, var(--c-surface) 60%, transparent);
+
+  display: flex;
+  flex-wrap: nowrap;          /* 줄바꿈 금지: 카테고리가 늘어도 높이가 널뛰지 않는다 */
+  gap: var(--sp-1);
+  align-items: stretch;
+  min-inline-size: 0;
+  margin-block-end: var(--sp-6);
+  padding: var(--sp-2);
+  border-radius: var(--r-lg);
+
+  /* 가로 스크롤 + 스냅. 카테고리 10개짜리 모바일이 이 컴포넌트의 기준 시나리오다. */
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: inline proximity;
+  scroll-padding-inline: var(--sp-2);
+  scrollbar-width: none;
+
+  /* 스크롤 그림자 — prose.css의 .table-wrap과 같은 기법.
+     local 배경(레일색 덮개)이 끝에 붙어 있다가 스크롤하면 밀려나고,
+     scroll 배경(그림자)이 드러나 "옆에 더 있다"를 알린다. 자바스크립트 0줄.
+     스크롤할 게 없으면 덮개가 끝까지 덮고 있어 그림자가 아예 안 보인다 —
+     즉 "필요할 때만 나타나는" 어포던스가 CSS만으로 성립한다. */
+  background:
+    linear-gradient(to right, var(--rail) 34%, transparent) 0 0 / 34px 100% no-repeat local,
+    linear-gradient(to left,  var(--rail) 34%, transparent) 100% 0 / 34px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--c-scrim) 22%, transparent), transparent) 0 0 / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--c-scrim) 22%, transparent), transparent) 100% 0 / 12px 100% no-repeat scroll,
+    var(--rail);
+
+  /* 위쪽 안쪽 그림자 = 책상에 파인 홈. 탭이 그 위에 얹혀 있다는 층위를 만든다. */
+  box-shadow: inset 0 1px 2px color-mix(in oklab, var(--c-scrim) 12%, transparent);
+}
+
+.cat-nav::-webkit-scrollbar { display: none; }
+
+/* 다크는 반전이 아니라 재설계다.
+   tokens.css에서 다크의 --c-surface-2(#2a271f)는 --c-surface(#201e18)보다 "밝다".
+   라이트의 값 관계를 그대로 쓰면 레일이 떠 보이고 선택된 탭이 눌려 보여
+   "홈 위에 얹힌 종이"라는 층위가 통째로 뒤집힌다.
+   그래서 다크에서는 레일을 바닥 쪽으로 한 단계 내리고, 뜬 탭을 밝은 면으로 올린다. */
+:root[data-theme="dark"] .cat-nav {
+  --rail:      color-mix(in oklab, var(--c-surface) 75%, var(--c-bg));
+  --tab-up:    var(--c-surface-2);
+  --tab-hover: color-mix(in oklab, var(--c-surface-2) 55%, transparent);
+}
+
+.cat-item {
+  /* 카테고리 색. data-color가 없으면(=전체) 사이트 액센트로 떨어진다. */
+  --cat-ink: var(--c-accent);
+
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  scroll-snap-align: start;
+
+  /* --h-control은 coarse 포인터에서 tokens.css가 44px로 올린다(터치 타깃). */
+  min-block-size: var(--h-control);
+  padding-inline: var(--sp-4);
+  /* 밑줄 자리(2px + 5px)를 아래쪽 패딩으로 확보해 글자와 겹치지 않게 한다. */
+  padding-block: var(--sp-1) calc(var(--sp-1) + 4px);
+
+  border-radius: var(--r-md);
+  background: transparent;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--c-text-dim);
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    scale var(--dur-fast) var(--ease);
+}
+
+/* 스크롤 컨테이너는 바깥쪽 outline을 잘라 먹는다. 링을 안쪽으로 넣는다. */
+.cat-item:focus-visible { outline-offset: -2px; }
+
+.cat-item:hover {
+  color: var(--c-text);
+  background: var(--tab-hover);
+}
+
+.cat-item:active { scale: .97; }
+
+/* 선택됨 = 홈 위로 떠오른 종이 한 장. 메모지 메타포와 같은 어휘를 쓴다. */
+.cat-item.is-active {
+  background: var(--tab-up);
+  color: var(--c-text);
+  box-shadow: var(--sh-sm);
+}
+
+/* 탭 인디케이터. 정지 상태(접힘/펼침)는 여기서, 펴지는 동작은 animations.css에서.
+   animations.css가 없어도 접힌 상태가 유지되도록 transform을 여기에 둔다. */
+.cat-item::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--sp-4);
+  inset-block-end: 5px;
+  block-size: 2px;
+  border-radius: var(--r-full);
+  background: var(--cat-ink);
+  transform: scaleX(0);
+  transform-origin: 0 50%;    /* 왼쪽에서 오른쪽으로 그어진다 = 읽기 방향 */
+}
+
+.cat-item.is-active::after { transform: scaleX(1); }
+
+/* 메모지 6색 — 글에 쓰는 색과 같은 토큰이라 보드와 네비가 같은 언어를 쓴다. */
+.cat-item[data-color="amber"] { --cat-ink: var(--memo-amber-ink); }
+.cat-item[data-color="mint"]  { --cat-ink: var(--memo-mint-ink); }
+.cat-item[data-color="sky"]   { --cat-ink: var(--memo-sky-ink); }
+.cat-item[data-color="rose"]  { --cat-ink: var(--memo-rose-ink); }
+.cat-item[data-color="lilac"] { --cat-ink: var(--memo-lilac-ink); }
+.cat-item[data-color="lime"]  { --cat-ink: var(--memo-lime-ink); }
+
+.cat-dot {
+  flex: none;
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: var(--r-full);
+  background: var(--cat-ink);
+  transition: box-shadow var(--dur) var(--ease);
+}
+
+/* 선택된 항목의 점에만 후광을 둘러 "지금 이 분류"를 한 번 더 못박는다. */
+.cat-item.is-active .cat-dot {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--cat-ink) 22%, transparent);
+}
+
+.cat-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cat-count {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1.6em;
+  padding-inline: var(--sp-1);
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--c-text) 8%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 1.6;
+  /* --c-text-mute를 쓰면 자기 배지 배경(본문색 8% 틴트) 위에서 4.4:1로 떨어진다.
+     이 숫자는 "이 분류에 글이 몇 개인지"라는 실제 정보다. 한 단계 올려 읽히게 한다. */
+  color: var(--c-text-dim);
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.cat-item.is-active .cat-count {
+  background: color-mix(in oklab, var(--cat-ink) 16%, transparent);
+  color: color-mix(in oklab, var(--cat-ink) 85%, var(--c-text));
+}
+
+/* 글이 0개인 분류. opacity로 흐리게 하면 대비가 4.5:1 아래로 떨어진다.
+   "약한 색"이 아니라 "한 단계 낮은 색 토큰"으로 내린다(--c-text-mute = 4.8:1). */
+.cat-item.is-empty { color: var(--c-text-mute); }
+.cat-item.is-empty .cat-dot { background: var(--c-border); }
+.cat-item.is-empty:hover { color: var(--c-text-dim); }
+
+/* ============================================================================
+   12. 카테고리 만들기 (계약서 §10-4) — write.html
+   ========================================================================= */
+.cat-picker {
+  display: flex;
+  flex-wrap: wrap;            /* 360px에서 버튼이 셀렉트 아래로 내려간다 */
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+}
+
+/* 셀렉트가 남는 폭을 먹고, 버튼은 글자 길이만큼만. */
+.cat-picker > .field { flex: 1 1 11rem; min-inline-size: 0; }
+.cat-picker > .btn   { flex: 0 0 auto; }
+
+/* 새 분류 입력칸. 폴더를 하나 더 만드는 일이라 "지금 평소와 다른 걸 하고 있다"가
+   보여야 한다. 파선 + 액센트 틴트로 본 폼에서 한 겹 떼어 놓는다. */
+.cat-new {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px dashed color-mix(in oklab, var(--c-accent) 45%, var(--c-border));
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--c-accent-soft) 55%, transparent);
+}
+
+.cat-new > .field { flex: 1 1 9rem; min-inline-size: 0; background: var(--c-surface); }
+.cat-new > .btn   { flex: 0 0 auto; }
+
+/* slug는 한 번 정하면 못 바꾼다(계약서 §10-2). 그 사실은 입력 "전에" 보여야 한다. */
+.cat-new-hint {
+  flex: 1 0 100%;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--c-text-dim);
+}
+
+.cat-new-hint strong { color: var(--c-text); font-weight: 700; }
+
+/* ============================================================================
+   13. 푸터 (계약서 §10-5)
+   본문과 분리는 되어야 하지만 무게를 실으면 안 된다.
+   layout.css의 파선 경계가 "찢어 낸 자리"를 만들고,
+   여기서는 그 아래 두 줄의 위계만 잡는다.
+   ========================================================================= */
+
+/* 주 문구. --c-text-mute(4.8:1)로 두면 "읽지 말라"는 신호가 된다.
+   이 문장은 읽으라고 쓴 문장이므로 한 단계 올린다(--c-text-dim = 약 8:1). */
+.footer-note {
+  max-inline-size: 52ch;
+  margin-inline: auto;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--c-text-dim);
+  text-wrap: balance;
+}
+
+/* 히어로는 액센트 바로 열고 푸터는 같은 바로 닫는다 — 페이지의 앞뒤가 맞물린다.
+   .hero::before(44×3px)보다 작게 해서 "끝"이 "시작"보다 조용하게. */
+.footer-note::before {
+  content: "";
+  display: block;
+  inline-size: 24px;
+  block-size: 2px;
+  margin: 0 auto var(--sp-5);
+  border-radius: var(--r-full);
+  background: linear-gradient(90deg, var(--c-accent), var(--c-accent-2));
+  opacity: .6;
+}
+
+/* 보조. 사이트명 · 연도. 여기는 흘려봐도 되는 정보라 한 단계 더 내린다. */
+.footer-meta {
+  margin-block-start: var(--sp-3);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-wide);
+  color: var(--c-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   14. 방문자 안내 (write.html #editorVisitor)
+   관리자 스위치가 꺼져 있을 때 에디터 위에 뜨는 설명 박스.
+   ========================================================================= */
+.editor-visitor {
+  max-inline-size: 64ch;
+  margin-block-end: var(--sp-6);
+  padding: var(--sp-5) var(--sp-6);
+  border: 1px dashed color-mix(in oklab, var(--c-accent) 42%, var(--c-border));
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--c-accent-soft) 50%, transparent);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--c-text-dim);
+  text-wrap: pretty;
+}
+
+.editor-visitor > p + p { margin-block-start: var(--sp-3); }
+.editor-visitor strong { color: var(--c-text); font-weight: 700; }
+
+/* ============================================================================
+   15. 접근성 유틸
+   ========================================================================= */
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 포커스로 들어오면 드러나는 "본문 바로가기" 링크용.
+   ⚠ :focus-visible만 걸면 안 된다. 스크립트가 .focus()로 포커스를 옮기거나
+     :focus-visible 판정이 보수적인 브라우저에서는 링크가 영영 화면에 나타나지 않는다.
+     스킵 링크는 "키보드 사용자의 유일한 탈출구"라 한 경우라도 새면 실패다.
+     .sr-only는 포커스 가능한 요소에 거의 안 붙으므로 :focus를 켜도 오작동이 없다. */
+.sr-only:focus,
+.sr-only:focus-visible {
+  position: fixed;
+  z-index: var(--z-toast);
+  inset-block-start: var(--sp-3);
+  inset-inline-start: var(--sp-3);
+  inline-size: auto;
+  block-size: auto;
+  /* 드러난 상태에서도 44px 터치 타깃을 지킨다. */
+  min-block-size: var(--h-control);
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: var(--sp-3) var(--sp-5);
+  overflow: visible;
+  clip-path: none;
+  white-space: nowrap;
+  border-radius: var(--r-full);
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-weight: 700;
+  box-shadow: var(--sh-lg);
+  /* base.css의 기본 링은 --c-focus(=액센트)라 액센트 알약 위에서 사라진다.
+     드러난 스킵 링크만 본문색 링으로 바꿔 어떤 테마에서도 테두리가 보이게 한다. */
+  outline: 2px solid var(--c-text);
+  outline-offset: 3px;
+}
+
+/* ============================================================================
+   16. 터치 기기 보정 — 손가락은 마우스 커서보다 굵다.
+   ========================================================================= */
+/* .btn / .icon-btn / .chip / .cat-item / .search-input / .select / .field 는
+   --h-control을 쓰므로 tokens.css의 coarse 분기에서 자동으로 44px가 된다.
+   여기서는 그 밖의 작은 표적만 키운다. */
+@media (pointer: coarse) {
+  .md-btn { min-inline-size: var(--h-control); min-block-size: var(--h-control); }
+  .memo-act { min-block-size: var(--h-control); padding-inline: var(--sp-4); }
+  .toc-item { padding-block: var(--sp-3); }
+  .post-tags .tag { min-block-size: var(--h-control); }
+  .back-link { min-block-size: var(--h-control); }
+
+  /* .search-clear만 44px가 아니다. 44px 인풋 "안에" 들어가는 컨트롤이라
+     같은 높이로 키우면 알약을 꽉 채운 원판이 되어 입력칸처럼 안 보인다.
+     40px로 두고 주변 24px 이상을 비워 WCAG 2.2 간격 예외를 만족시킨다.
+     inset을 4px로 줄여야 40px 버튼이 인풋의 오른쪽 패딩(44px) 안에 정확히 들어간다 —
+     8px로 두면 버튼이 4px만큼 글자 영역을 덮는다. */
+  .search-clear { inline-size: 40px; block-size: 40px; inset-inline-end: var(--sp-1); }
+}
