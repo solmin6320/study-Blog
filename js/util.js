@@ -70,7 +70,7 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  /* 문자열 → 32bit 정수. 메모지 기울기를 id로부터 결정적으로 만들 때 쓴다. */
+  /* 문자열 → 32bit 정수. "같은 입력이면 언제나 같은 결과"가 필요할 때 쓴다(난수 대용). */
   function hashCode(str) {
     var text = String(str);
     var h = 5381;
@@ -136,19 +136,14 @@
     };
   }
 
-  /* 2026.09.13 — 목록 카드용 */
+  /* 2026.09.13 — 목록의 날짜 열과 상세의 날짜 줄이 쓴다.
+     두 화면이 같은 형식을 쓰는 것은 의도다(같은 글의 같은 날짜가 다르게 보이면 안 된다). */
   function fmtDot(iso) {
     var p = parts(iso);
     return p ? p.y + '.' + p.m + '.' + p.d : '';
   }
 
-  /* 09.13 — 같은 해의 수정 날짜를 짧게 붙일 때 */
-  function fmtDotShort(iso) {
-    var p = parts(iso);
-    return p ? p.m + '.' + p.d : '';
-  }
-
-  /* 2026년 9월 13일 — 상세 페이지용 */
+  /* 2026년 9월 13일 — 에디터 안내문처럼 문장 속에 들어가는 자리 */
   function fmtKo(iso) {
     var p = parts(iso);
     return p ? p.y + '년 ' + Number(p.m) + '월 ' + Number(p.d) + '일' : '';
@@ -193,21 +188,6 @@
   }
 
   function todayStampKst() { return nowIsoKst().slice(0, 10); }
-
-  /* ---------- 읽기 시간 ---------- */
-
-  /* 코드블록·이미지·링크 문법을 걷어낸 뒤 공백 제외 글자 수로 계산한다(한글 분당 500자). */
-  function readingMinutes(markdown) {
-    var text = String(markdown || '')
-      .replace(/```[\s\S]*?```/g, ' ')
-      .replace(/`[^`]*`/g, ' ')
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-      .replace(/[#>*_~|\-]/g, ' ')
-      .replace(/\s+/g, '');
-    var minutes = Math.ceil(text.length / CFG.read.charsPerMinute);
-    return Math.max(CFG.read.minMinutes, minutes || 0);
-  }
 
   /* ---------- 타이밍 ---------- */
 
@@ -340,10 +320,10 @@
     qs: qs, qsa: qsa, el: el, on: on, append: append, clear: clear, setHidden: setHidden,
     escapeHtml: escapeHtml, hashCode: hashCode, hashUnit: hashUnit,
     slugHeading: slugHeading, slugAscii: slugAscii, clamp: clamp, pad2: pad2,
-    toDate: toDate, fmtDot: fmtDot, fmtDotShort: fmtDotShort, fmtKo: fmtKo, yearOf: yearOf,
+    toDate: toDate, fmtDot: fmtDot, fmtKo: fmtKo, yearOf: yearOf,
     fmtRelative: fmtRelative, sameMoment: sameMoment,
     nowIsoKst: nowIsoKst, todayStampKst: todayStampKst,
-    readingMinutes: readingMinutes, debounce: debounce, rafThrottle: rafThrottle,
+    debounce: debounce, rafThrottle: rafThrottle,
     getQuery: getQuery, setQuery: setQuery,
     copyText: copyText, download: download, toast: toast
   };

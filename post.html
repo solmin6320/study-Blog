@@ -20,21 +20,21 @@
   })();
 </script>
 
-<title>메모 · 메모 블로그</title>
-<meta name="description" content="메모 상세 — 공부한 내용을 정리한 글.">
+<title>글 · 메모 블로그</title>
+<meta name="description" content="공부한 내용을 정리한 글.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:,">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<!-- 로드 순서 고정: tokens → base → layout → components → prose → animations
-     highlight.js의 테마 CSS는 로드하지 않는다. 코드블록 배색은 prose.css가 토큰으로 직접 그린다. -->
+<!-- 로드 순서 고정: tokens → base → layout → components → prose (계약서 §11)
+     highlight.js의 테마 CSS는 로드하지 않는다. 코드블록 배색은 prose.css가 토큰으로 직접 그린다.
+     animations.css는 v3.0에서 파일째 삭제됐다. -->
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/prose.css">
-<link rel="stylesheet" href="css/animations.css">
 
 <!-- CDN 고정 버전 — config.js의 cdn 값과 일치시킨다.
      defer 스크립트는 문서 순서대로 실행되므로 라이브러리가 항상 먼저 준비된다.
@@ -64,65 +64,52 @@
 <!-- 계약서 §3-1: 세 페이지 모두 #main으로 간다. #postBody는 렌더 전에는 빈 컨테이너다. -->
 <a class="sr-only" href="#main">본문 바로가기</a>
 
-<div class="bg-layer" aria-hidden="true">
-  <div class="bg-mesh"></div>
-  <div class="bg-grain"></div>
-</div>
-
-<div class="progress">
-  <div class="progress-bar" id="progressBar" role="progressbar"
-       aria-label="읽기 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
-</div>
-
-<header class="site-header" id="siteHeader">
-  <a class="brand" href="index.html">
-    <span class="brand-mark" aria-hidden="true"></span>
-    <span class="brand-text" data-site-title>메모 블로그</span>
-  </a>
-  <!-- write.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
+<header class="site-header">
+  <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
   <nav class="site-nav" aria-label="주요 메뉴">
-    <a class="nav-link" href="index.html">메모</a>
+    <a class="nav-link" href="index.html">글</a>
     <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
   </nav>
-  <div class="header-actions">
-    <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
-    <a class="btn btn-primary" href="write.html" data-admin-only>새 메모</a>
-  </div>
+  <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
 
 <!-- tabindex="-1"은 스킵 링크의 착지점이다. 없으면 스크롤만 되고 포커스는 헤더에 남는다(계약서 §3-1). -->
 <main class="site-main" id="main" tabindex="-1">
 
+  <!-- 탈출구는 .post 밖에 둔다. CDN이 막혀 post.js가 .is-loading을 떼지 못해도 살아 있어야 한다. -->
+  <a class="back-link" href="index.html">← 목록</a>
+
   <!-- is-loading은 post.js가 렌더를 마치면 떼어낸다. 빈 머리말이 깜빡이는 것을 막기 위함. -->
   <article class="post is-loading" id="post">
     <header class="post-head">
-      <a class="back-link" href="index.html">← 목록으로</a>
-      <a class="btn btn-ghost" id="postEdit" href="write.html" data-admin-only>수정</a>
-
-      <!-- 계약서 §5는 span이지만, 카테고리에서 같은 분류의 글 목록으로 건너갈 수 있어야 해서 a로 둔다.
-           base.css의 a{color:inherit}가 있어 .post-cat 스타일은 그대로 적용된다. -->
-      <a class="post-cat" id="postCat" href="index.html"></a>
-      <h1 class="post-title" id="postTitle">메모를 불러오는 중…</h1>
+      <h1 class="post-title" id="postTitle">글을 불러오는 중…</h1>
       <p class="post-summary" id="postSummary"></p>
 
-      <div class="post-meta">
+      <!-- 순서 고정: 날짜 줄 → 분류·태그 줄 (계약서 §5).
+           구분자 ·는 CSS가 그린다. created와 같은 날이면 post.js가 #postUpdated에 hidden을 붙인다. -->
+      <p class="post-dates">
         <time class="post-date" id="postDate"></time>
-        <time class="post-updated" id="postUpdated"></time>
-        <span class="post-read" id="postRead"></span>
-      </div>
+        <time class="post-updated" id="postUpdated" hidden></time>
+      </p>
 
-      <ul class="post-tags" id="postTags"></ul>
+      <div class="post-meta">
+        <!-- 분류는 같은 분류의 목록으로 가는 유일한 경로라 <a>다(계약서 §5-3). -->
+        <a class="post-cat" id="postCat" href="index.html"></a>
+        <ul class="post-tags" id="postTags"></ul>
+      </div>
     </header>
 
-    <div class="post-body">
-      <!-- 제목이 2개 미만이면 post.js가 계속 감춰 둔다. 그래서 시작 상태도 hidden이다. -->
-      <aside class="toc" id="toc" hidden>
-        <p class="toc-title">목차</p>
-        <nav class="toc-list" aria-label="본문 목차"></nav>
-      </aside>
+    <!-- h2가 3개 미만이면 post.js가 계속 감춰 둔다. 그래서 시작 상태도 hidden이다(계약서 §5-4). -->
+    <aside class="toc" id="toc" hidden>
+      <p class="toc-title">목차</p>
+      <nav class="toc-list" aria-label="본문 목차"></nav>
+    </aside>
 
-      <div class="prose" id="postBody"></div>
-    </div>
+    <div class="prose" id="postBody"></div>
+
+    <footer class="post-foot">
+      <a class="btn" id="postEdit" href="write.html" data-admin-only>수정</a>
+    </footer>
 
     <nav class="post-nav" id="postNav" aria-label="이전 글 · 다음 글" hidden></nav>
   </article>
@@ -130,16 +117,16 @@
   <!-- 없는 글 id · 네트워크 실패 · file:// 접근 — post.js가 문구를 바꿔 끼운다.
        JS가 문구를 채우지 못하더라도 목록으로 돌아갈 길은 마크업에 남겨 둔다. -->
   <div class="post-error" id="postError" hidden>
-    <p><strong>메모를 찾을 수 없어요</strong></p>
-    <p>주소의 글 id가 바뀌었거나 파일이 아직 posts/&lt;카테고리&gt;/ 폴더에 없을 수 있습니다.</p>
-    <a class="btn btn-primary" href="index.html">메모 보드로 돌아가기</a>
+    <p><strong>글을 찾을 수 없습니다</strong></p>
+    <p>주소의 글 id가 바뀌었거나 파일이 아직 posts/&lt;분류&gt;/ 폴더에 없을 수 있습니다.</p>
+    <a class="btn" href="index.html">목록으로 돌아가기</a>
   </div>
 
   <noscript>
     <div class="post-error">
-      <p><strong>자바스크립트가 꺼져 있어요</strong></p>
+      <p><strong>자바스크립트가 꺼져 있습니다</strong></p>
       <p>본문은 마크다운 파일을 읽어 그립니다. 브라우저 설정에서 자바스크립트를 켜 주세요.</p>
-      <a class="btn btn-primary" href="index.html">메모 보드로 돌아가기</a>
+      <a class="btn" href="index.html">목록으로 돌아가기</a>
     </div>
   </noscript>
 

@@ -277,17 +277,21 @@
     return { headings: opts.headings === false ? [] : collectHeadings(container) };
   }
 
-  /* 목차 렌더. 계약서 5절: <a class="toc-item is-h2 is-active" href="#..."> */
+  /* 목차 렌더. 계약서 §5-4: <a class="toc-item is-h2" href="#...">
+     등급 클래스(is-h2 / is-h3)는 생성 시점에 정해져 바뀌지 않는다(계약서 §8).
+     .is-active와 data-target은 폐기했다 — 스크롤 스파이가 사라져 "지금 여기"를 쓸 사람이 없다.
+     조각에 모아 한 번에 붙인다(항목마다 리플로우를 만들지 않는다). */
   function buildToc(headings, navEl) {
-    U.clear(navEl);
+    var frag = document.createDocumentFragment();
     headings.forEach(function (h) {
-      navEl.appendChild(U.el('a', {
+      frag.appendChild(U.el('a', {
         class: 'toc-item is-h' + h.level,
         href: '#' + encodeURIComponent(h.id),
-        'data-target': h.id,
         text: h.text
       }));
     });
+    U.clear(navEl);
+    navEl.appendChild(frag);
     return U.qsa('.toc-item', navEl);
   }
 

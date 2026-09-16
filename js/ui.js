@@ -1,5 +1,11 @@
-/* ui.js — 세 페이지가 공유하는 화면 동작: 테마 토글, 헤더 stuck, 진입 애니메이션,
-   토스트(util 재노출), 모달(포커스 트랩 + ESC), 숫자 카운트업. */
+/* ui.js — 세 페이지가 공유하는 화면 동작: 테마 토글, 토스트(util 재노출),
+   모달(포커스 트랩 + ESC), 공통 셸 부트스트랩.
+
+   계약서 v3.0(§12 #31~#33)에서 아래 셋이 폐기됐다. 되살리지 않는다.
+     initHeader()  — 헤더가 static이 되어 sticky 상태 클래스가 없다(§3). 스크롤 핸들러 하나가 함께 사라졌다.
+     reveal()      — 진입 애니메이션 폐기(§0-2·§8-2). 움직일 대상(메모지 카드)이 아예 없어졌다.
+     countUp()     — 히어로 통계 폐기(§0-2). 셀 숫자가 없다.
+   이 셋을 부르던 곳은 app.js(Blog.ui.reveal / Blog.ui.countUp)이며 frontend-dev가 자기 파일에서 지운다. */
 (function (window, document) {
   'use strict';
 
@@ -9,6 +15,8 @@
 
   var THEME_KEY = CFG.storageKeys.theme;
 
+  /* CSS 쪽은 base.css 끝의 @media (prefers-reduced-motion: reduce) 블록이 전부 처리한다.
+     이건 그 판정을 JS에서도 물어볼 수 있게 남겨 둔 창구다(타이머·스크롤 같은 CSS 밖의 동작용). */
   function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
@@ -61,72 +69,6 @@
       if (mq.addEventListener) mq.addEventListener('change', onChange);
       else if (mq.addListener) mq.addListener(onChange);
     }
-  }
-
-  /* ---------- 헤더 ---------- */
-
-  function initHeader() {
-    var header = document.getElementById('siteHeader');
-    if (!header) return;
-    var update = U.rafThrottle(function () {
-      header.classList.toggle('is-stuck', window.scrollY > 8);
-    });
-    update();
-    U.on(window, 'scroll', update, { passive: true });
-  }
-
-  /* ---------- 진입 애니메이션 ----------
-     CSS가 .memo를 처음에 숨겨 놓고 .is-visible에서 드러낸다.
-     IO가 없거나 모션을 줄이는 설정이면 즉시 보이게 해서 "영영 안 보이는" 사고를 막는다.
-
-     계약서 v2.2 §8-2: [data-reveal] 훅은 폐기됐다(정적 마크업에 "JS가 성공해야 보임"을
-     덧씌우는 경로라 실패 모드만 늘렸다). 기본 선택자는 .memo 하나뿐이고,
-     정적 마크업의 진입 모션은 animations.css의 CSS 단독 애니메이션이 맡는다.
-     .is-hidden을 떼는 모든 경로에서 이 함수를 다시 불러야 한다(§4 — 라운드 2 치명 T1). */
-
-  var observer = null;
-
-  function ensureObserver() {
-    if (observer || !window.IntersectionObserver) return observer;
-    observer = new window.IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-visible');
-        observer.unobserve(entry.target);
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
-    return observer;
-  }
-
-  function reveal(nodes) {
-    var list = Array.isArray(nodes) ? nodes : U.qsa(nodes || '.memo');
-    if (!list.length) return;
-    if (prefersReducedMotion() || !window.IntersectionObserver) {
-      list.forEach(function (node) { node.classList.add('is-visible'); });
-      return;
-    }
-    var io = ensureObserver();
-    list.forEach(function (node) { io.observe(node); });
-  }
-
-  /* ---------- 숫자 카운트업 ---------- */
-
-  function countUp(root) {
-    U.qsa('[data-count]', root || document).forEach(function (node) {
-      var target = Number(node.getAttribute('data-count')) || 0;
-      if (prefersReducedMotion()) { node.textContent = String(target); return; }
-      var duration = 700;
-      var start = 0;
-      var t0 = null;
-      function step(now) {
-        if (t0 === null) t0 = now;
-        var p = U.clamp((now - t0) / duration, 0, 1);
-        var eased = 1 - Math.pow(1 - p, 3);
-        node.textContent = String(Math.round(start + (target - start) * eased));
-        if (p < 1) window.requestAnimationFrame(step);
-      }
-      window.requestAnimationFrame(step);
-    });
   }
 
   /* ---------- 모달 ----------
@@ -287,7 +229,6 @@
 
   function initShell() {
     initTheme();
-    initHeader();
 
     /* 푸터 연도 자동 갱신 */
     U.qsa('[data-year]').forEach(function (node) {
@@ -307,15 +248,14 @@
     });
   }
 
+  /* v3.0에서 사라진 export: initHeader / reveal / countUp.
+     다른 파일에서 이 이름을 부르면 TypeError가 난다 — 부르는 쪽에서 지운다(§12 #18·#19). */
   Blog.ui = {
     initShell: initShell,
     initTheme: initTheme,
-    initHeader: initHeader,
     applyTheme: applyTheme,
     currentTheme: currentTheme,
     prefersReducedMotion: prefersReducedMotion,
-    reveal: reveal,
-    countUp: countUp,
     modal: modal,
     closeModal: closeModal,
     toast: U.toast

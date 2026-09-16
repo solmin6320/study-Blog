@@ -222,8 +222,6 @@
 
   /* ---------- 메타 정규화 ---------- */
 
-  var COLOR_VALUES = CFG.colors.map(function (c) { return c.value; });
-
   function toTagArray(value) {
     if (Array.isArray(value)) return value.map(function (t) { return String(t).trim(); }).filter(Boolean);
     if (typeof value === 'string' && value.trim()) {
@@ -238,14 +236,22 @@
     return Boolean(value);
   }
 
-  /* 색상이 팔레트 밖이면 id 해시로 하나 고른다. 빈 카드보다 낫고 매번 같은 색이 나온다. */
-  function normalizeColor(value, id) {
-    var color = String(value || '').trim().toLowerCase();
-    if (COLOR_VALUES.indexOf(color) !== -1) return color;
-    return COLOR_VALUES[Math.floor(U.hashUnit(id || 'x') * COLOR_VALUES.length) % COLOR_VALUES.length];
-  }
+  /* 계약서 §9-2에서 color 필드는 폐기됐다. 기존 .md·index.json에 color 키가 남아 있어도
+     META_KEYS에 없으므로 파서가 읽지 않고 그냥 지나간다(마이그레이션 불필요). */
+  var META_KEYS = ['id', 'title', 'summary', 'created', 'updated', 'tags', 'category', 'pinned'];
 
-  var META_KEYS = ['id', 'title', 'summary', 'created', 'updated', 'tags', 'category', 'color', 'pinned'];
+  /* 게시일은 목록의 날짜 열·연도 그룹·정렬이 전부 기대는 값이다(계약서 §9-1).
+     비면 그 글은 목록에서 자리를 못 잡으므로 updated → id 앞머리(YYYY-MM-DD) 순으로 되살린다.
+     id에서 뽑는 것은 "우리가 지어낸 날짜"가 아니라 사용자가 파일명에 직접 적은 날짜다 —
+     오늘 날짜를 찍는 것과는 다르다(그건 created 불변 규칙을 깨뜨린다). */
+  var ID_DATE_RE = /^(\d{4}-\d{2}-\d{2})/;
+
+  function fallbackCreated(created, updated, id) {
+    if (created) return created;
+    if (updated) return updated;
+    var m = ID_DATE_RE.exec(String(id || ''));
+    return m ? m[1] : '';
+  }
 
   /* 정규화는 빠진 필드를 기본값으로 채운다. 그래서 결과만 보면 "원본에 있던 값"과
      "여기서 채워 넣은 기본값"을 구분할 수 없다 — 병합(mergeMeta)이 바로 그 구분을 필요로 하므로
@@ -271,7 +277,11 @@
   function normalizeMeta(raw, fallbackId) {
     var meta = raw || {};
     var id = String(meta.id || fallbackId || '').trim();
-    var created = meta.created ? String(meta.created) : '';
+    var created = fallbackCreated(
+      meta.created ? String(meta.created) : '',
+      meta.updated ? String(meta.updated) : '',
+      id
+    );
     var updated = meta.updated ? String(meta.updated) : created;
     return markPresentKeys({
       id: id,
@@ -281,7 +291,6 @@
       updated: updated || created,
       tags: toTagArray(meta.tags),
       category: String(meta.category || ''),
-      color: normalizeColor(meta.color, id),
       pinned: toBool(meta.pinned)
     }, raw);
   }
@@ -325,7 +334,6 @@
     return {
       slug: slug,
       name: name || slug,
-      color: normalizeColor(src.color, slug),
       description: String(src.description || ''),
       order: isNaN(order) ? Number(fallbackOrder) || 0 : order
     };
@@ -336,8 +344,8 @@
     return String(a.name).localeCompare(String(b.name), 'ko');
   }
 
-  /* categories.json이 없을 때의 폴백: 글들이 실제로 쓰고 있는 category 값으로 목록을 만든다.
-     색은 그 카테고리의 첫 글 색을 빌린다(네비 점 색이 비는 것보다 낫다). */
+  /* categories.json이 없거나 깨졌을 때의 폴백: 글들이 실제로 쓰고 있는 category 값으로 목록을 만든다.
+     이 목록이 없으면 글은 있는데 그 글로 가는 분류 항목이 사라진다. */
   function deriveCategories(posts) {
     var seen = Object.create(null);
     var list = [];
@@ -350,7 +358,6 @@
       list.push({
         slug: slug,
         name: label,
-        color: normalizeColor(post.color, slug),
         description: '',
         order: list.length
       });
@@ -379,9 +386,15 @@
         } catch (err) {
           throw fail('parse', 'posts/categories.json 형식이 올바르지 않습니다(쉼표나 따옴표를 확인하세요).', err);
         }
-        var list = json && Array.isArray(json.categories) ? json.categories : [];
-        if (!list.length) throw fail('parse', 'posts/categories.json의 categories 배열이 비어 있습니다.');
-        return setCategories(list.map(normalizeCategory), false);
+        /* 빈 배열은 "깨진 파일"이 아니라 정상 상태다 — 이 블로그는 분류 0개에서 시작하고,
+           분류는 사용자가 에디터에서 직접 추가한다. 예전에는 여기서 예외를 던져
+           글에서 분류를 유추하는 폴백으로 넘어갔고, 관리자에게는 "파일을 읽지 못했다"는
+           경고까지 떴다 — 고장나지 않은 것을 고장났다고 말하는 상태였다.
+           배열이 아닌 경우(키 누락·타입 오류)만 진짜 오류로 본다. */
+        if (!json || !Array.isArray(json.categories)) {
+          throw fail('parse', 'posts/categories.json에 categories 배열이 없습니다.');
+        }
+        return setCategories(json.categories.map(normalizeCategory), false);
       })
       .catch(function (err) {
         /* 폴백은 유지하되(블로그는 계속 돌아야 한다) 무슨 일이 있었는지는 남긴다.
@@ -434,12 +447,7 @@
     return raw || CFG.category.fallbackName;
   }
 
-  function categoryColor(value) {
-    var found = findCategory(value);
-    return found ? found.color : CFG.category.fallbackColor;
-  }
-
-  /* slug → 글 수. 네비의 .cat-count와 .is-empty 판정에 쓴다. */
+  /* slug → 글 수. 인덱스의 .index-count와 .is-empty 판정에 쓴다. */
   function categoryCounts(posts) {
     var counts = Object.create(null);
     (posts || []).forEach(function (post) {
@@ -457,7 +465,7 @@
     var out = (catData ? catData.list : []).map(function (c) {
       known[c.slug] = true;
       return {
-        slug: c.slug, name: c.name, color: c.color,
+        slug: c.slug, name: c.name,
         description: c.description, order: c.order,
         count: counts[c.slug] || 0, registered: true
       };
@@ -472,7 +480,6 @@
       out.push({
         slug: slug,
         name: label || (slug === CFG.category.fallbackSlug ? CFG.category.fallbackName : slug),
-        color: CFG.category.fallbackColor,
         description: '',
         order: 9999,
         count: counts[slug],
@@ -486,7 +493,7 @@
   /* ---------- index.json ---------- */
 
   /* id는 글의 주소이자 파일명이다. index.json에 같은 id가 두 번 있으면 (손으로 고치다 복사한 경우)
-     보드에 같은 카드가 두 장 뜨고, data-id로 글을 찾는 필터·수정 버튼이 둘 중 무엇을 가리키는지
+     목록에 같은 행이 두 줄 뜨고, id로 글을 찾는 필터·이웃 글 계산이 둘 중 무엇을 가리키는지
      알 수 없게 된다. 먼저 나온 것만 남긴다 — index.json은 고정 글·최신순으로 정렬돼 있어
      앞쪽이 사용자가 의도한 최신 기록일 가능성이 높다. 버린 개수는 화면단이 알려 줄 수 있게 남긴다. */
   var indexDuplicates = [];
@@ -642,10 +649,10 @@
 
   function peekPost(id) { return postCache[id] || null; }
 
-  /* 보드의 기본 정렬(고정 글 먼저 · 그다음 최신 게시순)에서의 앞뒤 글.
-     created만 보고 정렬하면 보드에서 위에 붙어 있던 고정 글이 "이전/다음"에서는 중간에 끼어 있어,
+  /* 목록의 기본 정렬(고정 글 먼저 · 그다음 최신 게시순)에서의 앞뒤 글.
+     created만 보고 정렬하면 목록 맨 위에 있던 고정 글이 "이전/다음"에서는 중간에 끼어 있어,
      목록 → 상세 → 다음 글로 이어 읽을 때 순서가 어긋난다.
-     비교 함수는 app.js sortPosts('latest')·buildIndexJson과 같은 규칙을 쓴다. */
+     비교 함수는 app.js sortPosts()·buildIndexJson과 같은 규칙을 쓴다. */
   function neighbors(id) {
     if (!indexData) return { prev: null, next: null };
     var sorted = indexData.posts.slice().sort(function (a, b) {
@@ -769,7 +776,7 @@
         return {
           id: p.id, title: p.title, summary: p.summary,
           created: p.created, updated: p.updated,
-          tags: p.tags, category: p.category, color: p.color, pinned: Boolean(p.pinned)
+          tags: p.tags, category: p.category, pinned: Boolean(p.pinned)
         };
       })
     };
@@ -792,7 +799,6 @@
         return {
           slug: c.slug,
           name: c.name,
-          color: c.color,
           description: c.description || '',
           order: i
         };
@@ -819,7 +825,6 @@
     findCategory: findCategory,
     categorySlug: categorySlug,
     categoryName: categoryName,
-    categoryColor: categoryColor,
     categoryCounts: categoryCounts,
     categoryList: categoryList,
     slugifyCategory: slugifyCategory,

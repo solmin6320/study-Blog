@@ -21,8 +21,8 @@
   })();
 </script>
 
-<title>새 메모 쓰기 · 메모 블로그</title>
-<meta name="description" content="마크다운으로 메모를 쓰고 .md와 index.json 파일로 내보내는 작성 도구.">
+<title>새 글 쓰기 · 메모 블로그</title>
+<meta name="description" content="마크다운으로 글을 쓰고 .md와 index.json 파일로 내보내는 작성 도구.">
 <meta name="color-scheme" content="light dark">
 <!-- 작성 도구는 검색 결과에 뜰 이유가 없다(공개돼도 무해하지만 색인은 불필요). -->
 <meta name="robots" content="noindex, nofollow">
@@ -31,14 +31,14 @@
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<!-- 로드 순서 고정: tokens → base → layout → components → prose → animations
+<!-- 로드 순서 고정: tokens → base → layout → components → prose  (계약서 §11 — 5개다)
+     여섯 번째 애니메이션 파일은 v3.0에서 파일째 삭제됐다. 여기에 <link>를 되살리면 404가 난다.
      highlight.js의 테마 CSS는 로드하지 않는다. 코드블록 배색은 prose.css가 토큰으로 직접 그린다. -->
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/prose.css">
-<link rel="stylesheet" href="css/animations.css">
 
 <!-- 미리보기는 post.html과 똑같은 경로(marked → DOMPurify → highlight.js)로 그려야
      "보이는 대로 저장된다"가 성립한다. 그래서 상세 페이지와 같은 고정 버전을 그대로 싣는다.
@@ -73,31 +73,27 @@
 <body>
 <a class="sr-only" href="#main">본문 바로가기</a>
 
-<div class="bg-layer" aria-hidden="true">
-  <div class="bg-mesh"></div>
-  <div class="bg-grain"></div>
-</div>
-
-<header class="site-header" id="siteHeader">
-  <a class="brand" href="index.html">
-    <span class="brand-mark" aria-hidden="true"></span>
-    <span class="brand-text" data-site-title>메모 블로그</span>
-  </a>
+<!-- 계약서 §3: 헤더는 static이고 덩이는 셋(브랜드 · 내비 · 테마 버튼)뿐이다.
+     배경 3층 / 헤더 id / 로고 마크 / 액션 래퍼 + "새 메모" 버튼은 v3.0에서 전부 폐기됐다.
+     테마 버튼은 .site-header의 "직계" 자식이어야 한다 —
+     layout.css의 `.site-header > .icon-btn { margin-inline-start:auto }`가 그걸 전제로 한다. -->
+<header class="site-header">
+  <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
   <!-- index.html / post.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
-    <a class="nav-link" href="index.html">메모</a>
+    <a class="nav-link" href="index.html">글</a>
     <a class="nav-link is-active" href="write.html" data-admin-only>쓰기</a>
   </nav>
-  <div class="header-actions">
-    <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
-    <!-- 수정 모드(?id=)에서 빈 편집기로 돌아오는 길. 방문자에겐 admin.js가 DOM에서 지운다. -->
-    <a class="btn btn-primary" href="write.html" data-admin-only>새 메모</a>
-  </div>
+  <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
 
 <!-- tabindex="-1": 스킵 링크(#main)의 착지점. 이게 없으면 브라우저에 따라 스크롤만 되고
-     포커스는 헤더에 남아 다음 Tab이 다시 로고로 돌아간다(계약서 §3-1). 착지점 포커스 링은 base.css가 끈다. -->
-<main class="site-main" id="main" tabindex="-1">
+     포커스는 헤더에 남아 다음 Tab이 다시 로고로 돌아간다(계약서 §3-1). 착지점 포커스 링은 base.css가 끈다.
+
+     .editor-page(계약서 §6): 읽는 화면의 칼럼은 --w-prose(720px) 하나지만, 이 화면은
+     좌우 분할이 목적이라 720px 안에서는 두 칸이 각각 340px가 되어 쓸 수 없다.
+     이 클래스가 여기서만 기준선을 76rem으로 푼다. write.html의 <main> 외에는 쓰지 않는다. -->
+<main class="site-main editor-page" id="main" tabindex="-1">
 
   <!-- 관리자 스위치가 꺼져 있을 때 editor.js가 hidden을 푼다(editor.js의 #editorVisitor).
        에디터 자체를 막지는 않는다 — 정적 사이트라 막을 수도 없고, 막는 시늉을 할 이유도 없다. -->
@@ -126,31 +122,32 @@
            게시일(created)이 보존된다는 사실을 화면에서 확인할 수 있어야 한다. -->
       <p class="editor-mode" id="editorMode" hidden></p>
 
-      <!-- 카테고리 = 글이 실제로 들어갈 폴더(posts/<slug>/). 계약서 10-4.
-           목록은 posts/categories.json에서 온다. 그 파일이 아직 없어도 에디터는 살아 있어야 하므로
-           editor.js는 "빈 목록 + 새 카테고리 버튼"만으로도 글을 끝까지 쓸 수 있게 만든다. -->
+      <!-- 분류 = 글이 실제로 들어갈 폴더(posts/<slug>/). 계약서 §9-3.
+           목록은 posts/categories.json에서 온다. 그 파일이 비어 있거나 아예 없어도 에디터는
+           끝까지 동작해야 한다 — 분류는 사용자가 직접 만드는 것이고, 시작은 0개다.
+           editor.js가 "빈 목록 + 새 분류 버튼"만으로 글을 끝까지 쓸 수 있게 만든다. -->
       <div class="cat-picker">
-        <label class="sr-only" for="fCategory">카테고리 (글이 저장될 폴더)</label>
-        <select class="field" id="fCategory" title="카테고리 — posts/&lt;폴더명&gt;/ 에 저장됩니다"></select>
+        <label class="sr-only" for="fCategory">분류 (글이 저장될 폴더)</label>
+        <select class="field" id="fCategory" title="분류 — posts/&lt;폴더명&gt;/ 에 저장됩니다"></select>
         <button class="btn btn-ghost" type="button" id="btnNewCat"
-                aria-expanded="false" aria-controls="catNew">+ 새 카테고리</button>
+                aria-expanded="false" aria-controls="catNew">+ 새 분류</button>
       </div>
 
       <!-- 표시 이름과 폴더명을 나눠 받는다. 한글 이름은 폴더명이 될 수 없어서
            slug는 사용자가 영문으로 직접 짓는다(비면 editor.js가 막는다). -->
-      <div class="cat-new" id="catNew" hidden role="group" aria-label="새 카테고리 만들기">
-        <!-- 계약서 §10-4: 폴더명(slug)은 되돌릴 수 없는 결정이라 경고가 입력칸보다 "먼저" 와야 한다.
+      <div class="cat-new" id="catNew" hidden role="group" aria-label="새 분류 만들기">
+        <!-- 계약서 §6: 폴더명(slug)은 되돌릴 수 없는 결정이라 경고가 입력칸보다 "먼저" 와야 한다.
              title= 툴팁은 마우스에서만 뜨므로 터치·스크린리더 사용자에게는 없는 것과 같다.
              그래서 화면 문구로 내놓고, 폴더명 칸의 aria-describedby로도 연결해 포커스 때 읽히게 한다. -->
         <p class="cat-new-hint" id="catNewHint">
           폴더명은 <strong>한 번 정하면 바꾸지 않는다.</strong> 영문 소문자·숫자·하이픈만.
         </p>
 
-        <label class="sr-only" for="fNewCatName">새 카테고리 표시 이름</label>
+        <label class="sr-only" for="fNewCatName">새 분류 표시 이름</label>
         <input class="field" id="fNewCatName" type="text" placeholder="표시 이름 (예: 알고리즘)"
-               title="새 카테고리 표시 이름" autocomplete="off" maxlength="40">
+               title="새 분류 표시 이름" autocomplete="off" maxlength="40">
 
-        <label class="sr-only" for="fNewCatSlug">새 카테고리 폴더명 (영문 소문자·숫자·하이픈)</label>
+        <label class="sr-only" for="fNewCatSlug">새 분류 폴더명 (영문 소문자·숫자·하이픈)</label>
         <!-- inputmode="latin"은 HTML 표준에 없는 값이라 어떤 브라우저도 해석하지 않았다(= 아무 효과 없음).
              표준 안에서 같은 목적에 가장 가까운 것은 autocapitalize="none"이다 —
              모바일 키보드가 첫 글자를 대문자로 바꾸는 것을 막아 준다(폴더명은 소문자만 허용).
@@ -161,9 +158,8 @@
                aria-describedby="catNewHint"
                autocomplete="off" spellcheck="false" autocapitalize="none">
 
-        <label class="sr-only" for="fNewCatColor">새 카테고리 기본 메모지 색</label>
-        <select class="field" id="fNewCatColor" title="카테고리 기본 메모지 색"></select>
-
+        <!-- 분류 기본 메모지 색 셀렉트는 계약서 v3.0 §9-2에서 폐기됐다.
+             카드가 사라져 색이 놓일 면이 없다. 되살리지 않는다. -->
         <button class="btn" type="button" id="btnAddCat">추가</button>
         <button class="btn btn-ghost" type="button" id="btnCancelCat">취소</button>
       </div>
@@ -179,12 +175,12 @@
 
         <label class="sr-only" for="fId">파일 id (파일명으로 쓰입니다)</label>
         <input class="field" id="fId" type="text" placeholder="파일 id (제목에서 자동 생성)"
-               title="파일 id — posts/&lt;카테고리&gt;/&lt;id&gt;.md 의 파일명이 됩니다"
+               title="파일 id — posts/&lt;분류&gt;/&lt;id&gt;.md 의 파일명이 됩니다"
                autocomplete="off" spellcheck="false">
 
-        <label class="sr-only" for="fColor">메모지 색</label>
-        <!-- 색 목록은 config.js의 colors 배열이 진실. editor.js가 option을 채운다. -->
-        <select class="field" id="fColor" title="메모지 색"></select>
+        <!-- 메모지 색 셀렉트는 계약서 v3.0 §9-2에서 폐기됐다.
+             목록이 카드에서 텍스트 리스트로 바뀌어 색이 놓일 면이 없어졌고,
+             제목 열을 훑는 시선을 색이 좌우로 흩는다. frontmatter에도 더 이상 쓰지 않는다. -->
 
         <label class="switch">
           <input type="checkbox" id="fPinned"><span class="switch-ui" aria-hidden="true"></span>고정

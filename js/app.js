@@ -1,4 +1,6 @@
-/* app.js — index.html 전용. 메모지 보드 렌더 + 검색 + 태그 필터 + 정렬 + URL 상태 동기화. */
+/* app.js — index.html 전용.
+   날짜 + 제목 2단 목록(계약서 §4-4) 렌더 + 검색 + 분류/태그 인덱스 + URL 상태 동기화.
+   정렬 컨트롤은 없다. 학습 기록의 순서는 시간순 하나다(계약서 §0-2). */
 (function (window, document) {
   'use strict';
 
@@ -12,19 +14,12 @@
     posts: [],        // index.json의 전체 목록
     query: '',
     cat: '*',         // 단일 선택. '*'는 전체
-    tags: [],         // 다중 선택. 하나라도 일치하면 통과(OR)
-    sort: 'latest'
+    tags: []          // 다중 선택. 하나라도 일치하면 통과(OR)
   };
 
-  /* 값 조회용 맵은 반드시 프로토타입 없는 객체로 만든다.
-     객체 리터럴이면 ?sort=constructor 같은 주소에서 SORTS[q.sort]가 Object.prototype의 멤버를 집어
-     "있는 정렬"로 통과시킨다. 그러면 <select>에 없는 값이 state에 들어가 정렬 셀렉트가 빈 값이 되고
-     오염된 값이 URL에 그대로 남아 공유된다(라운드 3 M3-12 실측).
-     이 코드베이스의 다른 맵(postCache·counts·used…)은 이미 전부 Object.create(null)이다. */
-  var SORTS = Object.assign(Object.create(null), { latest: 1, updated: 1, title: 1 });
-
-  /* id → 글, id → 카테고리 slug.
-     필터는 타이핑마다 돌아간다. 매번 배열을 훑거나 slug를 다시 계산하지 않도록 한 번만 만든다. */
+  /* id → 글, id → 분류 slug, id → 검색용 문자열.
+     필터는 타이핑마다 돌아간다. 매번 배열을 훑거나 slug를 다시 계산하지 않도록 한 번만 만든다.
+     프로토타입 없는 객체로 만든다 — 'constructor' 같은 id가 들어와도 없는 글이 "있다"로 통과하지 않게. */
   var postById = Object.create(null);
   var slugById = Object.create(null);
   var searchById = Object.create(null);
@@ -38,7 +33,8 @@
       var slug = store.categorySlug(post.category);
       postById[post.id] = post;
       slugById[post.id] = slug;
-      /* 검색 대상 문자열은 한 번만 만든다. 카테고리는 폴더명(css)과 표시 이름(CSS) 둘 다 걸리게. */
+      /* 검색 대상은 화면에 없는 요약까지 포함한다(계약서 §0-1: summary는 검색 대상으로 살아 있다).
+         분류는 폴더명(css)과 표시 이름(CSS) 둘 다 걸리게 한다. */
       searchById[post.id] = [
         post.title, post.summary, slug, store.categoryName(post.category), post.tags.join(' ')
       ].join(' ').toLowerCase();
@@ -50,7 +46,7 @@
     return state.posts.filter(function (post) { return slugById[post.id] === state.cat; });
   }
 
-  /* 네비에 실제로 그려지는 분류인지. 등록된 카테고리 + 글만 있는 미등록 카테고리가 대상이다. */
+  /* 인덱스에 실제로 그려지는 분류인지. 등록된 분류 + 글만 있는 미등록 분류가 대상이다. */
   function catExists(slug) {
     if (slug === '*') return true;
     return store.categoryList(state.posts).some(function (cat) { return cat.slug === slug; });
@@ -58,17 +54,15 @@
 
   /* ---------- 정렬 / 필터 ---------- */
 
-  /* pinned는 어떤 정렬에서도 항상 위. 고정 글은 "지금 가장 중요한 메모"라는 뜻이기 때문. */
-  function sortPosts(list, mode) {
+  /* 고정 글은 어떤 경우에도 맨 위. 그 아래는 created 내림차순 하나뿐이다. */
+  function sortPosts(list) {
     return list.slice().sort(function (a, b) {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      if (mode === 'title') return a.title.localeCompare(b.title, 'ko');
-      if (mode === 'updated') return String(b.updated || b.created).localeCompare(String(a.updated || a.created));
       return String(b.created).localeCompare(String(a.created));
     });
   }
 
-  /* 카테고리(단일) · 태그(다중) · 검색어는 서로 다른 축이다. 셋을 AND로 묶는다. */
+  /* 분류(단일) · 태그(다중) · 검색어는 서로 다른 축이다. 셋을 AND로 묶는다. */
   function matches(post) {
     if (state.cat !== '*' && slugById[post.id] !== state.cat) return false;
 
@@ -81,189 +75,145 @@
     return true;
   }
 
-  /* ---------- 카드 ---------- */
-
-  /* 기울기는 id 해시로 정한다. Math.random을 쓰면 새로고침마다 각도가 바뀌어 어지럽다. */
-  function rotationOf(id) {
-    var range = CFG.memoRotation;
-    var deg = (U.hashUnit(id) * 2 - 1) * range;
-    return deg.toFixed(2) + 'deg';
+  function visiblePosts() {
+    return sortPosts(state.posts.filter(matches));
   }
 
-  /* created가 비면(.md에 `created:` 만 남긴 경우) 날짜 칸을 아예 만들지 않는다.
-     <time datetime=""> 는 무효 마크업이고, 값 없는 "게시" 라벨은 카드에서 잡음일 뿐이다.
-     자세한 배경은 post.js fillDates() 주석 — 두 화면이 같은 규칙을 쓴다. */
-  function dateNodes(post) {
-    if (!post.created) return [];
+  /* ---------- 목록 (계약서 §4-4) ---------- */
 
-    var nodes = [];
-    var createdRel = U.fmtRelative(post.created);
-    nodes.push(U.el('time', {
-      class: 'memo-date',
-      datetime: post.created,
-      title: '게시 ' + U.fmtKo(post.created),
-      text: U.fmtDot(post.created) + (createdRel ? ' · ' + createdRel : '')
+  /* 한 행의 내용물은 날짜와 제목 둘뿐이다. 요약·태그·분류·수정일·아이콘 금지. */
+  function entryRow(post) {
+    var li = U.el('li', { class: 'entry' + (post.pinned ? ' is-pinned' : '') });
+
+    /* created가 비면 <time datetime=""> 라는 무효 마크업이 된다.
+       store가 updated → id 앞머리 순으로 되살리므로 여기까지 빈 값이 오는 경우는
+       "날짜를 어디서도 알 수 없는 글" 하나뿐이다. 그때는 날짜 칸을 비워 둔다 —
+       칸 자체는 남아야 제목의 왼쪽 선이 다른 행과 어긋나지 않는다. */
+    if (post.created) {
+      li.appendChild(U.el('time', {
+        class: 'entry-date',
+        datetime: post.created,
+        text: U.fmtDot(post.created)
+      }));
+    } else {
+      /* 빈 칸이라도 자리는 지켜야 한다. 날짜 열이 접히면 그 행의 제목만 왼쪽으로 튄다. */
+      li.appendChild(U.el('span', { class: 'entry-date' }));
+    }
+
+    li.appendChild(U.el('a', {
+      class: 'entry-title',
+      href: 'post.html?id=' + encodeURIComponent(post.id),
+      text: post.title
     }));
 
-    /* created와 updated가 같으면 같은 날짜를 두 번 보여 주는 셈이라 숨긴다. */
-    if (!U.sameMoment(post.created, post.updated)) {
-      var sameYear = U.yearOf(post.created) === U.yearOf(post.updated);
-      var label = sameYear ? U.fmtDotShort(post.updated) : U.fmtDot(post.updated);
-      var updatedRel = U.fmtRelative(post.updated);
-      nodes.push(U.el('time', {
-        class: 'memo-updated',
-        datetime: post.updated,
-        title: '최종 수정 ' + U.fmtKo(post.updated),
-        text: '수정 ' + label + (updatedRel ? ' · ' + updatedRel : '')
-      }));
-    }
-    return nodes;
+    return li;
   }
 
-  function memoCard(post, index) {
-    var article = U.el('article', {
-      class: 'memo' + (post.pinned ? ' is-pinned' : ''),
-      'data-color': post.color,
-      'data-id': post.id,
-      style: '--i:' + index + '; --rot:' + rotationOf(post.id)
-    });
-
-    article.appendChild(U.el('span', { class: 'memo-pin', 'aria-hidden': 'true' }));
-
-    /* 카드에는 폴더명(css)이 아니라 표시 이름(CSS)을 보여 준다. 폴더명은 파일 정리용 이름이다. */
-    if (post.category) {
-      article.appendChild(U.el('span', { class: 'memo-cat', text: store.categoryName(post.category) }));
-    }
-
-    article.appendChild(U.el('h2', { class: 'memo-title' }, [
-      U.el('a', {
-        class: 'memo-link',
-        href: 'post.html?id=' + encodeURIComponent(post.id),
-        text: post.title
-      })
-    ]));
-
-    if (post.summary) {
-      article.appendChild(U.el('p', { class: 'memo-summary', text: post.summary }));
-    }
-
-    if (post.tags.length) {
-      var ul = U.el('ul', { class: 'memo-tags' });
-      post.tags.forEach(function (tag) {
-        ul.appendChild(U.el('li', { class: 'tag', text: tag }));
-      });
-      article.appendChild(ul);
-    }
-
-    /* 날짜가 하나도 없으면 .memo-meta 자체를 만들지 않는다.
-       빈 div도 margin-block-start를 그대로 먹어서 카드 아래에 이유 없는 공백이 남는다. */
-    var dates = dateNodes(post);
-    if (dates.length) article.appendChild(U.el('div', { class: 'memo-meta' }, dates));
-
-    var actions = U.el('div', { class: 'memo-actions', 'data-admin-only': '' }, [
-      U.el('button', {
-        class: 'memo-act',
-        type: 'button',
-        'data-act': 'edit',
-        'aria-label': post.title + ' 수정',
-        text: '수정'
-      })
-    ]);
-    article.appendChild(actions);
-
-    return article;
+  function entryGroup(label, posts) {
+    var section = U.el('section', { class: 'entry-group' });
+    if (label) section.appendChild(U.el('h2', { class: 'entry-group-label', text: label }));
+    var ul = U.el('ul', { class: 'entry-list' });
+    posts.forEach(function (post) { ul.appendChild(entryRow(post)); });
+    section.appendChild(ul);
+    return section;
   }
 
-  /* ---------- 렌더 ---------- */
-
-  function renderBoard() {
-    var sorted = sortPosts(state.posts, state.sort);
-    /* 카드를 하나씩 board에 붙이면 붙일 때마다 레이아웃이 다시 계산된다. 조각에 모아 한 번에 넣는다. */
-    var frag = document.createDocumentFragment();
-    sorted.forEach(function (post, i) {
-      frag.appendChild(memoCard(post, i));
-    });
-    /* 보드는 aria-live 영역이다. 지우고 다시 채우는 동안의 중간 상태까지 읽히면
-       정렬 한 번에 카드 수만큼 발화가 쏟아진다. 다 채운 뒤 한 번만 알리게 묶는다. */
-    dom.board.setAttribute('aria-busy', 'true');
-    U.clear(dom.board);
-    dom.board.appendChild(frag);
-    /* 동적으로 만든 .memo-actions에도 관리자 규칙을 적용해야 한다. */
-    Blog.admin.apply(dom.board);
-    applyFilter();   // reveal()은 applyFilter()가 책임진다(아래 주석)
-    dom.board.removeAttribute('aria-busy');
-  }
-
-  function applyFilter() {
-    var visible = 0;
-    U.qsa('.memo', dom.board).forEach(function (node) {
-      var post = postById[node.getAttribute('data-id')];
-      var ok = post ? matches(post) : false;
-      node.classList.toggle('is-hidden', !ok);
-      if (ok) {
-        /* 걸러진 카드를 건너뛰고 스태거 순번을 다시 매긴다. */
-        node.style.setProperty('--i', String(visible));
-        visible += 1;
+  /* created의 연도가 바뀌는 지점마다 끊는다. 순서는 이미 정렬돼 있으므로 한 번 훑으면 된다. */
+  function groupByYear(posts) {
+    var groups = [];
+    var last = null;
+    posts.forEach(function (post) {
+      var year = U.yearOf(post.created);
+      if (!last || last.year !== year) {
+        last = { year: year, posts: [] };
+        groups.push(last);
       }
+      last.posts.push(post);
+    });
+    return groups;
+  }
+
+  /* 필터가 걸릴 때마다 목록을 다시 그린다. 행을 숨기는 방식으로는
+     "한 해에 다 들어가면 연도 라벨을 넣지 않는다"는 규칙을 지킬 수 없다 —
+     걸러낸 결과가 한 해에 모이면 라벨 자체가 사라져야 하고, 그 판단은 그려 봐야 안다. */
+  function renderList() {
+    var posts = visiblePosts();
+    var pinned = posts.filter(function (p) { return p.pinned; });
+    var rest = posts.filter(function (p) { return !p.pinned; });
+    var groups = groupByYear(rest);
+
+    /* 연도가 하나뿐이면 라벨을 넣지 않는다. 글 4편 위의 "2026" 한 줄은 정보가 아니라 장식이다.
+       300편이 되어 연도가 둘 이상이 되는 순간 스크롤의 이정표로 자동 등장한다(계약서 §4-4). */
+    var showYear = groups.length > 1;
+
+    var frag = document.createDocumentFragment();
+    /* 고정 글은 연도 그룹보다 위에, 라벨 없는 한 덩어리로 온다. */
+    if (pinned.length) frag.appendChild(entryGroup(null, pinned));
+    groups.forEach(function (group) {
+      frag.appendChild(entryGroup(showYear ? group.year : null, group.posts));
     });
 
-    U.setHidden(dom.empty, visible !== 0);
-    if (visible === 0) renderEmpty();
-    updateCount(visible);
-    revealVisible();
+    /* aria-live 영역이라 지우고 채우는 중간 상태까지 읽히면 행 수만큼 발화가 쏟아진다.
+       다 채운 뒤 한 번만 알리도록 묶는다. */
+    dom.list.setAttribute('aria-busy', 'true');
+    U.clear(dom.list);
+    dom.list.appendChild(frag);
+    dom.list.removeAttribute('aria-busy');
+
+    U.setHidden(dom.empty, posts.length !== 0);
+    if (!posts.length) renderEmpty();
   }
 
-  /* 계약서 §4 — .is-hidden을 떼는 모든 경로에서 reveal()을 다시 부른다.
-     필터가 걸린 동안 숨어 있던 카드는 IntersectionObserver의 관찰 대상에서 빠져 있어,
-     필터를 풀어도 .is-visible을 받을 기회가 없다 → opacity:0인 빈 칸으로 영영 남는다(라운드 2 T1).
-     호출부 5곳이 각자 기억해야 하는 규칙으로 두면 여섯 번째 호출부에서 다시 깨지므로
-     applyFilter() 안에서 한 번에 처리한다.
-     이미 드러난 카드(.is-visible)를 다시 관찰하면 진입 모션이 재생되므로 제외한다. */
-  function revealVisible() {
-    Blog.ui.reveal(U.qsa('.memo:not(.is-hidden):not(.is-visible)', dom.board));
-  }
+  /* ---------- 빈 상태 ---------- */
 
-  /* 비었을 때의 문구는 "왜 비었는지"에 따라 달라야 한다.
-     글이 아예 없는 것 / 이 카테고리가 빈 것 / 조건이 안 맞는 것은 사용자가 할 일이 서로 다르다. */
+  /* 왜 비었는지에 따라 사용자가 할 일이 다르다.
+     글이 아예 없는 것 / 이 분류가 빈 것 / 조건이 안 맞는 것 / 주소가 틀린 것. */
   function renderEmpty() {
+    var admin = Blog.admin.isAdmin();
+
     if (!state.posts.length) {
-      setEmptyMessage('아직 메모가 없어요',
-        'write.html 에디터로 첫 메모를 쓰고 posts/<카테고리>/ 폴더에 넣어 보세요.', false);
+      /* 글 0편이 이 블로그의 기본 화면이다. 방문자에게는 담백하게 비어 있다고만 알린다 —
+         "파일을 넣으세요"는 방문자가 할 수 없는 일이고, 비어 있음이 고장으로 보여도 안 된다. */
+      setEmptyMessage('아직 글이 없습니다.',
+        admin
+          ? '위 “쓰기”에서 첫 글을 쓰고, 내보낸 파일을 posts/ 폴더에 넣으면 여기에 나타납니다.'
+          : '첫 글이 올라오면 여기에 표시됩니다.',
+        false);
       return;
     }
-    var filtered = state.query || state.tags.length;
-    /* ?cat= 값이 목록에 없는 slug면 네비에 활성 탭이 하나도 없어 "왜 비었는지"를 알 수 없다.
+
+    /* ?cat= 값이 목록에 없는 slug면 인덱스에 켜진 항목이 하나도 없어 "왜 비었는지"를 알 수 없다.
        주소를 잘못 받은 것과 글이 아직 없는 것은 사용자가 할 일이 다르므로 문구를 나눈다. */
     if (state.cat !== '*' && !catExists(state.cat)) {
-      setEmptyMessage('‘' + state.cat + '’ 라는 분류는 없어요',
-        '주소의 ?cat= 값이 분류 목록에 없습니다. 위 분류 탭에서 다시 골라 주세요.', true);
+      setEmptyMessage('‘' + state.cat + '’ 라는 분류는 없습니다.',
+        '주소의 ?cat= 값이 분류 목록에 없습니다. 위 분류에서 다시 골라 주세요.', true);
       return;
     }
+
     if (state.cat !== '*' && !postsInCat().length) {
       var name = store.categoryName(state.cat);
-      setEmptyMessage('‘' + name + '’ 에 아직 메모가 없어요',
-        'posts/' + state.cat + '/ 폴더에 .md 파일을 넣으면 여기에 붙습니다.', true);
+      setEmptyMessage('‘' + name + '’ 에 아직 글이 없습니다.',
+        admin
+          ? 'posts/' + state.cat + '/ 폴더에 .md 파일을 넣으면 여기에 나타납니다.'
+          : '다른 분류를 골라 보세요.',
+        true);
       return;
     }
-    setEmptyMessage('조건에 맞는 메모가 없어요',
-      filtered ? '검색어나 태그를 바꿔 보세요.' : '다른 카테고리를 골라 보세요.', true);
-  }
 
-  function updateCount(visible) {
-    if (!dom.statPosts) return;
-    dom.statPosts.setAttribute('data-count', String(visible));
-    dom.statPosts.textContent = String(visible);
+    setEmptyMessage('조건에 맞는 글이 없습니다.',
+      (state.query || state.tags.length) ? '검색어나 태그를 바꿔 보세요.' : '다른 분류를 골라 보세요.',
+      true);
   }
 
   function setEmptyMessage(title, desc, showReset) {
     if (!dom.empty) return;
-    /* 계약서에 없는 클래스를 만들지 않으려고 태그 구조만 쓴다(디자이너가 .board-empty 하위로 스타일링). */
+    /* 계약서 §4-4: 첫 줄은 <strong>(무슨 상태인지), 둘째 줄은 다음 행동. 클래스를 새로 만들지 않는다. */
     U.clear(dom.empty);
     dom.empty.appendChild(U.el('p', null, [U.el('strong', { text: title })]));
     dom.empty.appendChild(U.el('p', { text: desc }));
     if (showReset) {
       dom.empty.appendChild(U.el('button', {
-        class: 'btn btn-ghost',
+        class: 'btn',
         type: 'button',
         text: '조건 초기화',
         onclick: function () { resetFilters(); }
@@ -271,129 +221,133 @@
     }
   }
 
-  /* ---------- 카테고리 네비 (계약서 10-3) ---------- */
+  /* ---------- 인덱스 — 분류 / 태그 (계약서 §4-3) ----------
+     두 축이 같은 부품을 쓴다. 이름은 .index-name 안에 넣고,
+     구분자(·)와 태그의 # 접두사는 CSS가 그린다 — 텍스트로 넣으면 필터 값과 화면 문자열이 어긋난다. */
 
-  function catButton(cat, isReal) {
-    var active = state.cat === cat.slug;
+  function indexItem(opts) {
     var btn = U.el('button', {
-      class: 'cat-item' + (active ? ' is-active' : '') + (isReal && !cat.count ? ' is-empty' : ''),
-      type: 'button',
-      'data-cat': cat.slug,
-      'data-color': isReal ? cat.color : null,
-      /* 계약서 §10-3: 카테고리는 단일 선택이라 aria-current, 태그 칩은 다중 선택이라 aria-pressed.
-         비활성 항목에는 aria-current="false"가 아니라 속성 자체를 두지 않는다. */
-      'aria-current': active ? 'true' : null,
-      title: cat.description || null
+      class: 'index-item'
+        + (opts.active ? ' is-active' : '')
+        + (opts.empty ? ' is-empty' : ''),
+      type: 'button'
     });
-    if (isReal) btn.appendChild(U.el('span', { class: 'cat-dot', 'aria-hidden': 'true' }));
-    btn.appendChild(U.el('span', { class: 'cat-name', text: cat.name }));
-    btn.appendChild(U.el('span', { class: 'cat-count', text: String(cat.count) }));
+    if (opts.cat !== undefined) {
+      btn.setAttribute('data-cat', opts.cat);
+      /* 분류는 단일 선택이라 aria-current. 비활성 항목에는 "false"가 아니라 속성 자체를 두지 않는다. */
+      if (opts.active) btn.setAttribute('aria-current', 'true');
+    } else {
+      btn.setAttribute('data-tag', opts.tag);
+      /* 태그는 다중 선택이라 aria-pressed. 이쪽은 false도 의미가 있다(누를 수 있고 지금은 꺼짐). */
+      btn.setAttribute('aria-pressed', opts.active ? 'true' : 'false');
+    }
+    btn.appendChild(U.el('span', { class: 'index-name', text: opts.name }));
+    btn.appendChild(U.el('span', { class: 'index-count', text: String(opts.count) }));
     return btn;
   }
 
-  /* 글이 없는 카테고리도 그린다(.is-empty). 빈 칸이 보여야 "여기에 쓰면 되는구나"를 안다. */
-  function renderCatNav() {
-    if (!dom.catNav) return;
+  /* 정렬: categories.json의 order 오름차순 → 같으면 글 수 내림차순 → 이름(계약서 §4-3).
+     order를 먼저 보는 이유 — 분류의 순서는 이 블로그에서 사용자의 편집 대상이다. */
+  function byIndexOrder(a, b) {
+    if (a.order !== b.order) return a.order - b.order;
+    if (a.count !== b.count) return b.count - a.count;
+    return String(a.name).localeCompare(String(b.name), 'ko');
+  }
+
+  /* 글이 0편인 분류도 그린다(.is-empty). 빈 칸이 보여야 "여기에 쓰면 되는구나"를 안다. */
+  function renderCatIndex() {
+    if (!dom.catIndex || !dom.catRow) return;
+    var cats = store.categoryList(state.posts).slice().sort(byIndexOrder);
+
+    /* 분류가 하나도 없으면 행 전체를 감춘다. "분류  전체 0" 한 줄은 정보가 아니라
+       "여기 뭔가 고장났나?"로 읽힌다 — 글이 0편인 첫 화면에서 특히 그렇다(계약서 §4-3). */
+    U.setHidden(dom.catRow, !cats.length);
+    if (!cats.length) { U.clear(dom.catIndex); return; }
+
     var frag = document.createDocumentFragment();
-    frag.appendChild(catButton({ slug: '*', name: '전체', count: state.posts.length }, false));
-    store.categoryList(state.posts).forEach(function (cat) {
-      frag.appendChild(catButton(cat, true));
+    frag.appendChild(indexItem({
+      cat: '*', name: '전체', count: state.posts.length, active: state.cat === '*'
+    }));
+    cats.forEach(function (cat) {
+      frag.appendChild(indexItem({
+        cat: cat.slug, name: cat.name, count: cat.count,
+        active: state.cat === cat.slug, empty: !cat.count
+      }));
     });
-    U.clear(dom.catNav);
-    dom.catNav.appendChild(frag);
+    U.clear(dom.catIndex);
+    dom.catIndex.appendChild(frag);
   }
 
-  function syncCatState() {
-    U.qsa('.cat-item', dom.catNav).forEach(function (btn) {
-      var active = btn.getAttribute('data-cat') === state.cat;
-      btn.classList.toggle('is-active', active);
-      if (active) btn.setAttribute('aria-current', 'true');
-      else btn.removeAttribute('aria-current');
-    });
-  }
-
-  /* ---------- 태그 칩 ---------- */
-
-  /* 칩은 지금 보고 있는 카테고리 안의 태그만 센다. 카테고리를 고른 뒤에도
-     전체 태그가 그대로 남아 있으면 "눌러도 아무것도 안 나오는 칩"이 생긴다. */
-  function renderChips() {
-    if (!dom.chips) return;
-    var scope = postsInCat();
+  /* 태그는 지금 보고 있는 분류 안의 것만 센다. 분류를 고른 뒤에도 전체 태그가 남아 있으면
+     "눌러도 아무것도 안 나오는 태그"가 생긴다. */
+  function tagCounts() {
     var counts = Object.create(null);
-    scope.forEach(function (post) {
+    postsInCat().forEach(function (post) {
       post.tags.forEach(function (tag) { counts[tag] = (counts[tag] || 0) + 1; });
     });
-    /* 선택된 태그는 이 카테고리에 없더라도 0으로 남긴다. 보이지 않는 필터가 걸려 있으면 안 된다. */
+    /* 선택된 태그는 이 분류에 없더라도 0으로 남긴다. 보이지 않는 필터가 걸려 있으면 안 된다. */
     state.tags.forEach(function (tag) { if (!counts[tag]) counts[tag] = 0; });
+    return counts;
+  }
 
+  function renderTagIndex() {
+    if (!dom.tagIndex || !dom.tagFold) return;
+    var counts = tagCounts();
     var tags = Object.keys(counts).sort(function (a, b) {
       if (counts[b] !== counts[a]) return counts[b] - counts[a];
       return a.localeCompare(b, 'ko');
     });
 
+    /* 태그가 하나도 없으면 손잡이째 감춘다 — 열어도 아무것도 없는 <details>는 남기지 않는다. */
+    U.setHidden(dom.tagFold, !tags.length);
+    if (!tags.length) { U.clear(dom.tagIndex); return; }
+
+    if (dom.tagTotal) dom.tagTotal.textContent = String(tags.length);
+
     var frag = document.createDocumentFragment();
-    frag.appendChild(U.el('button', {
-      class: 'chip' + (state.tags.length === 0 ? ' is-active' : ''),
-      type: 'button',
-      'data-tag': '*',
-      'aria-pressed': state.tags.length === 0 ? 'true' : 'false',
-      text: '전체'
+    frag.appendChild(indexItem({
+      tag: '*', name: '전체', count: postsInCat().length, active: state.tags.length === 0
     }));
     tags.forEach(function (tag) {
-      var active = state.tags.indexOf(tag) !== -1;
-      frag.appendChild(U.el('button', {
-        class: 'chip' + (active ? ' is-active' : ''),
-        type: 'button',
-        'data-tag': tag,
-        'aria-pressed': active ? 'true' : 'false',
-        text: tag + ' ' + counts[tag]
+      frag.appendChild(indexItem({
+        tag: tag, name: tag, count: counts[tag],
+        active: state.tags.indexOf(tag) !== -1, empty: !counts[tag]
       }));
     });
+    U.clear(dom.tagIndex);
+    dom.tagIndex.appendChild(frag);
 
-    U.clear(dom.chips);
-    dom.chips.appendChild(frag);
-  }
-
-  function syncChipState() {
-    U.qsa('.chip', dom.chips).forEach(function (chip) {
-      var tag = chip.getAttribute('data-tag');
-      var active = tag === '*' ? state.tags.length === 0 : state.tags.indexOf(tag) !== -1;
-      chip.classList.toggle('is-active', active);
-      chip.setAttribute('aria-pressed', active ? 'true' : 'false');
-    });
+    /* 주소에 태그 필터가 걸려 있는데 그 필터가 접혀 있으면 사용자는 왜 글이 3편뿐인지 알 수 없다.
+       그래서 열기만 하고 닫지는 않는다 — 닫는 것은 사용자의 몫이다(계약서 §4-3). */
+    if (state.tags.length) dom.tagFold.setAttribute('open', '');
   }
 
   /* ---------- URL 상태 ---------- */
 
-  /* 주소를 상태로 읽는다. 모르는 정렬값이 들어와 있었으면 true를 돌려준다 —
-     화면은 최신순으로 도는데 주소만 ?sort=constructor 라고 말하고 있으면,
-     그 주소를 공유받은 사람은 보이지도 않는 정렬을 기대하게 된다. 호출부가 주소를 정리한다. */
+  /* 주소를 상태로 읽는다. v2.x의 ?sort= 는 폐기됐다 — 남아 있으면 정리해야 하므로 알려 준다.
+     보이지도 않는 정렬을 주소가 약속하고 있으면 그 링크를 받은 사람이 헷갈린다. */
   function readUrl() {
     var q = U.getQuery();
     state.query = q.q || '';
     state.cat = q.cat ? String(q.cat).trim() : '*';
     state.tags = q.tags ? q.tags.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [];
-    state.sort = SORTS[q.sort] ? q.sort : 'latest';
-    return Boolean(q.sort) && !SORTS[q.sort];
+    return q.sort !== undefined;
   }
 
   /* 검색어는 replace(타이핑마다 히스토리가 쌓이면 뒤로가기가 못 쓰게 된다),
-     카테고리·칩·정렬처럼 한 번에 끝나는 조작은 push. */
+     분류·태그처럼 한 번에 끝나는 조작은 push. */
   function writeUrl(push) {
     U.setQuery({
       q: state.query || null,
       cat: state.cat === '*' ? null : state.cat,
       tags: state.tags.length ? state.tags.join(',') : null,
-      sort: state.sort === 'latest' ? null : state.sort
+      sort: null       // 폐기된 파라미터는 주소에서 지운다
     }, push);
   }
 
   function syncControls() {
     if (dom.search) dom.search.value = state.query;
-    if (dom.sort) dom.sort.value = state.sort;
     if (dom.searchClear) U.setHidden(dom.searchClear, !state.query);
-    syncCatState();
-    syncChipState();
   }
 
   function resetFilters() {
@@ -401,9 +355,15 @@
     state.cat = '*';
     state.tags = [];
     writeUrl(true);
-    renderChips();
     syncControls();
-    applyFilter();
+    renderIndexes();
+    renderList();
+  }
+
+  /* 인덱스 두 축은 서로의 개수에 영향을 준다(분류를 고르면 태그 수가 바뀐다). 항상 같이 그린다. */
+  function renderIndexes() {
+    renderCatIndex();
+    renderTagIndex();
   }
 
   /* ---------- 이벤트 ---------- */
@@ -413,36 +373,37 @@
       state.query = dom.search.value;
       writeUrl(false);
       U.setHidden(dom.searchClear, !state.query);
-      applyFilter();
+      renderList();
     }, CFG.debounce.search);
 
     U.on(dom.search, 'input', onSearch);
 
     U.on(dom.searchClear, 'click', function () {
+      onSearch.cancel();            // 대기 중이던 입력이 뒤늦게 덮어쓰지 않게
       state.query = '';
       dom.search.value = '';
       U.setHidden(dom.searchClear, true);
       writeUrl(true);
-      applyFilter();
+      renderList();
       dom.search.focus();
     });
 
-    /* 카테고리는 단일 선택. 켜진 것을 다시 누르면 전체로 돌아온다. */
-    U.on(dom.catNav, 'click', function (e) {
-      var btn = e.target.closest('.cat-item');
+    /* 분류는 단일 선택. 켜진 것을 다시 누르면 전체로 돌아온다. */
+    U.on(dom.catIndex, 'click', function (e) {
+      var btn = e.target.closest('.index-item');
       if (!btn) return;
       var slug = btn.getAttribute('data-cat');
       state.cat = (slug === state.cat && slug !== '*') ? '*' : slug;
       writeUrl(true);
-      syncCatState();
-      renderChips();
-      applyFilter();
+      renderIndexes();
+      renderList();
     });
 
-    U.on(dom.chips, 'click', function (e) {
-      var chip = e.target.closest('.chip');
-      if (!chip) return;
-      var tag = chip.getAttribute('data-tag');
+    /* 태그는 다중 선택. '*'는 필터 해제다. */
+    U.on(dom.tagIndex, 'click', function (e) {
+      var btn = e.target.closest('.index-item');
+      if (!btn) return;
+      var tag = btn.getAttribute('data-tag');
       if (tag === '*') state.tags = [];
       else {
         var at = state.tags.indexOf(tag);
@@ -450,31 +411,16 @@
         else state.tags.splice(at, 1);
       }
       writeUrl(true);
-      syncChipState();
-      applyFilter();
+      renderIndexes();
+      renderList();
     });
 
-    U.on(dom.sort, 'change', function () {
-      state.sort = SORTS[dom.sort.value] ? dom.sort.value : 'latest';
-      writeUrl(true);
-      renderBoard();
-    });
-
-    /* 카드의 "수정" 버튼 → 에디터 수정 모드 */
-    U.on(dom.board, 'click', function (e) {
-      var btn = e.target.closest('.memo-act');
-      if (!btn) return;
-      var card = btn.closest('.memo');
-      if (!card) return;
-      window.location.href = 'write.html?id=' + encodeURIComponent(card.getAttribute('data-id'));
-    });
-
-    /* 뒤로가기로 이전 검색/카테고리/태그 상태가 살아나야 한다. */
+    /* 뒤로가기로 이전 검색·분류·태그 상태가 살아나야 한다. */
     U.on(window, 'popstate', function () {
       readUrl();
-      renderChips();
       syncControls();
-      renderBoard();
+      renderIndexes();
+      renderList();
     });
 
     /* "/" 로 검색창 포커스 */
@@ -496,71 +442,56 @@
     document.title = site.title;
   }
 
-  /* 분류 수는 "글이 들어 있는 카테고리" 기준이다. 등록만 해 둔 빈 카테고리까지 세면
-     숫자가 실제 내용보다 부풀어 보인다(빈 칸은 네비에 .is-empty로 이미 드러난다). */
-  function fillStats() {
-    var tags = Object.create(null);
-    var cats = Object.create(null);
-    state.posts.forEach(function (p) {
-      p.tags.forEach(function (t) { tags[t] = 1; });
-      if (p.category) cats[slugById[p.id]] = 1;
-    });
-    if (dom.statTags) dom.statTags.setAttribute('data-count', String(Object.keys(tags).length));
-    if (dom.statCats) dom.statCats.setAttribute('data-count', String(Object.keys(cats).length));
-    Blog.ui.countUp(dom.stats);
-  }
-
   /* 내보내지 않은 초안이 남아 있으면 알려 준다(데이터 유실 방지). */
   function noticeDrafts() {
     if (!Blog.admin.isAdmin()) return;
     var drafts = store.draft.list();
     if (!drafts.length) return;
-    U.toast('내보내지 않은 초안 ' + drafts.length + '개가 남아 있어요', 'warn');
+    U.toast('내보내지 않은 초안 ' + drafts.length + '개가 남아 있습니다', 'warn');
   }
 
   /* posts/ 안의 파일이 잘못돼 있다는 경고들. 관리자(= 파일을 고칠 수 있는 사람)에게만 띄운다.
      방문자에게는 고칠 방법이 없는 경고일 뿐이고, 화면은 폴백으로 이미 정상 동작하고 있다.
-     - categories.json이 깨지면 카테고리가 글에서 유추한 목록으로 바뀐다.
-       색·설명·순서·빈 카테고리가 조용히 사라지므로 알려 주지 않으면 원인을 찾을 수 없다.
-     - index.json에 같은 id가 두 번 있으면 뒤의 것이 버려진다(store가 먼저 것만 남긴다). */
+     ※ categories.json의 빈 배열은 경고 대상이 아니다 — 분류 0개는 정상 상태다(store.loadCategories). */
   function noticeDataProblems() {
     if (!Blog.admin.isAdmin()) return;
 
     var catErr = store.getCategoryError();
     if (catErr) {
-      U.toast('posts/categories.json을 읽지 못해 분류를 글에서 유추했어요 — ' + (catErr.message || ''), 'warn');
+      U.toast('posts/categories.json을 읽지 못해 분류를 글에서 유추했습니다 — ' + (catErr.message || ''), 'warn');
     }
 
     var dups = store.getIndexDuplicates();
     if (dups.length) {
-      U.toast('index.json에 중복된 id가 있어요: ' + dups.join(', ') + ' (뒤의 것은 무시)', 'warn');
+      U.toast('index.json에 중복된 id가 있습니다: ' + dups.join(', ') + ' (뒤의 것은 무시)', 'warn');
     }
   }
 
   function showLoadError(err) {
-    U.setHidden(dom.skeleton, true);
-    U.clear(dom.board);
+    U.setHidden(dom.loading, true);
+    U.setHidden(dom.catRow, true);
+    U.setHidden(dom.tagFold, true);
+    U.clear(dom.list);
     U.setHidden(dom.empty, false);
     setEmptyMessage(
-      err && err.code === 'file' ? '로컬 서버로 열어 주세요' : '메모를 불러오지 못했어요',
+      err && err.code === 'file' ? '로컬 서버로 열어 주세요' : '글 목록을 불러오지 못했습니다',
       (err && err.message) || '알 수 없는 오류가 발생했습니다.',
       false
     );
   }
 
   function start() {
-    dom.board = document.getElementById('board');
-    dom.empty = document.getElementById('boardEmpty');
-    dom.skeleton = document.getElementById('boardSkeleton');
+    dom.list = document.getElementById('postList');
+    dom.empty = document.getElementById('listEmpty');
+    dom.loading = document.getElementById('listLoading');
     dom.search = document.getElementById('searchInput');
     dom.searchClear = U.qs('.search-clear');
-    dom.chips = document.getElementById('tagFilters');
-    dom.catNav = document.getElementById('catNav');
-    dom.sort = document.getElementById('sortSelect');
-    dom.stats = U.qs('.hero-stats');
-    dom.statPosts = U.qs('[data-stat="posts"]');
-    dom.statTags = U.qs('[data-stat="tags"]');
-    dom.statCats = U.qs('[data-stat="cats"]');
+    dom.catRow = document.getElementById('catRow');
+    dom.catIndex = document.getElementById('catIndex');
+    dom.tagFold = document.getElementById('tagFold');
+    dom.tagIndex = document.getElementById('tagIndex');
+    /* 손잡이의 개수 칸. #tagIndex 안에도 .index-count가 생기므로 summary로 범위를 좁힌다. */
+    dom.tagTotal = U.qs('.index-fold-summary .index-count', dom.tagFold);
 
     Blog.ui.initShell();
     Blog.admin.init();
@@ -570,18 +501,15 @@
     syncControls();
     bind();
 
-    /* 카테고리는 목록과 동시에 받는다. 순서대로 기다리면 첫 화면이 한 번 더 늦어진다.
+    /* 분류는 목록과 동시에 받는다. 순서대로 기다리면 첫 화면이 한 번 더 늦어진다.
        loadCategories()는 실패해도 reject하지 않으므로 index.json 오류만 catch에 온다. */
     Promise.all([store.loadIndex(), store.loadCategories()]).then(function (results) {
       var data = results[0];
       setPosts(data.posts);
       fillSite(data.site);
-      U.setHidden(dom.skeleton, true);
-      renderCatNav();
-      renderChips();
-      syncControls();
-      renderBoard();
-      fillStats();
+      U.setHidden(dom.loading, true);
+      renderIndexes();
+      renderList();
       noticeDrafts();
       noticeDataProblems();
     }).catch(function (err) {

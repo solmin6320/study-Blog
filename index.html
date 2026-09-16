@@ -22,26 +22,22 @@
 </script>
 
 <title>메모 블로그</title>
-<meta name="description" content="공부한 내용을 메모지처럼 붙여 두는 개인 학습 블로그.">
+<meta name="description" content="공부한 것을 기록하는 개인 학습 블로그.">
 <meta name="color-scheme" content="light dark">
 <!-- 파비콘 404 요청을 만들지 않기 위한 빈 아이콘 -->
 <link rel="icon" href="data:,">
 
-<!-- 로드 순서 고정: tokens → base → layout → components → prose → animations -->
+<!-- 로드 순서 고정: tokens → base → layout → components → prose (계약서 §11)
+     animations.css는 v3.0에서 파일째 삭제됐다. 되살리지 말 것 — 404가 난다. -->
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/prose.css">
-<link rel="stylesheet" href="css/animations.css">
 
-<!-- 목록 화면은 마크다운을 렌더하지 않는다(요약은 순수 텍스트).
-     그래서 marked / DOMPurify / highlight.js는 여기서 로드하지 않는다 — 상세 페이지의 몫.
-
-     js/markdown.js도 같은 이유로 뺐다. 이 화면의 스크립트(app·ui·admin) 어디에서도
-     Blog.markdown을 부르지 않는다. CDN 세 개가 없는 페이지에서 살균 설정 파일만 올려 둘 이유가 없다.
-     ※ 나중에 목록이 본문 일부를 마크다운으로 그리게 되면(예: 요약 강조) 이 줄을 되살려야 한다.
-       그때는 marked/DOMPurify CDN도 함께 올려야 한다 — markdown.js 혼자서는 렌더하지 못한다. -->
+<!-- 목록 화면은 마크다운을 렌더하지 않는다(행의 내용물은 날짜와 제목뿐이다).
+     그래서 marked / DOMPurify / highlight.js 와 js/markdown.js는 여기서 로드하지 않는다 — 상세 페이지의 몫.
+     ※ 목록이 언젠가 본문 일부를 마크다운으로 그리게 되면 markdown.js와 CDN 셋을 함께 올려야 한다. -->
 <script defer src="js/config.js"></script>
 <script defer src="js/util.js"></script>
 <script defer src="js/store.js"></script>
@@ -53,102 +49,65 @@
 <body>
 <a class="sr-only" href="#main">본문 바로가기</a>
 
-<div class="bg-layer" aria-hidden="true">
-  <div class="bg-mesh"></div>
-  <div class="bg-grain"></div>
-</div>
-
-<header class="site-header" id="siteHeader">
-  <a class="brand" href="index.html">
-    <span class="brand-mark" aria-hidden="true"></span>
-    <span class="brand-text" data-site-title>메모 블로그</span>
-  </a>
-  <!-- write.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
+<!-- 헤더는 static이다. sticky도, 밑선도, 로고 마크도 없다(계약서 §3). -->
+<header class="site-header">
+  <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
+  <!-- 항목은 세 페이지가 동일하다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
-    <a class="nav-link is-active" href="index.html">메모</a>
+    <a class="nav-link is-active" href="index.html">글</a>
     <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
   </nav>
-  <div class="header-actions">
-    <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
-    <a class="btn btn-primary" href="write.html" data-admin-only>새 메모</a>
-  </div>
+  <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
 
 <!-- tabindex="-1"은 스킵 링크의 착지점이다. 없으면 스크롤만 되고 포커스는 헤더에 남는다(계약서 §3-1). -->
 <main class="site-main" id="main" tabindex="-1">
 
-  <section class="hero">
-    <h1 class="hero-title" data-site-title>메모 블로그</h1>
-    <p class="hero-sub" data-site-sub>공부한 것을 메모지처럼 붙여두는 곳</p>
-    <div class="hero-stats">
-      <div class="stat">
-        <b class="stat-num" data-stat="posts" data-count="0">0</b>
-        <span class="stat-label">메모</span>
-      </div>
-      <div class="stat">
-        <b class="stat-num" data-stat="tags" data-count="0">0</b>
-        <span class="stat-label">태그</span>
-      </div>
-      <div class="stat">
-        <b class="stat-num" data-stat="cats" data-count="0">0</b>
-        <span class="stat-label">분류</span>
-      </div>
-    </div>
-  </section>
+  <!-- DOM 순서 = 시선 순서 = Tab 순서: 정체 → 찾기 → 좁히기 → 목록 (계약서 §4). -->
+  <div class="page-head">
+    <h1 class="page-title" data-site-title>메모 블로그</h1>
+    <p class="page-sub" data-site-sub>공부한 것을 기록하는 곳</p>
+  </div>
 
-  <!-- 계약서 10-3. 카테고리는 단일 선택이라 .chip(다중)이 아니라 .cat-item을 쓴다.
-       버튼들은 nav의 직계 자식으로만 둔다 — 모바일에서 .cat-nav 자체가 가로 스크롤 컨테이너가 되어야 하므로
-       중간에 래퍼를 끼우지 않는다. 목록은 app.js가 posts/categories.json으로 다시 그린다. -->
-  <nav class="cat-nav" id="catNav" aria-label="카테고리">
-    <button class="cat-item is-active" type="button" data-cat="*" aria-current="true">
-      <span class="cat-name">전체</span><span class="cat-count">0</span>
-    </button>
-  </nav>
+  <div class="search">
+    <label class="sr-only" for="searchInput">글 검색</label>
+    <input class="search-input" id="searchInput" type="search"
+           placeholder="제목 · 요약 · 태그 검색  ( / )"
+           autocomplete="off" enterkeyhint="search">
+    <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
+  </div>
 
-  <!-- DOM 순서 = 그리드 배치 순서. layout.css가 .search→1열, .select→2열, .chips→전체폭이라
-       select를 chips보다 먼저 두어야 첫 줄에 나란히 놓인다. -->
-  <section class="toolbar" aria-label="검색과 필터">
-    <div class="search">
-      <label class="sr-only" for="searchInput">메모 검색</label>
-      <input class="search-input" id="searchInput" type="search"
-             placeholder="제목 · 요약 · 태그 검색  ( / )"
-             autocomplete="off" enterkeyhint="search">
-      <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
+  <!-- 분류 인덱스 — 항상 펼쳐져 있다. 항목은 app.js가 그린다.
+       분류가 하나도 없으면 행 전체가 hidden이 된다(계약서 §4-3):
+       "분류  전체 0" 한 줄은 정보가 아니라 고장으로 읽힌다. 그래서 시작 상태도 hidden이다. -->
+  <div class="index-row" id="catRow" hidden>
+    <span class="index-label" id="catIndexLabel">분류</span>
+    <nav class="index-list" id="catIndex" aria-labelledby="catIndexLabel"></nav>
+  </div>
+
+  <!-- 태그 인덱스 — 접혀 있다. 여닫는 일은 <details>가 한다(JS 0줄).
+       태그가 하나도 없으면 손잡이째 사라진다(hidden). ?tags= 가 있으면 app.js가 open을 붙인다. -->
+  <details class="index-fold" id="tagFold" hidden>
+    <summary class="index-fold-summary">태그 <span class="index-count">0</span></summary>
+    <div class="index-row">
+      <nav class="index-list" id="tagIndex" aria-label="태그 필터"></nav>
     </div>
-    <select class="select" id="sortSelect" aria-label="정렬 기준">
-      <option value="latest">최신순</option>
-      <option value="updated">수정순</option>
-      <option value="title">제목순</option>
-    </select>
-    <div class="chips" id="tagFilters" role="group" aria-label="태그 필터">
-      <button class="chip is-active" type="button" data-tag="*" aria-pressed="true">전체</button>
-    </div>
-  </section>
+  </details>
 
   <noscript>
-    <!-- JS가 꺼져 있으면 스켈레톤이 영영 남는다. 색·간격 토큰을 쓰지 않는 최소 규칙만 둔다. -->
-    <style>#boardSkeleton { display: none; }</style>
-    <div class="board-empty">
-      <p><strong>자바스크립트가 꺼져 있어요</strong></p>
-      <p>이 블로그는 메모 목록을 자바스크립트로 불러옵니다. 브라우저 설정에서 자바스크립트를 켜 주세요.</p>
+    <!-- JS가 꺼져 있으면 "불러오는 중"이 영영 남는다. 색·간격 토큰을 쓰지 않는 최소 규칙만 둔다. -->
+    <style>#listLoading { display: none; }</style>
+    <div class="list-empty">
+      <p><strong>자바스크립트가 꺼져 있습니다</strong></p>
+      <p>이 블로그는 글 목록을 자바스크립트로 불러옵니다. 브라우저 설정에서 자바스크립트를 켜 주세요.</p>
     </div>
   </noscript>
 
-  <section class="board" id="board" aria-live="polite" aria-label="메모 목록"></section>
+  <div class="post-list" id="postList" aria-live="polite"></div>
 
-  <div class="board-empty" id="boardEmpty" hidden>
-    <p><strong>아직 메모가 없어요</strong></p>
-    <p>write.html 에디터로 첫 메모를 쓰고 posts/&lt;카테고리&gt;/ 폴더에 넣어 보세요.</p>
-  </div>
+  <p class="list-loading" id="listLoading">불러오는 중…</p>
 
-  <div class="board-skeleton" id="boardSkeleton" aria-hidden="true">
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-    <div class="skeleton"></div>
-  </div>
+  <div class="list-empty" id="listEmpty" hidden></div>
 
 </main>
 

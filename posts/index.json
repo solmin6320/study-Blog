@@ -1,68 +1,7 @@
 {
   "site": {
     "title": "메모 블로그",
-    "subtitle": "공부한 것을 메모지처럼 붙여두는 곳"
+    "subtitle": "공부한 것을 기록하는 곳"
   },
-  "posts": [
-    {
-      "id": "2026-09-13-welcome",
-      "title": "이 블로그 사용법",
-      "summary": "메모를 쓰고 올리는 흐름과 화면 기능을 한 번에 정리한 안내 메모",
-      "created": "2026-09-13T10:20:00+09:00",
-      "updated": "2026-09-13T22:40:43+09:00",
-      "tags": [
-        "안내",
-        "마크다운",
-        "워크플로우"
-      ],
-      "category": "guide",
-      "color": "amber",
-      "pinned": true
-    },
-    {
-      "id": "2026-09-15-markdown-table",
-      "title": "메모에 표 넣기",
-      "summary": "정렬·넓은 표·셀 안에서 쓸 수 있는 것까지, 이 블로그의 표 문법을 한 장으로 정리한 메모",
-      "created": "2026-09-15T14:00:00+09:00",
-      "updated": "2026-09-15T14:00:00+09:00",
-      "tags": [
-        "마크다운",
-        "표",
-        "안내"
-      ],
-      "category": "guide",
-      "color": "mint",
-      "pinned": false
-    },
-    {
-      "id": "2026-09-10-css-grid",
-      "title": "CSS Grid 정리",
-      "summary": "트랙·간격·자동 배치까지, 실제로 쓰는 문법만 골라 정리한 그리드 노트",
-      "created": "2026-09-10T21:05:00+09:00",
-      "updated": "2026-09-12T09:30:00+09:00",
-      "tags": [
-        "css",
-        "layout",
-        "grid"
-      ],
-      "category": "css",
-      "color": "sky",
-      "pinned": false
-    },
-    {
-      "id": "2026-09-05-js-async",
-      "title": "자바스크립트 비동기 정리",
-      "summary": "이벤트 루프부터 Promise 조합과 취소 패턴까지 순서대로 짚은 비동기 노트",
-      "created": "2026-09-05T22:40:00+09:00",
-      "updated": "2026-09-11T20:15:00+09:00",
-      "tags": [
-        "javascript",
-        "async",
-        "비동기"
-      ],
-      "category": "javascript",
-      "color": "mint",
-      "pinned": false
-    }
-  ]
+  "posts": []
 }

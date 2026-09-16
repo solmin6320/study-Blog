@@ -2,9 +2,13 @@
    .md + index.json (+ categories.json) 내보내기, ?id= 수정 모드.
    이 화면이 "공부한 걸 블로그에 넣는" 유일한 통로다. 실수로 글을 잃는 경로가 없어야 한다.
 
-   v2: 글은 posts/<카테고리slug>/<id>.md 에 들어간다(계약서 10-1).
-   카테고리 목록은 posts/categories.json 이 진실이지만, 그 파일이 없어도 에디터는
-   끝까지 동작해야 한다 — 없으면 빈 목록 + "새 카테고리"로 진행한다. */
+   글은 posts/<분류slug>/<id>.md 에 들어간다(계약서 §9-3).
+   분류 목록은 posts/categories.json 이 진실이지만, 그 파일이 없거나 비어 있어도 에디터는
+   끝까지 동작해야 한다 — 이 블로그의 분류는 사용자가 직접 만드는 것이고 시작은 0개다.
+   목록이 비면 "미분류 한 줄 + 새 분류 버튼"만으로 글을 끝까지 쓸 수 있어야 한다.
+
+   v3.0: 글·분류의 color 필드는 폐기됐다(계약서 §9-2). 메모지 카드가 사라져 색이
+   놓일 면이 없다. 여기에 색 선택 UI를 되살리지 않는다. */
 (function (window, document) {
   'use strict';
 
@@ -33,7 +37,7 @@
     created: '',          // 수정 모드에서 보존해야 하는 원본 게시 시각
     originalId: '',
     originalCategory: '',
-    originalPath: '',     // 실제로 읽어 온 경로. 카테고리를 바꾸면 "이 파일을 지우라"고 알려 줘야 한다.
+    originalPath: '',     // 실제로 읽어 온 경로. 분류를 바꾸면 "이 파일을 지우라"고 알려 줘야 한다.
     idTouched: false,     // 사용자가 id를 직접 건드렸으면 자동 생성을 멈춘다
     modeTouched: false,   // 보기 모드를 손수 바꿨으면 화면 폭 변화가 덮어쓰지 않는다
     dirty: false,         // 내보내지 않은 변경
@@ -42,7 +46,7 @@
     indexError: null      // index.json을 왜 못 읽었는지. 내보내기 안전장치의 판단 근거가 된다.
   };
 
-  /* 카테고리 상태. added는 "이번에 새로 만들어서 categories.json에 아직 없는" 슬러그들. */
+  /* 분류 상태. added는 "이번에 새로 만들어서 categories.json에 아직 없는" 슬러그들. */
   var cats = {
     list: [],
     added: [],       // 이번 세션에서 새로 만든 slug
@@ -75,25 +79,13 @@
     return store.postPath(id, category);
   }
 
-  /* 실제로 읽어 온 경로에서 폴더명을 되짚는다. 폴더가 곧 그 글의 진짜 카테고리다. */
+  /* 실제로 읽어 온 경로에서 폴더명을 되짚는다. 폴더가 곧 그 글의 진짜 분류다. */
   function catFromPath(url) {
     var m = /(?:^|\/)posts\/([^/]+)\/[^/]+\.md$/.exec(String(url || ''));
     return m ? m[1] : '';
   }
 
-  /* ---------- 카테고리 ---------- */
-
-  var COLOR_VALUES = CFG.colors.map(function (c) { return c.value; });
-
-  function isColor(value) {
-    return COLOR_VALUES.indexOf(String(value || '').trim().toLowerCase()) !== -1;
-  }
-
-  /* 색이 비어 있으면 slug 해시로 하나 고정한다. 같은 카테고리는 언제나 같은 색이 나온다. */
-  function colorFor(slug, raw) {
-    if (isColor(raw)) return String(raw).trim().toLowerCase();
-    return COLOR_VALUES[Math.floor(U.hashUnit(slug || 'x') * COLOR_VALUES.length) % COLOR_VALUES.length];
-  }
+  /* ---------- 분류 ---------- */
 
   function normalizeCat(item, index) {
     var c = (typeof item === 'string') ? { slug: item, name: item } : (item || {});
@@ -103,7 +95,7 @@
     return {
       slug: slug,
       name: String(c.name || c.label || c.title || slug).trim() || slug,
-      color: colorFor(slug, c.color),
+      /* color는 폐기됐다(§9-2). 기존 categories.json에 키가 남아 있어도 읽지 않는다. */
       description: String(c.description || ''),
       order: isFinite(order) ? order : index
     };
@@ -145,11 +137,11 @@
     return sortCats(out);
   }
 
-  /* 카테고리 목록은 store.loadCategories() 하나로 받는다.
+  /* 분류 목록은 store.loadCategories() 하나로 받는다.
      그쪽은 절대 reject하지 않고, 파일을 못 읽으면 index.json의 category 값에서
      목록을 되살려 { list, derived:true } 로 돌려준다. */
 
-  /* 이 함수도 절대 reject하지 않는다. 카테고리를 못 읽는다고 글쓰기가 막히면 안 된다.
+  /* 이 함수도 절대 reject하지 않는다. 분류를 못 읽는다고 글쓰기가 막히면 안 된다.
 
      derived:true는 "categories.json을 못 읽어 index.json에서 되살린 목록"이라는 뜻이다.
      고르는 데는 그대로 쓰되, 파일을 읽은 것으로 치지는 않는다 — 그 상태에서
@@ -166,7 +158,7 @@
         cats.list = [];
         cats.derived = true;
         cats.loaded = false;
-        cats.error = err || mkErr('unknown', '카테고리 목록을 불러오지 못했습니다.');
+        cats.error = err || mkErr('unknown', '분류 목록을 불러오지 못했습니다.');
       });
   }
 
@@ -212,7 +204,9 @@
     cats.list.forEach(function (c) {
       dom.category.appendChild(U.el('option', { value: c.slug, text: optionLabel(c) }));
     });
-    /* 목록이 비어도 고를 값 하나는 있어야 한다. 계약서 10-1의 폴백 폴더. */
+    /* 분류가 0개여도 셀렉트가 빈 채로 남지 않는다. 빈 <select>는 화면에서 "고장"으로 읽히고,
+       값이 없으면 chosenCategory()가 무엇을 돌려줘야 하는지도 애매해진다.
+       계약서 §9-3의 폴백 폴더를 항상 마지막 항목으로 둔다. */
     dom.category.appendChild(U.el('option', { value: UNCATEGORIZED, text: '미분류 (' + UNCATEGORIZED + ')' }));
     selectCategory(want);
   }
@@ -243,16 +237,9 @@
       '이 글은 posts/' + chosenCategory() + '/ 폴더에 저장됩니다');
   }
 
-  function fillNewCatColors() {
-    if (!dom.newCatColor) return;
-    U.clear(dom.newCatColor);
-    CFG.colors.forEach(function (color) {
-      dom.newCatColor.appendChild(U.el('option', { value: color.value, text: color.label }));
-    });
-    dom.newCatColor.value = CFG.editor.defaultColor;
-  }
-
-  /* ---------- 새 카테고리 만들기 ---------- */
+  /* ---------- 새 분류 만들기 ----------
+     이 블로그의 분류는 전부 여기서 태어난다. categories.json은 빈 배열에서 시작하고,
+     사용자가 이 폼으로 만든 것만 들어간다. 그래서 0개 상태에서도 막힘없이 돌아야 한다. */
 
   var newCatSlugTouched = false;
 
@@ -262,7 +249,6 @@
     if (dom.btnNewCat) dom.btnNewCat.setAttribute('aria-expanded', 'true');
     dom.newCatName.value = '';
     dom.newCatSlug.value = '';
-    if (dom.newCatColor) dom.newCatColor.value = CFG.editor.defaultColor;
     newCatSlugTouched = false;
     dom.newCatName.focus();
   }
@@ -285,7 +271,7 @@
     var name = dom.newCatName.value.trim();
     var slug = dom.newCatSlug.value.trim().toLowerCase();
 
-    if (!name) return rejectNewCat(dom.newCatName, '카테고리 표시 이름을 입력해 주세요');
+    if (!name) return rejectNewCat(dom.newCatName, '분류 표시 이름을 입력해 주세요');
     if (!slug) {
       return rejectNewCat(dom.newCatSlug,
         '폴더명을 입력해 주세요. 한글은 폴더명으로 쓸 수 없어서 영문으로 직접 지어야 합니다 (예: algorithm)');
@@ -301,15 +287,16 @@
       return rejectNewCat(dom.newCatSlug, '이미 있는 폴더명이에요: ' + slug);
     }
     if (findCatByName(name)) {
-      return rejectNewCat(dom.newCatName, '같은 이름의 카테고리가 이미 있어요: ' + name);
+      return rejectNewCat(dom.newCatName, '같은 이름의 분류가 이미 있어요: ' + name);
     }
 
+    /* 목록이 비어 있으면 maxOrder는 -1로 남고 첫 분류가 order 0을 받는다.
+       index.html의 인덱스 정렬(§4-3)이 이 order를 그대로 읽는다. */
     var maxOrder = -1;
     cats.list.forEach(function (c) { if (c.order > maxOrder) maxOrder = c.order; });
     var cat = normalizeCat({
       slug: slug,
       name: name,
-      color: dom.newCatColor ? dom.newCatColor.value : '',
       description: '',
       order: maxOrder + 1
     }, cats.list.length);
@@ -321,7 +308,7 @@
     fillCategoryOptions(cat.slug);
     closeNewCat(true);
     onEdit();
-    U.toast('카테고리를 만들었어요 · 내보낼 때 categories.json도 함께 내려받습니다', 'ok');
+    U.toast('분류를 만들었어요 · 내보낼 때 categories.json도 함께 내려받습니다', 'ok');
     return true;
   }
 
@@ -334,7 +321,6 @@
       summary: dom.summary.value.trim(),
       tags: dom.tags.value.split(',').map(function (t) { return t.trim(); }).filter(Boolean),
       category: chosenCategory(),
-      color: dom.color.value,
       pinned: dom.pinned.checked,
       body: dom.body.value
     };
@@ -346,7 +332,6 @@
     dom.summary.value = meta.summary || '';
     dom.tags.value = (meta.tags || []).join(', ');
     selectCategory(meta.category || '');
-    dom.color.value = meta.color || CFG.editor.defaultColor;
     dom.pinned.checked = Boolean(meta.pinned);
     dom.body.value = body || '';
   }
@@ -403,7 +388,7 @@
 
   /* ---------- 자동 임시저장 ---------- */
 
-  /* 새로 만든 카테고리도 초안에 같이 담는다. 새로고침 한 번에 사라지면
+  /* 새로 만든 분류도 초안에 같이 담는다. 새로고침 한 번에 사라지면
      사용자는 폴더명을 다시 지어야 하고, 그 사이 글의 분류가 어긋난다. */
   function addedCatObjects() {
     return cats.added.map(function (slug) { return findCat(slug); }).filter(Boolean);
@@ -973,14 +958,14 @@
   function ensureUsableCategory(onOk) {
     var cat = chosenCategory();
     /* 새로 만들 때보다는 느슨하게 본다. 이미 categories.json에 있는 값(밑줄 포함)까지
-       막으면 사용자가 직접 손으로 넣은 카테고리를 에디터가 거부하게 된다. */
+       막으면 사용자가 직접 손으로 넣은 분류를 에디터가 거부하게 된다. */
     if (cat === UNCATEGORIZED || findCat(cat) || PATH_SAFE_RE.test(cat)) { onOk(); return; }
 
     Blog.ui.modal({
       title: '이 분류는 폴더명으로 쓸 수 없어요',
       text: '"' + cat + '" 은(는) 폴더명 규칙(영문 소문자·숫자·하이픈)에 맞지 않습니다.\n'
         + '글은 posts/<폴더명>/ 안에 들어가야 해서 이대로는 경로를 만들 수 없어요.\n'
-        + '카테고리를 고르거나 "+ 새 카테고리"로 만들어 주세요.',
+        + '분류를 고르거나 "+ 새 분류"로 만들어 주세요.',
       actions: [
         {
           label: '미분류로 내보내기', variant: 'ghost', onClick: function () {
@@ -991,7 +976,7 @@
           }
         },
         {
-          label: '카테고리 고르기', variant: 'primary', onClick: function () {
+          label: '분류 고르기', variant: 'primary', onClick: function () {
             window.setTimeout(function () { if (dom.category) dom.category.focus(); }, 0);
           }
         }
@@ -1010,7 +995,6 @@
         return {
           slug: c.slug,
           name: c.name,
-          color: colorFor(c.slug, c.color),
           description: c.description || '',
           order: (typeof c.order === 'number' && isFinite(c.order)) ? c.order : i
         };
@@ -1121,9 +1105,9 @@
       /* created는 절대 바뀌지 않고 updated만 갱신된다. 이 규칙이 깨지면 결함이다. */
       updated: now,
       tags: form.tags,
-      /* frontmatter의 category는 표시 이름이 아니라 slug(= 폴더명)다. 계약서 10-1. */
+      /* frontmatter의 category는 표시 이름이 아니라 slug(= 폴더명)다. 계약서 §9-3. */
       category: form.category,
-      color: form.color,
+      /* color는 내보내지 않는다(§9-2 폐기). 기존 파일에 남아 있는 키는 그대로 둬도 무해하다. */
       pinned: form.pinned
     };
 
@@ -1266,7 +1250,7 @@
         : 'posts/index.json 의 posts 배열에 이 글 항목을 직접 추가합니다(목록을 못 읽어 만들지 못했습니다).'
     ];
     if (opts.cats) {
-      lines.push('내려받은 categories.json 으로 posts/categories.json 을 덮어씁니다(새 카테고리가 들어 있습니다).');
+      lines.push('내려받은 categories.json 으로 posts/categories.json 을 덮어씁니다(새 분류가 들어 있습니다).');
     }
     if (moved) {
       lines.push('예전 파일 ' + oldPath + ' 은(는) 직접 지웁니다 — 지우지 않으면 같은 글이 두 곳에 남습니다.');
@@ -1285,7 +1269,7 @@
 
     if (moved) {
       nodes.push(U.el('p', {
-        text: '카테고리 또는 id가 바뀌어 파일이 다른 폴더로 갑니다: ' + oldPath + ' -> ' + newPath
+        text: '분류 또는 id가 바뀌어 파일이 다른 폴더로 갑니다: ' + oldPath + ' -> ' + newPath
       }));
     }
 
@@ -1332,14 +1316,6 @@
 
   /* ---------- 불러오기 ---------- */
 
-  function fillColorOptions() {
-    U.clear(dom.color);
-    CFG.colors.forEach(function (color) {
-      dom.color.appendChild(U.el('option', { value: color.value, text: color.label }));
-    });
-    dom.color.value = CFG.editor.defaultColor;
-  }
-
   function showEditBadge(meta, path) {
     if (!dom.modeBadge) return;
     U.setHidden(dom.modeBadge, false);
@@ -1351,7 +1327,7 @@
     document.title = '수정: ' + meta.title;
   }
 
-  /* 초안에 실려 온 "아직 파일에 없는 카테고리"를 목록에 되살린다. */
+  /* 초안에 실려 온 "아직 파일에 없는 분류"를 목록에 되살린다. */
   function restoreDraftCats(draftCats) {
     var changed = false;
     (draftCats || []).forEach(function (item) {
@@ -1368,11 +1344,12 @@
   }
 
   /* 초안이 "지금 화면에 있는 것과 완전히 같은가"를 본다(M3-7).
-     예전에는 title·body 둘만 비교해서, 요약·태그·id·색·고정·카테고리만 바꾸고 떠나면
+     예전에는 title·body 둘만 비교해서, 요약·태그·id·고정·분류만 바꾸고 떠나면
      다음에 열 때 모달조차 뜨지 않고 그 변경이 조용히 사라졌다.
-     특히 카테고리는 글이 저장될 폴더를 정하는 값이라 잃었을 때 비용이 가장 크다.
-     비교 대상은 readForm()이 만드는 필드 전부이며, 여기 필드가 늘면 이 목록도 함께 늘려야 한다. */
-  var FORM_TEXT_KEYS = ['id', 'title', 'summary', 'category', 'color', 'body'];
+     특히 분류는 글이 저장될 폴더를 정하는 값이라 잃었을 때 비용이 가장 크다.
+     비교 대상은 readForm()이 만드는 필드 전부이며, 여기 필드가 늘면 이 목록도 함께 늘려야 한다.
+     (v3.0에서 'color'가 빠졌다 — readForm()이 더 이상 그 값을 만들지 않는다.) */
+  var FORM_TEXT_KEYS = ['id', 'title', 'summary', 'category', 'body'];
 
   function sameForm(a, b) {
     if (!a || !b) return false;
@@ -1413,7 +1390,7 @@
         },
         {
           label: '불러오기', variant: 'primary', onClick: function () {
-            /* 카테고리를 먼저 되살려야 select 안에 그 값이 존재한다. */
+            /* 분류를 먼저 되살려야 select 안에 그 값이 존재한다. */
             restoreDraftCats(draft.data.newCats);
             var form = draft.data.form;
             writeForm(form, form.body);
@@ -1431,13 +1408,13 @@
     return true;
   }
 
-  /* 보드의 카테고리 네비는 "전체"를 ?cat=* 로 쓴다. 그건 폴더 이름이 아니다. */
+  /* 목록의 분류 인덱스는 "전체"를 ?cat=* 로 쓴다(계약서 §4-3). 그건 폴더 이름이 아니다. */
   function queryCategory() {
     var raw = String(U.getQuery().cat || '').trim();
     return (!raw || raw === '*') ? '' : raw;
   }
 
-  /* index.json이 알려 주는 카테고리 또는 ?cat= 으로 넘어온 힌트. 없으면 빈 문자열. */
+  /* index.json이 알려 주는 분류 또는 ?cat= 으로 넘어온 힌트. 없으면 빈 문자열. */
   function categoryHintFor(id) {
     var q = queryCategory();
     if (q) return q;
@@ -1456,7 +1433,7 @@
 
   /* 후보 경로 목록. 규칙은 store가 가진다(Blog.store.postCandidates) — 여기서 새로 조립하면
      저장하는 쪽과 찾는 쪽의 경로 규칙이 갈라져 "내보냈는데 못 찾는" 사고가 난다.
-     에디터가 아는 카테고리 힌트는 맨 앞에 둔다. 맞으면 요청이 한 번에 끝나고,
+     에디터가 아는 분류 힌트는 맨 앞에 둔다. 맞으면 요청이 한 번에 끝나고,
      틀려도 나머지 후보가 그대로 남아 손해가 없다. */
   function candidatePaths(id, hint) {
     var urls = [];
@@ -1477,14 +1454,14 @@
     return promised(function () { return store.fetchText(url); });
   }
 
-  /* 후보 경로를 차례로 두드린다. store가 카테고리 경로를 아직 모를 수 있어서 필요한 폴백이다. */
+  /* 후보 경로를 차례로 두드린다. store가 분류 경로를 아직 모를 수 있어서 필요한 폴백이다. */
   function fetchPostFallback(id, hint, firstErr) {
     var urls = candidatePaths(id, hint);
     var i = 0;
     function next() {
       if (i >= urls.length) {
         throw firstErr || mkErr('notfound',
-          'posts/ 안에서 ' + id + '.md 를 찾지 못했습니다. 카테고리 폴더로 옮겨졌는지 확인해 주세요.');
+          'posts/ 안에서 ' + id + '.md 를 찾지 못했습니다. 분류 폴더로 옮겨졌는지 확인해 주세요.');
       }
       var url = urls[i];
       i += 1;
@@ -1505,7 +1482,7 @@
     return typeof store.fetchText === 'function' && typeof store.postCandidates === 'function';
   }
 
-  /* store.loadPost(id, categoryHint)를 먼저 쓴다. 카테고리 힌트를 함께 넘겨 불필요한 404를 줄인다.
+  /* store.loadPost(id, categoryHint)를 먼저 쓴다. 분류 힌트를 함께 넘겨 불필요한 404를 줄인다.
      폴백(직접 후보 훑기)은 store가 거부했거나(= 파이프라인이 깨졌거나)
      후보 탐색 API가 없을 때만 돈다. */
   function loadPostAny(id, hint) {
@@ -1520,7 +1497,7 @@
         if (!res.post) {
           if (!res.err && storeScansCandidates()) {
             throw mkErr('notfound',
-              'posts/ 안에서 ' + id + '.md 를 찾지 못했습니다. 카테고리 폴더로 옮겨졌는지 확인해 주세요.');
+              'posts/ 안에서 ' + id + '.md 를 찾지 못했습니다. 분류 폴더로 옮겨졌는지 확인해 주세요.');
           }
           return fetchPostFallback(id, hint, res.err);
         }
@@ -1529,7 +1506,7 @@
       });
   }
 
-  /* 글이 어느 카테고리 값으로 열려야 하는지 고른다.
+  /* 글이 어느 분류 값으로 열려야 하는지 고른다.
      폴더가 곧 진실이지만, v1에서 넘어온 한글 표시 이름도 버리지 않고 slug로 옮겨 준다. */
   function pickCategoryValue(meta, path) {
     var fromPath = catFromPath(path);
@@ -1566,7 +1543,7 @@
       setStatus('불러왔습니다', false);
 
       if (catValue !== UNCATEGORIZED && !findCat(catValue) && !PATH_SAFE_RE.test(catValue)) {
-        U.toast('이 글의 분류 "' + catValue + '" 는 폴더명 규칙에 맞지 않아요. 카테고리를 골라 주세요.', 'warn');
+        U.toast('이 글의 분류 "' + catValue + '" 는 폴더명 규칙에 맞지 않아요. 분류를 골라 주세요.', 'warn');
       }
       /* writeForm()으로 화면이 채워진 뒤에 부른다 — 비교 기준이 "지금 화면"이어야 하기 때문. */
       applyDraftIfNewer();
@@ -1585,12 +1562,12 @@
   function startNew() {
     state.mode = 'new';
     state.slot = 'new';
-    /* 보드에서 카테고리를 고른 채 "새 메모"로 왔으면 그 카테고리로 시작한다. */
+    /* 목록에서 분류를 고른 채(?cat=) 쓰기로 왔으면 그 분류로 시작한다. */
     selectCategory(queryCategory() || defaultCategorySlug());
     refreshAutoId();
     /* 수정 모드는 loadForEdit가 글 제목으로 바꾼다. 새 글일 때만 사이트명을 반영한다. */
-    document.title = '새 메모 쓰기 · ' + siteInfo().title;
-    setStatus('새 메모', false);
+    document.title = '새 글 쓰기 · ' + siteInfo().title;
+    setStatus('새 글', false);
     applyDraftIfNewer();
     renderPreview();
   }
@@ -1670,7 +1647,7 @@
     });
     U.on(dom.newCatSlug, 'input', function () { newCatSlugTouched = true; });
 
-    /* 새 카테고리 폼 안에서는 Enter로 추가, ESC로 취소.
+    /* 새 분류 폼 안에서는 Enter로 추가, ESC로 취소.
 
        ① IME 가드 — 한글 이름을 치고 조합을 확정하려고 누른 Enter를 여기서 가로채면
           조합이 깨진 채로 addCategory()가 돌아 "알고리즘"이 "알고리즤" 같은 이름으로 만들어진다.
@@ -1698,7 +1675,6 @@
     [dom.title, dom.summary, dom.tags].forEach(function (field) {
       U.on(field, 'input', onEdit);
     });
-    U.on(dom.color, 'change', onEdit);
     U.on(dom.pinned, 'change', onEdit);
 
     U.on(dom.title, 'input', refreshAutoId);
@@ -1752,14 +1728,15 @@
     });
   }
 
-  /* 카테고리를 못 읽었을 때 한 번만 알린다. 글쓰기를 막지는 않는다. */
+  /* 분류가 0개일 때 "고장난 건가?"로 읽히지 않게 한 번만 알린다. 글쓰기를 막지는 않는다.
+     이 블로그는 분류 0개에서 시작하는 게 정상이므로 이건 오류 안내가 아니라 다음 행동 안내다. */
   function noticeCategoryState() {
     if (cats.list.length) return;
     if (cats.error && cats.error.code && cats.error.code !== 'notfound') {
-      U.toast('카테고리 목록을 불러오지 못했어요(' + cats.error.code + '). "+ 새 카테고리"로 만들 수 있습니다.', 'warn');
+      U.toast('분류 목록을 불러오지 못했어요(' + cats.error.code + '). "+ 새 분류"로 만들 수 있습니다.', 'warn');
       return;
     }
-    U.toast('카테고리가 아직 없어요. "+ 새 카테고리"로 만들면 내보낼 때 categories.json도 함께 생깁니다.', 'warn');
+    U.toast('분류가 아직 없어요. "+ 새 분류"로 만들면 내보낼 때 categories.json도 함께 내려받습니다.', 'warn');
   }
 
   function start() {
@@ -1768,7 +1745,6 @@
     dom.summary = document.getElementById('fSummary');
     dom.tags = document.getElementById('fTags');
     dom.category = document.getElementById('fCategory');
-    dom.color = document.getElementById('fColor');
     dom.pinned = document.getElementById('fPinned');
     dom.id = document.getElementById('fId');
     dom.body = document.getElementById('fBody');
@@ -1786,13 +1762,10 @@
     dom.btnCancelCat = document.getElementById('btnCancelCat');
     dom.newCatName = document.getElementById('fNewCatName');
     dom.newCatSlug = document.getElementById('fNewCatSlug');
-    dom.newCatColor = document.getElementById('fNewCatColor');
 
     Blog.ui.initShell();
     var admin = Blog.admin.init();
 
-    fillColorOptions();
-    fillNewCatColors();
     bind();
     initToolbarRoving();
     setViewMode(autoViewMode());
