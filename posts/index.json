@@ -3,16 +3,5 @@
     "title": "메모 블로그",
     "subtitle": "공부한 것을 기록하는 곳"
   },
-  "posts": [
-    {
-      "id": "2026-09-16-closure",
-      "title": "클로저 (JavaScript)",
-      "summary": "클로저(closure)는 함수와 그 함수가 만들어질 때의 주변 변수 환경을 한데 묶은 것으로, 바깥 함수가 실행을 마친 뒤에도 안쪽 함수가 그 변수를 계속 참조할 수 있게 한다.",
-      "created": "2026-09-16T14:54:19+09:00",
-      "updated": "2026-09-16T14:54:19+09:00",
-      "tags": ["JavaScript", "스코프"],
-      "category": "_uncategorized",
-      "pinned": false
-    }
-  ]
+  "posts": []
 }
