@@ -558,7 +558,21 @@
 
   /* ---------- posts/<category>/<id>.md ---------- */
 
+  /* 글 id는 곧 파일명이고, ?id= 로 주소에서 그대로 들어온다. 검사 없이 경로에 붙이면
+     "../../x" 나 "x?y" 같은 값이 posts/ 밖의 파일을 읽어 마크다운으로 그리려 든다.
+     살균기가 뒤에 있어 스크립트가 도는 일은 없지만, 경로 조립에 들어가는 값은 조립 전에 막는 것이 원칙이다.
+     허용 집합은 util.slugAscii가 만드는 값(영문 소문자·숫자·하이픈)에 사용자가 손으로 지을 수 있는
+     대문자·밑줄·점을 더한 것이다. 슬래시·역슬래시·물음표·해시·공백·앞머리 점은 들어올 수 없다. */
+  var SAFE_ID_RE = /^[0-9A-Za-z][0-9A-Za-z._-]{0,199}$/;
+
+  function isSafeId(id) {
+    var s = String(id === null || id === undefined ? '' : id);
+    return SAFE_ID_RE.test(s) && s.indexOf('..') === -1;
+  }
+
+  /* 허용되지 않는 id면 빈 문자열 — 어떤 호출부도 이 값을 fetch 경로로 쓰지 못한다. */
   function postPath(id, category) {
+    if (!isSafeId(id)) return '';
     return CFG.paths.post(id, categorySlug(category));
   }
 
@@ -578,7 +592,7 @@
   function postCandidates(id, categoryHint, trusted) {
     var urls = [];
     function push(url) { if (url && urls.indexOf(url) === -1) urls.push(url); }
-    if (!id) return urls;
+    if (!id || !isSafeId(id)) return urls;    // 쓸 수 없는 id는 후보 자체가 없다(요청 0번)
 
     if (categoryHint) push(postPath(id, categoryHint));
     if (!trusted) {
@@ -606,7 +620,8 @@
      없으면 null(reject 아님). file://·네트워크 실패만 reject한다 — 그건 "없다"가 아니라
      "읽을 수 없다"라서 화면이 다른 안내를 해야 하기 때문이다. */
   function loadPost(id, categoryHint) {
-    if (!id) return Promise.resolve(null);
+    /* 쓸 수 없는 id는 "없는 글"과 같은 결과(null)다. 화면단은 isSafeId로 두 경우를 갈라 안내한다. */
+    if (!id || !isSafeId(id)) return Promise.resolve(null);
     if (postCache[id]) return Promise.resolve(postCache[id]);
 
     /* index.json은 글이 든 폴더를 알려 주고, categories.json은 표시 이름을 알려 준다.
@@ -812,6 +827,7 @@
        글을 찾는 규칙이 store와 에디터에서 갈라지면 "보드에는 보이는데 수정은 안 되는 글"이 생긴다. */
     fetchText: fetchText,
     postCandidates: postCandidates,
+    isSafeId: isSafeId,
     loadIndex: loadIndex,
     getIndexSync: getIndexSync,
     getIndexDuplicates: getIndexDuplicates,

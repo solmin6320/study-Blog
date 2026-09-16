@@ -2,24 +2,15 @@
 <html lang="ko" data-theme="light">
 <head>
 <meta charset="utf-8">
+<!-- CSP — index.html / post.html과 문자열이 같아야 한다(세 페이지가 한 정책).
+     인라인 <script> / <style> / style="…" / on*="…" 을 전부 막는다.
+     그래서 이 파일에는 인라인 코드가 한 줄도 없어야 한다. 테마 초기화도 js/theme-init.js로 뺐다. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' https: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지).
+<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지). 그래서 defer 없이 동기로 싣는다.
      'blogTheme' 문자열은 config.js의 storageKeys.theme과 반드시 같아야 한다. -->
-<script>
-  (function () {
-    try {
-      var saved = localStorage.getItem('blogTheme');
-      var dark = saved
-        ? saved === 'dark'
-        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    } catch (err) {
-      /* 시크릿 모드 등에서 localStorage가 막혀도 기본 테마로 계속 그린다. */
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-  })();
-</script>
+<script src="js/theme-init.js"></script>
 
 <title>새 글 쓰기 · 메모 블로그</title>
 <meta name="description" content="마크다운으로 글을 쓰고 .md와 index.json 파일로 내보내는 작성 도구.">
@@ -95,12 +86,12 @@
      이 클래스가 여기서만 기준선을 76rem으로 푼다. write.html의 <main> 외에는 쓰지 않는다. -->
 <main class="site-main editor-page" id="main" tabindex="-1">
 
-  <!-- 관리자 스위치가 꺼져 있을 때 editor.js가 hidden을 푼다(editor.js의 #editorVisitor).
-       에디터 자체를 막지는 않는다 — 정적 사이트라 막을 수도 없고, 막는 시늉을 할 이유도 없다. -->
+  <!-- 배포 도메인(관리자 판정 false)에서는 editor.js가 아래 .editor를 DOM에서 통째로 지우고
+       이 문단의 hidden만 푼다. 에디터는 초기화조차 하지 않는다 — 자동저장·단축키·beforeunload도 붙지 않는다.
+       사용자 요구: 배포 버전은 보기만 가능해야 한다. 글은 posts/ 폴더에 넣어 커밋하는 것이 유일한 경로다.
+       (판정은 hostname 하나다 — js/admin.js. 쿼리·localStorage로 켜는 길은 없다.) -->
   <div class="editor-visitor" id="editorVisitor" hidden>
-    <p><strong>이 페이지는 블로그 주인의 작성 도구입니다.</strong></p>
-    <p>자유롭게 써 보셔도 됩니다. 다만 내보낸 파일을 저장소에 커밋할 수 있는 사람만 실제로 글을 올릴 수 있고,
-       여기서 쓴 내용은 이 브라우저에만 임시로 남습니다.</p>
+    <p>이 페이지는 로컬에서만 동작합니다. 글은 posts/ 폴더에 넣어 배포합니다. <a href="index.html">글 목록으로</a></p>
   </div>
 
   <noscript>

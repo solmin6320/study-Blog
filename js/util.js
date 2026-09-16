@@ -17,8 +17,23 @@
     return function off() { target.removeEventListener(type, handler, opts); };
   }
 
+  /* URL을 받는 속성. 이 속성에 스크립트 스킴이 들어가면 클릭 한 번이 곧 코드 실행이다.
+     호출부는 전부 'post.html?id=' 같은 고정 접두사 뒤에 encodeURIComponent로 값을 붙이므로
+     정상 경로에서는 걸릴 일이 없다 — 이 검사는 그 약속이 깨졌을 때를 위한 마지막 그물이다.
+     blob:은 다운로드(download)가 쓰므로 막지 않는다. */
+  var URL_ATTRS = ['href', 'src', 'action', 'formaction', 'xlink:href'];
+  var BAD_SCHEME_RE = /^(?:javascript|vbscript|data):/i;
+
+  function isSafeUrlAttr(value) {
+    /* 브라우저는 스킴 앞뒤의 제어문자·공백을 무시하고 해석하므로("java\nscript:") 검사 전에 같은 방식으로 지운다. */
+    var normalized = String(value).replace(/[\x00-\x20\x7f-\x9f]/g, "");
+    return !BAD_SCHEME_RE.test(normalized);
+  }
+
   /* el('div', {class:'x', text:'안녕'}, [child]) — text는 항상 textContent로 들어간다.
-     html 키는 의도적으로 막아 둔다. 살균되지 않은 문자열이 DOM에 들어갈 통로를 없애기 위함. */
+     html 키는 의도적으로 막아 둔다. 살균되지 않은 문자열이 DOM에 들어갈 통로를 없애기 위함.
+     on* 키는 함수만 받는다(문자열이면 인라인 핸들러 속성이 되고, CSP에도 걸린다).
+     style 키는 객체(CSSOM)만 받는다 — 문자열 style 속성은 CSP(style-src 'self')가 막는다. */
   function el(tag, props, children) {
     var node = document.createElement(tag);
     if (props) {
@@ -29,9 +44,18 @@
         if (key === 'class') { node.className = value; return; }
         if (key === 'text') { node.textContent = value; return; }
         if (key === 'dataset') { Object.keys(value).forEach(function (d) { node.dataset[d] = value[d]; }); return; }
-        if (key === 'style' && typeof value === 'object') { Object.keys(value).forEach(function (s) { node.style[s] = value[s]; }); return; }
-        if (key.slice(0, 2) === 'on' && typeof value === 'function') { node.addEventListener(key.slice(2).toLowerCase(), value); return; }
+        if (key === 'style') {
+          if (typeof value !== 'object') throw new Error('el(): style은 객체로만 받는다(문자열 style 속성은 CSP가 막는다).');
+          Object.keys(value).forEach(function (s) { node.style[s] = value[s]; });
+          return;
+        }
+        if (key.slice(0, 2) === 'on') {
+          if (typeof value !== 'function') throw new Error('el(): ' + key + ' 은(는) 함수만 받는다(인라인 핸들러 문자열 금지).');
+          node.addEventListener(key.slice(2).toLowerCase(), value);
+          return;
+        }
         if (value === true) { node.setAttribute(key, ''); return; }
+        if (URL_ATTRS.indexOf(key.toLowerCase()) !== -1 && !isSafeUrlAttr(value)) return;   // 위험 스킴은 속성 자체를 버린다
         node.setAttribute(key, value);
       });
     }

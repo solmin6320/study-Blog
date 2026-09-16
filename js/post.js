@@ -24,8 +24,16 @@
     document.title = title;
   }
 
-  /* 글 파일은 분류 폴더 안에 있다. 어디를 봐야 하는지 경로로 알려 준다. */
+  /* 글 파일은 분류 폴더 안에 있다. 어디를 봐야 하는지 경로로 알려 준다.
+     id는 주소에서 온 값 그대로다 — 문구에는 textContent로만 들어간다(U.el의 text). */
   function showNotFound(id) {
+    /* store가 경로 조립을 거부한 id. "없는 글"과 섞어 안내하면 파일을 찾아 헤매게 된다. */
+    if (!store.isSafeId(id)) {
+      showError('쓸 수 없는 글 주소입니다',
+        '주소의 글 id에 쓸 수 없는 문자가 있습니다.',
+        '글 id는 영문·숫자·하이픈(-)·밑줄(_)·점(.)만 쓸 수 있습니다. 예: post.html?id=2026-09-13-css-grid');
+      return;
+    }
     var meta = store.findMeta(id);
     var where = meta ? store.postPath(id, meta.category) : 'posts/<분류>/' + id + '.md';
     showError('그런 글은 없습니다',
@@ -203,10 +211,15 @@
 
   /* ---------- 부트스트랩 ---------- */
 
-  /* 비동기 렌더라 로드 시점의 #해시가 이미 지나가 있다. 직접 한 번 이동시켜 준다. */
+  /* 비동기 렌더라 로드 시점의 #해시가 이미 지나가 있다. 직접 한 번 이동시켜 준다.
+     해시는 주소에서 온 값이지만 getElementById의 인자로만 쓰인다(DOM에 넣지 않는다).
+     "#%E0%A4"처럼 깨진 퍼센트 인코딩은 decodeURIComponent가 던진다 — 렌더 마지막 단계라
+     본문은 이미 그려져 있지만, 던지게 두면 콘솔에 오류가 남으니 그냥 이동을 포기한다. */
   function jumpToHash() {
     if (window.location.hash.length <= 1) return;
-    var target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    var id;
+    try { id = decodeURIComponent(window.location.hash.slice(1)); } catch (err) { return; }
+    var target = document.getElementById(id);
     if (target) window.setTimeout(function () { target.scrollIntoView({ block: 'start' }); }, 60);
   }
 

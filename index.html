@@ -2,24 +2,16 @@
 <html lang="ko" data-theme="light">
 <head>
 <meta charset="utf-8">
+<!-- CSP — post.html / write.html과 문자열이 같아야 한다(세 페이지가 한 정책).
+     GitHub Pages는 HTTP 헤더를 못 바꾸므로 <meta>가 유일한 수단이다.
+     인라인 <script> / <style> / style="…" / on*="…" / eval 을 전부 막는다.
+     그래서 이 파일에는 인라인 코드가 한 줄도 없어야 한다. 테마 초기화도 js/theme-init.js로 뺐다. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' https: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지).
+<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지). 그래서 defer 없이 동기로 싣는다.
      'blogTheme' 문자열은 config.js의 storageKeys.theme과 반드시 같아야 한다. -->
-<script>
-  (function () {
-    try {
-      var saved = localStorage.getItem('blogTheme');
-      var dark = saved
-        ? saved === 'dark'
-        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    } catch (err) {
-      /* 시크릿 모드 등에서 localStorage가 막혀도 기본 테마로 계속 그린다. */
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-  })();
-</script>
+<script src="js/theme-init.js"></script>
 
 <title>메모 블로그</title>
 <meta name="description" content="공부한 것을 기록하는 개인 학습 블로그.">
@@ -94,9 +86,10 @@
     </div>
   </details>
 
+  <!-- CSP(style-src 'self')가 인라인 <style>을 막으므로 noscript 안에 숨김 규칙을 둘 수 없다.
+       대신 #listLoading을 hidden으로 시작시키고 app.js가 켠다 — JS가 꺼져 있으면 영영 켜지지 않으니
+       "불러오는 중"이 이 안내와 같이 보이는 일이 없다. -->
   <noscript>
-    <!-- JS가 꺼져 있으면 "불러오는 중"이 영영 남는다. 색·간격 토큰을 쓰지 않는 최소 규칙만 둔다. -->
-    <style>#listLoading { display: none; }</style>
     <div class="list-empty">
       <p><strong>자바스크립트가 꺼져 있습니다</strong></p>
       <p>이 블로그는 글 목록을 자바스크립트로 불러옵니다. 브라우저 설정에서 자바스크립트를 켜 주세요.</p>
@@ -105,7 +98,8 @@
 
   <div class="post-list" id="postList" aria-live="polite"></div>
 
-  <p class="list-loading" id="listLoading">불러오는 중…</p>
+  <!-- hidden으로 시작한다. app.js start()가 fetch 직전에 켜고, 로드가 끝나면 다시 끈다. -->
+  <p class="list-loading" id="listLoading" hidden>불러오는 중…</p>
 
   <div class="list-empty" id="listEmpty" hidden></div>
 

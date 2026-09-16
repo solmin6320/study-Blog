@@ -38,8 +38,9 @@
     debounce: { search: 180, preview: 120, draft: 800 },
 
     storageKeys: {
-      /* theme 키는 FOUC 방지용으로 각 HTML <head> 인라인 스크립트에도 문자열이 박혀 있다.
-         여기를 바꾸면 세 HTML의 인라인 스크립트도 같이 바꿔야 한다. */
+      /* theme 키는 FOUC 방지용으로 js/theme-init.js에도 문자열이 박혀 있다
+         (그 파일은 config.js보다 먼저 실행되므로 여기를 참조할 수 없다).
+         여기를 바꾸면 theme-init.js도 같이 바꿔야 한다. */
       theme: 'blogTheme',
       admin: 'blogAdmin',
       draft: 'blogDraft'

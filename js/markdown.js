@@ -27,19 +27,49 @@
        그래서 _blank만 보지 않고 "_self가 아닌 모든 target"을 대상으로 한다. */
     var SAME_DOC_TARGETS = ['', '_self'];
 
-    window.DOMPurify.addHook('afterSanitizeAttributes', function (node) {
-      if (node.tagName !== 'A' || !node.hasAttribute('target')) return;
+    function hardenLink(node) {
+      if (!node.hasAttribute('target')) return;
       var target = String(node.getAttribute('target')).trim().toLowerCase();
       if (SAME_DOC_TARGETS.indexOf(target) !== -1) return;
       node.setAttribute('rel', 'noopener noreferrer');
+    }
+
+    /* 본문에서 살아남는 <input>은 GFM 체크리스트(- [ ] 항목)가 만드는 "비활성 체크박스" 하나뿐이다.
+       html 프로파일이 input을 통째로 허용하므로, 그대로 두면 글 안에 텍스트 입력칸을 그릴 수 있다 —
+       스크립트는 못 돌아도 "비밀번호를 입력하세요" 같은 가짜 폼이 된다(form은 막았지만 입력칸만으로도 속인다).
+       체크박스가 아니면 노드째 버리고, 체크박스면 disabled를 강제한다(marked도 disabled로 내지만 원문 HTML은 아닐 수 있다). */
+    function restrictInput(node) {
+      var type = String(node.getAttribute('type') || '').trim().toLowerCase();
+      if (type !== 'checkbox') {
+        if (node.parentNode) node.parentNode.removeChild(node);
+        return;
+      }
+      node.setAttribute('disabled', '');
+    }
+
+    window.DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+      if (node.tagName === 'A') { hardenLink(node); return; }
+      if (node.tagName === 'INPUT') { restrictInput(node); }
     });
 
     configured = true;
     return true;
   }
 
+  /* html 프로파일에서 추가로 막는 태그.
+     iframe·object·embed·script는 프로파일 밖이라 원래 안 들어오지만, 누군가 ADD_TAGS로 넓혀도
+     FORBID가 이기도록 명시한다 — 살균 설정은 "무엇을 여는가"보다 "무엇을 절대 안 여는가"가 읽혀야 한다.
+     button·select·textarea·dialog는 본문에 상태 있는 컨트롤을 두지 않는다는 규칙(계약서 §7-1과 같은 취지).
+     template은 렌더되지 않는 하위 트리라 살균 우회(mXSS)의 단골이다. input은 훅(restrictInput)이 다룬다. */
+  var FORBIDDEN_TAGS = [
+    'style', 'form', 'iframe', 'object', 'embed', 'script',
+    'button', 'select', 'textarea', 'dialog', 'template'
+  ];
+
   /* 마크다운 → 살균된 DocumentFragment.
-     문자열 HTML을 돌려주지 않는 이유: 호출부가 innerHTML에 넣을 여지를 아예 없애기 위해. */
+     문자열 HTML을 돌려주지 않는 이유: 호출부가 innerHTML에 넣을 여지를 아예 없애기 위해.
+     USE_PROFILES html + 기본 ALLOWED_URI_REGEXP 를 유지한다 — href/src의 javascript: 는 여기서 떨어지고,
+     그래도 남는 것은 CSP(script-src)가 한 번 더 막는다. style 속성은 CSP(style-src 'self')에도 걸리므로 살균에서 미리 뗀다. */
   function renderFragment(markdown) {
     if (!configure()) {
       throw new Error('marked / DOMPurify 로드 실패 — CDN 스크립트를 확인하세요.');
@@ -49,8 +79,7 @@
       RETURN_DOM_FRAGMENT: true,
       USE_PROFILES: { html: true },
       ADD_ATTR: ['target'],
-      /* input은 GFM 체크리스트(- [ ] 항목)가 만들므로 살려 둔다. style/form은 글에 필요 없다. */
-      FORBID_TAGS: ['style', 'form'],
+      FORBID_TAGS: FORBIDDEN_TAGS,
       FORBID_ATTR: ['style']
     });
   }

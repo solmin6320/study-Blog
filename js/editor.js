@@ -8,7 +8,10 @@
    목록이 비면 "미분류 한 줄 + 새 분류 버튼"만으로 글을 끝까지 쓸 수 있어야 한다.
 
    v3.0: 글·분류의 color 필드는 폐기됐다(계약서 §9-2). 메모지 카드가 사라져 색이
-   놓일 면이 없다. 여기에 색 선택 UI를 되살리지 않는다. */
+   놓일 면이 없다. 여기에 색 선택 UI를 되살리지 않는다.
+
+   배포 도메인 잠금: Blog.admin.isAdmin()(= hostname이 localhost 계열)이 false면
+   start()가 lockForVisitor()만 부르고 끝난다. 에디터는 초기화되지 않고 DOM에서 제거된다. */
 (function (window, document) {
   'use strict';
 
@@ -1739,6 +1742,40 @@
     U.toast('분류가 아직 없어요. "+ 새 분류"로 만들면 내보낼 때 categories.json도 함께 내려받습니다.', 'warn');
   }
 
+  /* ---------- 배포 도메인 잠금 ----------
+     관리자 판정이 false(= localhost가 아님)면 폼·툴바·미리보기를 DOM에서 통째로 제거하고
+     안내 문단(#editorVisitor, 계약서 §6의 .editor-visitor)만 남긴다.
+     숨기는 게 아니라 지운다 — hidden은 개발자도구 없이도 되돌릴 수 있고,
+     "숨겼으니 잠갔다"는 착각을 만든다. 에디터 리스너는 하나도 붙이지 않는다.
+
+     안내 블록이 마크업에 없으면(다른 사람이 지웠을 때) 같은 문장을 만들어 넣는다.
+     빈 <main>은 "고장"으로 읽힌다. 문구는 write.html의 것과 같아야 한다. */
+  function lockForVisitor() {
+    U.qsa('.editor', document).forEach(function (node) {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    });
+
+    var note = dom.visitorNote;
+    if (!note) {
+      note = U.el('div', { class: 'editor-visitor', id: 'editorVisitor' }, [
+        U.el('p', null, [
+          '이 페이지는 로컬에서만 동작합니다. 글은 posts/ 폴더에 넣어 배포합니다. ',
+          U.el('a', { href: 'index.html', text: '글 목록으로' })
+        ])
+      ]);
+      var main = document.getElementById('main');
+      if (main) main.appendChild(note);
+    }
+    U.setHidden(note, false);
+
+    /* 헤더·푸터의 사이트명은 다른 페이지와 같은 진실(index.json)을 따른다.
+       에디터 기능과 무관한 셸 표시일 뿐이고, 실패해도 config 기본값이 그대로 남는다. */
+    promised(function () { return store.loadIndex(); }).then(function (data) {
+      state.indexData = data;
+      fillSite();
+    }).catch(function () { /* 기본 사이트명 유지 */ });
+  }
+
   function start() {
     dom.split = document.getElementById('editorSplit');
     dom.title = document.getElementById('fTitle');
@@ -1766,17 +1803,15 @@
     Blog.ui.initShell();
     var admin = Blog.admin.init();
 
+    /* 배포 도메인 잠금 — 사용자 요구: 배포 버전은 보기만 가능해야 한다.
+       관리자 판정(= 로컬 호스트)이 아니면 에디터를 초기화하지 않는다.
+       리스너(자동저장·단축키·beforeunload)를 하나도 붙이기 전에 여기서 끝낸다. */
+    if (!admin) { lockForVisitor(); return; }
+
     bind();
     initToolbarRoving();
     setViewMode(autoViewMode());
     watchWidth();
-
-    if (!admin) {
-      /* 관리자 스위치가 꺼져 있어도 파일은 누구나 열 수 있다. 막는 게 아니라 알려 주는 것.
-         write.html에 안내 블록이 있으면 그걸 띄우고, 없으면 토스트로라도 알린다. */
-      if (dom.visitorNote) U.setHidden(dom.visitorNote, false);
-      else U.toast('관리자 모드가 꺼져 있어요. 작성은 되지만 목록의 수정 버튼은 보이지 않습니다.', 'warn');
-    }
 
     /* index.json은 내보내기에서 다시 쓰므로 미리 받아 둔다. 실패해도 작성은 가능해야 한다.
        다만 "왜 실패했는지"는 기억해 둔다 — 내보낼 때 목록을 덮어쓸지 판단해야 하기 때문.

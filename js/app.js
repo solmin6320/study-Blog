@@ -501,6 +501,10 @@
     syncControls();
     bind();
 
+    /* "불러오는 중"은 마크업에서 hidden으로 시작한다. CSP가 <noscript> 안의 인라인 <style>을 막아
+       JS가 꺼진 화면에서 이 줄을 CSS로 감출 수 없기 때문이다 — 켜는 쪽을 JS로 돌리면 같은 효과다. */
+    U.setHidden(dom.loading, false);
+
     /* 분류는 목록과 동시에 받는다. 순서대로 기다리면 첫 화면이 한 번 더 늦어진다.
        loadCategories()는 실패해도 reject하지 않으므로 index.json 오류만 catch에 온다. */
     Promise.all([store.loadIndex(), store.loadCategories()]).then(function (results) {
