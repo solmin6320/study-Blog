@@ -18,7 +18,7 @@
 | `pm-integrator` | **전체 총괄** — 검수·분배·우선순위·충돌 조정 | `docs/meeting-*.md`, `CLAUDE.md` |
 | `web-designer` | **웹 구조 총괄** — 정보구조·화면설계·계약서 + 비주얼 | `docs/contract.md`, `css/*` |
 | `frontend-dev` | 코어 뷰·데이터 파이프라인 | `index.html` `post.html`, `js/{config,util,store,markdown,app,post}.js`, `posts/*` |
-| `frontend-dev-2` | 에디터·인터랙션·접근성 | `write.html`, `js/{editor,ui,admin}.js`, `start.bat` |
+| `frontend-dev-2` | 에디터·인터랙션·접근성 | `write.html`, `js/{editor,ui,admin}.js`, `start.bat` `start.ps1` |
 
 **소유하지 않은 파일은 읽기만 하고 수정하지 않는다.** 두 에이전트가 같은 파일을 건드리면 서로의 작업을 덮어쓴다.
 구조·클래스명 변경은 `web-designer`가 `docs/contract.md`를 먼저 개정한 뒤에만 가능하다.

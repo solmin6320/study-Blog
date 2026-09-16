@@ -11,26 +11,26 @@ description: 학습 블로그에 새 글을 추가하거나 기존 글을 수정
 
 ## 2. 파일 규칙
 
-- 경로: `posts/YYYY-MM-DD-slug.md` (slug는 영문 소문자·숫자·하이픈만)
+- 경로: `posts/<category-slug>/<id>.md` — 분류 폴더 안에 둔다. `id`는 `YYYY-MM-DD-slug`(slug는 영문 소문자·숫자·하이픈만).
 - `id`는 확장자를 뺀 파일명과 **정확히 일치**해야 한다.
+- `category`는 `posts/categories.json`에 있는 slug만. **없는 분류는 만들지 말고 사용자에게 묻는다** — 새 분류는 사용자가 에디터에서 직접 만든다.
 
 ```
 ---
 id: 2026-09-13-css-grid
 title: CSS Grid 레이아웃 정리
+summary: 한 줄 요약 (상세 화면과 검색에 쓰인다. 목록에는 안 나온다)
 created: 2026-09-13T14:20:00+09:00
 updated: 2026-09-13T14:20:00+09:00
 tags: [css, layout]
-category: 프론트엔드
-summary: 한 줄 요약 (목록 카드에 그대로 노출됨)
-color: amber
+category: css
 pinned: false
 ---
 
 본문 마크다운
 ```
 
-- `color`: `amber` `mint` `sky` `rose` `lilac` `lime` 중 하나. 메모지 색이다.
+- frontmatter 키는 위 8개뿐이다. `color`는 v3.0에서 폐기됐다 — 넣어도 무시된다.
 - `category`: 하나만. `tags`: 여러 개 가능.
 
 ## 3. 날짜 규칙 (절대 어기지 말 것)
