@@ -1,5 +1,5 @@
 /* ui.js — 세 페이지가 공유하는 화면 동작: 테마 토글, 토스트(util 재노출),
-   모달(포커스 트랩 + ESC), 공통 셸 부트스트랩.
+   모달(포커스 트랩 + ESC), 사이드바(v3.2 — 분류별 글 목록, 열기/고정/접기), 공통 셸 부트스트랩.
 
    계약서 v3.0(§12 #31~#33)에서 아래 셋이 폐기됐다. 되살리지 않는다.
      initHeader()  — 헤더가 static이 되어 sticky 상태 클래스가 없다(§3). 스크롤 핸들러 하나가 함께 사라졌다.
@@ -225,10 +225,306 @@
     return { root: root, body: body, close: closeModal };
   }
 
+  /* ---------- 사이드바 ----------
+     사양 B(v3.2): 햄버거(#sideToggle)로 여닫는 분류별 글 목록.
+     마크업은 세 HTML이 공유하고(.side > .side-head + #sideTree, 뒤에 .side-scrim), 트리는 renderSide()가 그린다.
+
+     상태는 전부 <body> 클래스로 표현한다 — CSS가 그걸 보고 그린다.
+       side-open    보인다
+       side-pinned  고정. 데스크톱(≥1024px)에서만 "도킹"(본문이 밀리고 스크림 없음).
+     열려 있는데 도킹이 아니면 "오버레이"다: 스크림이 깔리고 Esc·스크림 클릭·링크 클릭·바깥 포커스 이동에 닫힌다.
+     1024px 미만에서는 pinned여도 오버레이다(좁은 화면에서 본문을 밀 자리가 없다). pinned 값은 보존만 한다.
+
+     저장은 localStorage 한 키(blogSide)에 JSON {pinned, closed:[slug…]}.
+     테마와 달리 첫 페인트 전 처리는 theme-init.js가 <html data-side="pinned">로 먼저 해 두고,
+     여기서는 body 클래스와 버튼 상태를 그 위에 동기화한다. */
+
+  var SIDE_KEY = (CFG.storageKeys && CFG.storageKeys.side) || 'blogSide';
+  /* theme-init.js·layout.css의 도킹 브레이크포인트와 같은 값이어야 한다. */
+  var DOCK_MQ = '(min-width: 1024px)';
+  var FALLBACK_SLUG = (CFG.category && CFG.category.fallbackSlug) || '_uncategorized';
+  var FALLBACK_NAME = (CFG.category && CFG.category.fallbackName) || '미분류';
+
+  var side = {
+    loaded: false,     // 저장값을 읽었는가. renderSide()가 initSide()보다 먼저 불려도 접힘 상태는 복원돼야 한다.
+    pinned: false,
+    closed: [],        // 접어 둔 분류 slug
+    open: false,
+    mq: null,
+    dom: {}
+  };
+
+  function loadSideState() {
+    if (side.loaded) return;
+    side.loaded = true;
+    try {
+      var parsed = JSON.parse(window.localStorage.getItem(SIDE_KEY) || 'null');
+      if (parsed && typeof parsed === 'object') {
+        side.pinned = parsed.pinned === true;
+        side.closed = Array.isArray(parsed.closed)
+          ? parsed.closed.filter(function (v) { return typeof v === 'string'; })
+          : [];
+      }
+    } catch (err) {
+      /* 저장소가 막혔거나 JSON이 깨졌으면 기본값(고정 아님·전부 펼침)으로 간다. */
+      side.pinned = false;
+      side.closed = [];
+    }
+  }
+
+  function saveSideState() {
+    try {
+      window.localStorage.setItem(SIDE_KEY, JSON.stringify({ pinned: side.pinned, closed: side.closed }));
+    } catch (err) { /* 저장 실패는 무시 — 이번 세션 안에서는 메모리 상태로 계속 동작한다. */ }
+  }
+
+  function isWide() { return Boolean(side.mq && side.mq.matches); }
+  function isDocked() { return side.open && side.pinned && isWide(); }
+  function isOverlay() { return side.open && !isDocked(); }
+
+  /* 상태 → DOM. 상태를 바꾸는 모든 경로가 마지막에 이걸 한 번 부른다.
+     한 곳에서만 DOM을 만지면 클래스·aria·스크림이 서로 어긋날 일이 없다. */
+  function syncSide() {
+    var d = side.dom;
+    document.body.classList.toggle('side-open', side.open);
+    document.body.classList.toggle('side-pinned', side.pinned);
+    /* theme-init.js가 첫 페인트용으로 붙인 속성. 이후로는 여기서 도킹 여부와 같이 움직인다 —
+       고정을 풀었는데 이 속성이 남아 있으면 CSS가 계속 본문을 밀어 둔다. */
+    if (isDocked()) document.documentElement.setAttribute('data-side', 'pinned');
+    else document.documentElement.removeAttribute('data-side');
+
+    if (d.toggle) {
+      d.toggle.setAttribute('aria-expanded', side.open ? 'true' : 'false');
+      d.toggle.setAttribute('aria-label', side.open ? '분류 메뉴 닫기' : '분류 메뉴 열기');
+    }
+    if (d.pin) {
+      d.pin.setAttribute('aria-pressed', side.pinned ? 'true' : 'false');
+      d.pin.setAttribute('aria-label', side.pinned ? '사이드바 고정 해제' : '사이드바 고정');
+    }
+    /* 스크림은 오버레이일 때만. 도킹이면 본문을 가릴 이유가 없다(클릭도 막으면 안 된다). */
+    U.setHidden(d.scrim, !isOverlay());
+  }
+
+  /* 열릴 때 포커스는 사이드바 안으로 — 첫 버튼(핀), 없으면 트리의 첫 링크.
+     CSS 슬라이드가 걸려 있어도 visibility는 전환 시작 시점에 이미 visible이라 바로 focus()가 먹지만,
+     스타일 재계산 전에 부르는 경우를 피해 한 프레임 뒤로 미룬다. */
+  function focusIntoSide() {
+    var d = side.dom;
+    var target = d.pin || d.close || (d.tree && U.qsa('a[href]', d.tree)[0]) || d.aside;
+    if (!target) return;
+    window.requestAnimationFrame(function () {
+      if (side.open) target.focus();
+    });
+  }
+
+  function openSide(moveFocus) {
+    if (side.open) return;
+    side.open = true;
+    syncSide();
+    if (moveFocus) focusIntoSide();
+  }
+
+  /* restoreFocus: 닫은 뒤 포커스를 햄버거로 돌린다. Esc·닫기 버튼·스크림 클릭처럼 "사용자가 닫은" 경우.
+     링크를 눌러 페이지가 넘어가거나 포커스가 스스로 밖으로 나간 경우엔 false — 되돌리면 오히려 방해다. */
+  function closeSide(restoreFocus) {
+    if (!side.open) return;
+    side.open = false;
+    syncSide();
+    if (restoreFocus && side.dom.toggle) side.dom.toggle.focus();
+  }
+
+  function initSide() {
+    var d = side.dom;
+    d.aside = document.getElementById('side');
+    d.toggle = document.getElementById('sideToggle');
+    d.pin = document.getElementById('sidePin');
+    d.close = document.getElementById('sideClose');
+    d.scrim = document.getElementById('sideScrim');
+    d.tree = document.getElementById('sideTree');
+    if (!d.aside || !d.toggle) return;   // 이 페이지에 사이드바 마크업이 없다
+
+    loadSideState();
+    side.mq = window.matchMedia ? window.matchMedia(DOCK_MQ) : null;
+    /* 초기 열림: 고정 + 데스크톱이면 처음부터 도킹된 채 시작한다(theme-init.js가 미리 그려 둔 상태와 일치). */
+    side.open = side.pinned && isWide();
+    syncSide();
+
+    U.on(d.toggle, 'click', function () {
+      if (side.open) closeSide(false);   // 포커스는 이미 햄버거에 있다
+      else openSide(true);
+    });
+
+    U.on(d.close, 'click', function () { closeSide(true); });
+
+    U.on(d.scrim, 'click', function () { closeSide(true); });
+
+    /* 핀: 고정 토글 + 저장. 고정을 풀어도 닫지 않는다 — 사용자는 "고정만" 풀고 싶었을 뿐이다.
+       도킹 ↔ 오버레이 전환(스크림 유무)은 syncSide가 처리한다. */
+    U.on(d.pin, 'click', function () {
+      side.pinned = !side.pinned;
+      saveSideState();
+      syncSide();
+    });
+
+    /* 트리 안 링크 클릭 → 오버레이면 닫는다. 도킹이면 그대로(페이지가 넘어가도 열린 채 유지되는 것이 도킹의 뜻).
+       분류 접기 버튼은 renderSide()가 항목마다 직접 묶는다. */
+    U.on(d.tree, 'click', function (e) {
+      var link = e.target.closest ? e.target.closest('a[href]') : null;
+      if (link && isOverlay()) closeSide(false);
+    });
+
+    /* 오버레이에서 포커스가 사이드바 밖으로 나가면 닫는다(포커스 트랩 대신 — 트랩은 모달의 것이고,
+       사이드바는 Tab으로 지나칠 수 있는 내비게이션이다).
+       relatedTarget이 없는 경우(창 전환·비포커스 영역 클릭)는 무시한다 — Alt+Tab 한 번에 닫히면 안 된다.
+       햄버거로 돌아가는 Shift+Tab은 "밖"으로 치지 않는다(토글 위에서 다시 열고 닫을 수 있어야 한다). */
+    U.on(d.aside, 'focusout', function (e) {
+      var next = e.relatedTarget;
+      if (!next || !isOverlay()) return;
+      if (d.aside.contains(next) || next === d.toggle) return;
+      closeSide(false);
+    });
+
+    /* Esc: 오버레이에서만. 모달이 위에 떠 있으면 모달의 Esc가 우선이다. */
+    U.on(document, 'keydown', function (e) {
+      if (e.key !== 'Escape' || openModalState || !isOverlay()) return;
+      e.preventDefault();
+      closeSide(true);
+    });
+
+    /* 도킹 ↔ 오버레이 경계(1024px)를 넘을 때.
+       넓어짐 + 고정: 페이지를 새로 열었을 때와 같은 상태(도킹된 채 열림)로 맞춘다.
+       좁아짐 + 고정 + 열림: 도킹이 통째로 스크림 오버레이로 바뀌어 본문을 덮어 버리므로 닫는다.
+       고정이 아닌 오버레이는 폭과 무관하니 손대지 않는다. */
+    if (side.mq) {
+      var onDockChange = function (e) {
+        if (side.pinned) {
+          if (e.matches) openSide(false);
+          else closeSide(false);
+        }
+        syncSide();
+      };
+      if (side.mq.addEventListener) side.mq.addEventListener('change', onDockChange);
+      else if (side.mq.addListener) side.mq.addListener(onDockChange);
+    }
+  }
+
+  /* 분류 안 글 순서: 고정 먼저, 그 다음 created 내림차순(app.js sortPosts와 같은 규칙). */
+  function bySidePostOrder(a, b) {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+    return String(b.created).localeCompare(String(a.created));
+  }
+
+  function setCatOpen(li, toggle, name, open) {
+    li.classList.toggle('is-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', name + (open ? ' 접기' : ' 펼치기'));
+  }
+
+  /* 트리 한 그루를 #sideTree에 그린다. innerHTML 없이 U.el만 쓴다(제목·분류명은 사용자 입력).
+     { posts, cats, activeId, activeCat }
+       posts     index.json의 글 목록(store.loadIndex().posts 그대로)
+       cats      store.categoryList(posts)를 호출자가 order → 글 수 내림차순 → 이름 순으로 정렬한 것. 각 {slug, name, count}
+       activeId  post.html의 현재 글 id → 그 글에 aria-current="page"
+       activeCat index.html의 ?cat= slug → 그 분류 이름에 aria-current="true"
+     여러 번 불려도 된다(필터가 바뀔 때마다 통째로 다시 그린다). 접힘 상태는 저장값에서 복원한다. */
+  function renderSide(options) {
+    var o = options || {};
+    var tree = side.dom.tree || document.getElementById('sideTree');
+    if (!tree) return;
+    loadSideState();
+
+    var posts = Array.isArray(o.posts) ? o.posts : [];
+    var cats = Array.isArray(o.cats) ? o.cats : [];
+    var store = Blog.store;
+
+    U.clear(tree);
+    if (!posts.length) {
+      tree.appendChild(U.el('p', { class: 'side-empty', text: '글이 없습니다' }));
+      return;
+    }
+
+    /* slug별로 글을 모은다. 분류 판정은 store.categorySlug 하나만 쓴다 — app.js·post.js와 같은 함수라
+       카드 목록에서 A 분류였던 글이 사이드바에서 B에 가 있는 일이 없다. */
+    var groups = Object.create(null);
+    posts.forEach(function (post) {
+      var slug = store && store.categorySlug ? store.categorySlug(post.category) : FALLBACK_SLUG;
+      (groups[slug] || (groups[slug] = [])).push(post);
+    });
+
+    /* 순서는 호출자가 준 cats 그대로. 미분류는 어디에 있든 빼서 맨 아래로, 글이 있을 때만 붙인다.
+       cats에 없는데 글이 있는 slug(호출자가 다른 목록을 줬을 때)도 잃지 않도록 뒤에 덧붙인다. */
+    var seen = Object.create(null);
+    var ordered = [];
+    cats.forEach(function (cat) {
+      if (!cat || !cat.slug || cat.slug === FALLBACK_SLUG || seen[cat.slug]) return;
+      seen[cat.slug] = true;
+      ordered.push({ slug: cat.slug, name: String(cat.name || cat.slug) });
+    });
+    Object.keys(groups).forEach(function (slug) {
+      if (seen[slug] || slug === FALLBACK_SLUG) return;
+      seen[slug] = true;
+      var raw = String(groups[slug][0].category || '').trim();
+      ordered.push({ slug: slug, name: (store && store.categoryName ? store.categoryName(raw) : raw) || slug });
+    });
+    if (groups[FALLBACK_SLUG]) ordered.push({ slug: FALLBACK_SLUG, name: FALLBACK_NAME });
+
+    var list = U.el('ul', { class: 'side-cats' });
+    ordered.forEach(function (cat) {
+      var items = (groups[cat.slug] || []).slice().sort(bySidePostOrder);
+      var isEmpty = items.length === 0;
+      var listId = 'sideCat-' + cat.slug;
+
+      var row = U.el('div', { class: 'side-cat-row' }, [
+        U.el('a', {
+          class: 'side-cat-name',
+          href: 'index.html?cat=' + encodeURIComponent(cat.slug),
+          'aria-current': o.activeCat && o.activeCat === cat.slug ? 'true' : null,
+          text: cat.name
+        }),
+        U.el('span', { class: 'side-cat-count', text: String(items.length) })
+      ]);
+
+      var li = U.el('li', { class: 'side-cat' + (isEmpty ? ' is-empty' : '') }, [row]);
+
+      /* 글 0편이면 접을 목록이 없다 — 토글 버튼도, 빈 <ul>도 만들지 않는다.
+         있는데 아무 일도 안 하는 버튼은 키보드 사용자에게 고장으로 읽힌다. */
+      if (isEmpty) { list.appendChild(li); return; }
+
+      var toggle = U.el('button', { class: 'side-cat-toggle', type: 'button', 'aria-controls': listId });
+      row.appendChild(toggle);
+
+      var ul = U.el('ul', { class: 'side-posts', id: listId }, items.map(function (post) {
+        return U.el('li', null, [
+          U.el('a', {
+            class: 'side-post' + (post.pinned ? ' is-pinned' : ''),
+            href: 'post.html?id=' + encodeURIComponent(post.id),
+            'aria-current': o.activeId && o.activeId === post.id ? 'page' : null,
+            text: post.title
+          })
+        ]);
+      }));
+      li.appendChild(ul);
+
+      setCatOpen(li, toggle, cat.name, side.closed.indexOf(cat.slug) === -1);
+      toggle.addEventListener('click', function () {
+        var nowOpen = !li.classList.contains('is-open');
+        setCatOpen(li, toggle, cat.name, nowOpen);
+        side.closed = side.closed.filter(function (s) { return s !== cat.slug; });
+        if (!nowOpen) side.closed.push(cat.slug);
+        saveSideState();
+      });
+
+      list.appendChild(li);
+    });
+
+    tree.appendChild(list);
+  }
+
   /* ---------- 공통 셸 부트스트랩 ---------- */
 
   function initShell() {
     initTheme();
+    initSide();
 
     /* 푸터 연도 자동 갱신 */
     U.qsa('[data-year]').forEach(function (node) {
@@ -258,6 +554,9 @@
     prefersReducedMotion: prefersReducedMotion,
     modal: modal,
     closeModal: closeModal,
-    toast: U.toast
+    toast: U.toast,
+    /* v3.2 사이드바. initSide는 initShell이 부르지만, 셸을 따로 초기화하는 페이지를 위해 함께 내놓는다. */
+    initSide: initSide,
+    renderSide: renderSide
   };
 })(window, document);

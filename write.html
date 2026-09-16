@@ -64,11 +64,15 @@
 <body>
 <a class="sr-only" href="#main">본문 바로가기</a>
 
-<!-- 계약서 §3: 헤더는 static이고 덩이는 셋(브랜드 · 내비 · 테마 버튼)뿐이다.
+<!-- 계약서 §3: 헤더는 static이고 덩이는 넷(햄버거 · 브랜드 · 내비 · 테마 버튼)뿐이다.
      배경 3층 / 헤더 id / 로고 마크 / 액션 래퍼 + "새 메모" 버튼은 v3.0에서 전부 폐기됐다.
+     햄버거는 첫 자식이다 — 사이드바가 왼쪽에서 나오므로 여는 버튼도 왼쪽 끝에 있어야 한다.
+     아이콘은 CSS ::before가 그린다(테마 버튼과 같은 방식). 세 페이지 마크업이 같아야 한다.
      테마 버튼은 .site-header의 "직계" 자식이어야 한다 —
      layout.css의 `.site-header > .icon-btn { margin-inline-start:auto }`가 그걸 전제로 한다. -->
 <header class="site-header">
+  <button class="icon-btn side-toggle" id="sideToggle" type="button"
+          aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
   <!-- index.html / post.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
@@ -77,6 +81,22 @@
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
+
+<!-- 사이드바 — 분류별 글 목록. 세 페이지 마크업이 바이트 단위로 같다(사양 B).
+     <header> 뒤·<main> 앞에 두는 이유: Tab 순서가 햄버거 → 사이드바 → 본문이 되어야
+     열자마자 다음 Tab이 사이드바 안으로 들어간다. #sideTree는 ui.js renderSide()가 채운다.
+     열림·고정 상태는 <body> 클래스(side-open / side-pinned)로, ui.js가 붙인다. -->
+<aside class="side" id="side" aria-label="분류별 글 목록">
+  <div class="side-head">
+    <span class="side-title">분류</span>
+    <button class="icon-btn side-pin" id="sidePin" type="button"
+            aria-label="사이드바 고정" aria-pressed="false"></button>
+    <button class="icon-btn side-close" id="sideClose" type="button" aria-label="닫기"></button>
+  </div>
+  <nav class="side-tree" id="sideTree"></nav>
+</aside>
+<!-- 오버레이 모드에서만 보인다(고정 도킹이면 스크림 없음). hidden 토글은 ui.js 몫. -->
+<div class="side-scrim" id="sideScrim" hidden></div>
 
 <!-- tabindex="-1": 스킵 링크(#main)의 착지점. 이게 없으면 브라우저에 따라 스크롤만 되고
      포커스는 헤더에 남아 다음 Tab이 다시 로고로 돌아간다(계약서 §3-1). 착지점 포커스 링은 base.css가 끈다.

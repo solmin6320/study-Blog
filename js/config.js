@@ -43,7 +43,10 @@
          여기를 바꾸면 theme-init.js도 같이 바꿔야 한다. */
       theme: 'blogTheme',
       admin: 'blogAdmin',
-      draft: 'blogDraft'
+      draft: 'blogDraft',
+      /* 사이드바 상태 {"pinned":bool,"closed":[slug…]}. theme처럼 theme-init.js에도 문자열이 박혀 있다 —
+         고정 도킹은 첫 페인트 전에 알아야 레이아웃이 튀지 않기 때문이다. 바꾸면 그 파일도 같이 바꾼다. */
+      side: 'blogSide'
     },
 
     /* CDN 고정 버전. HTML의 <script src>와 반드시 일치시킨다(표시·점검용). */

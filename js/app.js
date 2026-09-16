@@ -1,5 +1,5 @@
 /* app.js — index.html 전용.
-   날짜 + 제목 2단 목록(계약서 §4-4) 렌더 + 검색 + 분류/태그 인덱스 + URL 상태 동기화.
+   카드 그리드(분류 → 제목 → 날짜·태그, 계약서 §4-4) 렌더 + 검색 + 분류/태그 인덱스 + 사이드바 데이터 공급 + URL 상태 동기화.
    정렬 컨트롤은 없다. 학습 기록의 순서는 시간순 하나다(계약서 §0-2). */
 (function (window, document) {
   'use strict';
@@ -81,23 +81,18 @@
 
   /* ---------- 목록 (계약서 §4-4) ---------- */
 
-  /* 한 행의 내용물은 날짜와 제목 둘뿐이다. 요약·태그·분류·수정일·아이콘 금지. */
+  /* 카드 한 장. 순서 고정: .entry-cat → .entry-title → .entry-meta(날짜 · 태그).
+     요약·수정일·아이콘은 여기 없다 — 카드는 "무슨 글인지"까지만 말하고 나머지는 상세가 한다.
+     태그는 링크가 아니다(카드 전체가 .entry-title::after로 링크 면적이라 안에 링크가 겹치면 안 된다).
+     분류 라벨(액센트)·날짜(황토)·태그(자주)가 색 셋이 실제로 보이는 자리다(계약서 §4-4). */
   function entryRow(post) {
     var li = U.el('li', { class: 'entry' + (post.pinned ? ' is-pinned' : '') });
 
-    /* created가 비면 <time datetime=""> 라는 무효 마크업이 된다.
-       store가 updated → id 앞머리 순으로 되살리므로 여기까지 빈 값이 오는 경우는
-       "날짜를 어디서도 알 수 없는 글" 하나뿐이다. 그때는 날짜 칸을 비워 둔다 —
-       칸 자체는 남아야 제목의 왼쪽 선이 다른 행과 어긋나지 않는다. */
-    if (post.created) {
-      li.appendChild(U.el('time', {
-        class: 'entry-date',
-        datetime: post.created,
-        text: U.fmtDot(post.created)
-      }));
-    } else {
-      /* 빈 칸이라도 자리는 지켜야 한다. 날짜 열이 접히면 그 행의 제목만 왼쪽으로 튄다. */
-      li.appendChild(U.el('span', { class: 'entry-date' }));
+    /* 미분류는 라벨을 생략한다. "미분류"는 정보가 아니라 "분류를 안 했다"는 고백이라
+       카드마다 찍히면 목록이 미완성으로 보인다. */
+    var slug = slugById[post.id] || store.categorySlug(post.category);
+    if (slug !== CFG.category.fallbackSlug) {
+      li.appendChild(U.el('span', { class: 'entry-cat', text: store.categoryName(post.category) }));
     }
 
     li.appendChild(U.el('a', {
@@ -105,6 +100,24 @@
       href: 'post.html?id=' + encodeURIComponent(post.id),
       text: post.title
     }));
+
+    /* created가 비면 <time datetime=""> 라는 무효 마크업이 된다.
+       store가 updated → id 앞머리 순으로 되살리므로 여기까지 빈 값이 오는 경우는
+       "날짜를 어디서도 알 수 없는 글" 하나뿐이다. 그때는 날짜를 그리지 않는다 —
+       카드는 그리드 셀이라 v3.1의 자리 지킴(빈 span)이 필요 없다. 날짜·태그 둘 다 없으면 메타 줄째 뺀다. */
+    var meta = [];
+    if (post.created) {
+      meta.push(U.el('time', {
+        class: 'entry-date',
+        datetime: post.created,
+        text: U.fmtDot(post.created)
+      }));
+    }
+    if (post.tags.length) {
+      meta.push(U.el('ul', { class: 'entry-tags', 'aria-label': '태그' },
+        post.tags.map(function (tag) { return U.el('li', { class: 'entry-tag', text: tag }); })));
+    }
+    if (meta.length) li.appendChild(U.el('div', { class: 'entry-meta' }, meta));
 
     return li;
   }
@@ -246,18 +259,15 @@
     return btn;
   }
 
-  /* 정렬: categories.json의 order 오름차순 → 같으면 글 수 내림차순 → 이름(계약서 §4-3).
-     order를 먼저 보는 이유 — 분류의 순서는 이 블로그에서 사용자의 편집 대상이다. */
-  function byIndexOrder(a, b) {
-    if (a.order !== b.order) return a.order - b.order;
-    if (a.count !== b.count) return b.count - a.count;
-    return String(a.name).localeCompare(String(b.name), 'ko');
+  /* 정렬은 U.sortCats(order → 글 수 → 이름, 계약서 §4-3). 사이드바도 같은 순서를 써야 하므로 util로 뺐다. */
+  function sortedCats() {
+    return U.sortCats(store.categoryList(state.posts));
   }
 
   /* 글이 0편인 분류도 그린다(.is-empty). 빈 칸이 보여야 "여기에 쓰면 되는구나"를 안다. */
   function renderCatIndex() {
     if (!dom.catIndex || !dom.catRow) return;
-    var cats = store.categoryList(state.posts).slice().sort(byIndexOrder);
+    var cats = sortedCats();
 
     /* 분류가 하나도 없으면 행 전체를 감춘다. "분류  전체 0" 한 줄은 정보가 아니라
        "여기 뭔가 고장났나?"로 읽힌다 — 글이 0편인 첫 화면에서 특히 그렇다(계약서 §4-3). */
@@ -322,6 +332,26 @@
     if (state.tags.length) dom.tagFold.setAttribute('open', '');
   }
 
+  /* ---------- 사이드바 (사양 B) ----------
+     트리를 그리는 것은 ui.js의 몫이다. 여기서는 데이터(글 전체 + 정렬된 분류)와
+     "지금 어느 분류가 켜져 있는가"만 넘긴다. 마지막으로 넘긴 activeCat을 기억해 두는 이유 —
+     renderIndexes()는 태그 클릭에도 돌지만 사이드바는 태그를 모르므로 그때는 다시 그릴 필요가 없다. */
+  var sideActiveCat;     // undefined = 아직 한 번도 안 그림
+
+  function renderSide() {
+    /* ui.js가 아직 renderSide를 내놓지 않은 빌드(또는 구버전 캐시)에서도 목록은 살아 있어야 한다. */
+    if (typeof Blog.ui.renderSide !== 'function') return;
+    var active = state.cat === '*' ? null : state.cat;
+    if (active === sideActiveCat) return;
+    sideActiveCat = active;
+    Blog.ui.renderSide({
+      posts: state.posts,
+      cats: sortedCats(),
+      activeId: null,
+      activeCat: active
+    });
+  }
+
   /* ---------- URL 상태 ---------- */
 
   /* 주소를 상태로 읽는다. v2.x의 ?sort= 는 폐기됐다 — 남아 있으면 정리해야 하므로 알려 준다.
@@ -360,10 +390,12 @@
     renderList();
   }
 
-  /* 인덱스 두 축은 서로의 개수에 영향을 준다(분류를 고르면 태그 수가 바뀐다). 항상 같이 그린다. */
+  /* 인덱스 두 축은 서로의 개수에 영향을 준다(분류를 고르면 태그 수가 바뀐다). 항상 같이 그린다.
+     분류가 바뀌는 경로(클릭·뒤로가기·초기화)는 전부 여기를 지나므로 사이드바의 activeCat도 여기서 맞춘다. */
   function renderIndexes() {
     renderCatIndex();
     renderTagIndex();
+    renderSide();
   }
 
   /* ---------- 이벤트 ---------- */
@@ -478,6 +510,10 @@
       (err && err.message) || '알 수 없는 오류가 발생했습니다.',
       false
     );
+    /* 사이드바가 영영 빈 채로 남지 않게 빈 데이터를 넘긴다 — ui.js가 .side-empty 한 줄을 그린다. */
+    if (typeof Blog.ui.renderSide === 'function') {
+      Blog.ui.renderSide({ posts: [], cats: [], activeId: null, activeCat: null });
+    }
   }
 
   function start() {

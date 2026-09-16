@@ -130,6 +130,21 @@
 
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 
+  /* ---------- 분류 정렬 ----------
+     store.categoryList() 결과를 화면에 그리는 순서: categories.json의 order 오름차순 →
+     같으면 글 수 내림차순 → 이름(ko). order를 먼저 보는 이유 — 분류의 순서는 사용자의 편집 대상이다.
+     목록 인덱스(app.js)·사이드바(app.js / post.js / editor.js)가 전부 같은 순서여야 하므로 여기 한 곳에 둔다.
+     store.categoryList 자체의 정렬(order → 이름)과는 다르다 — 글 수를 끼워 넣는 것은 화면의 규칙이다. */
+  function byCatOrder(a, b) {
+    if (a.order !== b.order) return a.order - b.order;
+    if (a.count !== b.count) return b.count - a.count;
+    return String(a.name).localeCompare(String(b.name), 'ko');
+  }
+
+  function sortCats(list) {
+    return (list || []).slice().sort(byCatOrder);
+  }
+
   /* ---------- 날짜 ----------
      표시용 값은 ISO 문자열에서 직접 뽑는다. Date로 바꿔 로컬 시간대로 찍으면
      +09:00으로 쓴 글이 해외 방문자에게 하루 밀려 보인다. 상대 시간 계산에만 Date를 쓴다. */
@@ -344,6 +359,7 @@
     qs: qs, qsa: qsa, el: el, on: on, append: append, clear: clear, setHidden: setHidden,
     escapeHtml: escapeHtml, hashCode: hashCode, hashUnit: hashUnit,
     slugHeading: slugHeading, slugAscii: slugAscii, clamp: clamp, pad2: pad2,
+    sortCats: sortCats,
     toDate: toDate, fmtDot: fmtDot, fmtKo: fmtKo, yearOf: yearOf,
     fmtRelative: fmtRelative, sameMoment: sameMoment,
     nowIsoKst: nowIsoKst, todayStampKst: todayStampKst,

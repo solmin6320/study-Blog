@@ -209,6 +209,20 @@
     U.toast('이 글의 ' + keys.join(', ') + ' 값이 index.json과 다릅니다 — 목록에는 옛 값이 보입니다', 'warn');
   }
 
+  /* ---------- 사이드바 (사양 B) ----------
+     트리는 ui.js가 그린다. 여기서는 글 전체·정렬된 분류(U.sortCats — 목록 인덱스와 같은 순서)·현재 글 id를 넘긴다.
+     activeCat은 없다 — 상세 화면은 어느 분류의 "필터"가 걸린 상태가 아니다. 현재 글에만 aria-current가 붙는다. */
+  function renderSide(posts, activeId) {
+    /* ui.js가 아직 renderSide를 내놓지 않은 빌드(또는 구버전 캐시)에서도 본문은 살아 있어야 한다. */
+    if (typeof Blog.ui.renderSide !== 'function') return;
+    Blog.ui.renderSide({
+      posts: posts,
+      cats: U.sortCats(store.categoryList(posts)),
+      activeId: activeId || null,
+      activeCat: null
+    });
+  }
+
   /* ---------- 부트스트랩 ---------- */
 
   /* 비동기 렌더라 로드 시점의 #해시가 이미 지나가 있다. 직접 한 번 이동시켜 준다.
@@ -277,10 +291,21 @@
       return;
     }
 
-    /* 사이트명은 본문보다 먼저 자리를 잡아야 한다. loadPost도 같은 약속을 쓰므로 요청은 늘지 않는다. */
-    store.loadIndex()
-      .then(function (data) { fillSite(data.site); })
-      .catch(function () { /* 사이트명을 못 채워도 본문 표시는 계속한다 */ });
+    /* 사이트명은 본문보다 먼저 자리를 잡아야 한다. 사이드바도 같은 데이터로 그린다 —
+       본문(loadPost)과 별개로 굴려서 글이 없거나 본문이 실패해도 분류 트리는 살아 있게 한다
+       (그래야 "그런 글은 없습니다" 화면에서 다른 글로 갈 길이 남는다).
+       분류(categories.json)를 같이 기다리는 이유 — 없으면 categoryList()가 글에서 유추한 이름·순서로 트리를 그린다.
+       loadPost도 같은 두 약속을 쓰므로 요청은 늘지 않고, loadCategories()는 실패해도 reject하지 않는다. */
+    Promise.all([store.loadIndex(), store.loadCategories()])
+      .then(function (results) {
+        var data = results[0];
+        fillSite(data.site);
+        renderSide(data.posts, id);
+      })
+      .catch(function () {
+        /* 사이트명을 못 채워도 본문 표시는 계속한다. 사이드바에는 빈 데이터를 넘겨 .side-empty 한 줄이 뜨게 한다. */
+        renderSide([], id);
+      });
 
     /* loadPost는 "없는 글"을 null로 돌려주고, 읽을 수 없는 상황(file://·네트워크)만 reject한다. */
     store.loadPost(id).then(function (post) {

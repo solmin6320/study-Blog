@@ -5,11 +5,12 @@
    재사용 부품(버튼·태그·인덱스 항목 등)의 생김새는 components.css가 담당한다.
    의존: tokens.css, base.css
 
-   ── v3.0의 기본 골격 ──────────────────────────────────────────────────────
-   이 사이트에는 세로 기준선이 하나뿐이다: --w-prose(720px).
-   헤더·본문·목록·푸터가 전부 같은 칼럼에 선다.
-     브랜드의 왼쪽 선 = 제목의 왼쪽 선 = 날짜의 왼쪽 선.
-   v2.x의 --w-page(1200px)를 없앤 이유는 tokens.css 선언부 주석에 있다.
+   ── 기본 골격 (v3.2) ──────────────────────────────────────────────────────
+   읽는 화면(post.html)의 세로 기준선은 --w-prose(720px) 하나다.
+   목록 화면(index.html)은 <main class="list-page">로 --w-page(1152px)까지 넓힌다 —
+   사용자 판정 "전체적으로 구조가 비어보여"(계약서 §2). 헤더·푸터도 같은 페이지에서는
+   같은 폭으로 따라간다(아래 :has 규칙). 그래야 브랜드의 왼쪽 선 = 제목의 왼쪽 선이 유지된다.
+   왼쪽에는 고정 가능한 사이드바(.side)가 있고, 도킹되면 페이지 전체가 --w-side만큼 오른쪽으로 민다.
    ========================================================================= */
 
 /* 세 영역이 공유하는 칼럼. 값이 세 번 복사되지 않게 한 번만 쓴다. */
@@ -20,6 +21,124 @@
   max-inline-size: var(--w-prose);
   margin-inline: auto;
   padding-inline: var(--gutter);
+}
+
+/* 넓은 페이지 둘 — 목록(.list-page, 72rem)과 에디터(.editor-page, 76rem).
+   <main>만 넓히면 헤더가 본문보다 216px 안쪽에서 시작해 왼쪽 선이 둘이 된다.
+   같은 페이지의 헤더·푸터를 main 폭에 맞춘다. :has()를 모르는 브라우저는 헤더가 720px에
+   남을 뿐 깨지지 않는다(v3.1의 write.html이 실제로 그 상태였다). */
+.list-page   { max-inline-size: var(--w-page); }
+.editor-page { max-inline-size: 76rem; }
+
+body:has(> .list-page) .site-header,
+body:has(> .list-page) .site-footer   { max-inline-size: var(--w-page); }
+body:has(> .editor-page) .site-header,
+body:has(> .editor-page) .site-footer { max-inline-size: 76rem; }
+
+/* ============================================================================
+   0. 사이드바 (계약서 §3-2, v3.2) — 사용자 요청 "왼쪽 위 햄버거 → 분류로 정리된 글 목록,
+   클로드/GPT 챗처럼 고정 가능".
+   골격만 여기. 안의 부품(.side-head / .side-cat / .side-post …)은 components.css §15.
+
+   상태는 <body> 클래스 셋으로 결정된다(ui.js가 붙인다):
+     (없음)                        닫힘. 화면 왼쪽 밖에 있고 visibility: hidden — Tab 순서에서도 빠진다.
+     body.side-open                오버레이. 본문 위로 슬라이드해 들어오고 스크림이 뒤를 덮는다.
+     body.side-open.side-pinned    ≥1024px에서만 도킹 — 본문이 --w-side만큼 오른쪽으로 밀리고
+                                   스크림·그림자 없이 경계선 하나로 본문과 나뉜다.
+                                   <1024px에서는 pinned여도 오버레이다(폭이 모자란다).
+     html[data-side="pinned"]      theme-init.js가 첫 페인트 "전"에 붙이는 같은 뜻의 힌트.
+                                   body 클래스는 DOMContentLoaded 뒤에야 붙으므로 이게 없으면
+                                   페이지가 한 번 튄다. ui.js가 body를 동기화한 뒤 떼어 낸다.
+   ========================================================================= */
+.side {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: var(--z-side);
+  /* 360px 화면에서도 260px 패널 옆에 100px의 스크림이 남아 "밖을 눌러 닫기"가 가능하다. */
+  inline-size: min(var(--w-side), 100vw - var(--sp-9));
+  display: flex;
+  flex-direction: column;
+  background: var(--c-surface);
+  border-inline-end: 1px solid var(--c-border-soft);
+  /* 오버레이 상태의 그림자 — 원칙 3의 예외(계약서 §1-2). 본문 "위"에 떠 있다는 사실이 정보다.
+     도킹되면 아래 규칙이 뗀다. */
+  box-shadow: var(--sh-pop);
+
+  /* 닫힘: 자기 폭만큼 왼쪽 밖. visibility까지 꺼야 스크린리더·Tab이 보이지 않는 링크를 밟지 않는다.
+     visibility는 슬라이드가 끝난 "뒤"에 꺼진다(delay = --dur). 열 때는 즉시 켠다(아래). */
+  translate: -100% 0;
+  visibility: hidden;
+  transition:
+    translate         var(--dur)       var(--ease),
+    visibility        0s               linear  var(--dur),
+    box-shadow        var(--dur-fast)  var(--ease),
+    background-color  var(--dur-theme) var(--ease-fade),
+    border-color      var(--dur-theme) var(--ease-fade);
+}
+
+body.side-open .side {
+  translate: 0 0;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* 머리 줄: 제목 + 핀 + 닫기. 스크롤되는 트리 위에 고정. */
+.side-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  /* 왼쪽 패딩이 오른쪽보다 큰 이유: 오른쪽 끝은 아이콘 버튼의 투명한 히트 영역이 이미 여백처럼 보인다. */
+  padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-5);
+  border-block-end: 1px solid var(--c-border-soft);
+}
+
+.side-head > .side-title { flex: 1 1 auto; min-inline-size: 0; }
+
+/* 트리: 남은 높이를 전부 차지하고 자기 안에서만 스크롤한다. */
+.side-tree {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--sp-3) var(--sp-2) var(--sp-8);
+}
+
+/* 스크림. 오버레이 상태에서만 보인다. 표시 여부는 body 클래스가 정한다 —
+   초기 마크업의 hidden은 JS 실행 전 안전장치이고, initSide()가 떼어 낸 뒤로는 CSS가 맡는다.
+   (JS가 hidden을 계속 토글해도 아래 규칙과 어긋나지 않는다 — 둘 다 같은 조건이다.)
+   등장은 --dur-fast로 흐리게, 퇴장은 슬라이드와 같은 --dur. 알파 45%: 모달(58%)보다 옅게 —
+   모달은 "결정을 요구"하지만 사이드바는 "옆에 열어 둔 것"이라 본문이 읽혀야 한다. */
+.side-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  background: color-mix(in oklab, var(--c-scrim) 45%, transparent);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity    var(--dur) var(--ease-fade),
+    visibility 0s         linear var(--dur);
+}
+
+body.side-open .side-scrim {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--dur-fast) var(--ease-fade);
+}
+
+/* 오버레이가 열려 있는 동안 뒤 페이지는 스크롤하지 않는다(모달과 같은 규칙).
+   도킹 상태는 아래 1024px 블록이 다시 푼다. */
+body.side-open { overflow: hidden; }
+:root:has(body.side-open) { overflow: hidden; }
+
+/* 도킹은 페이지를 "미는" 것이라 padding 전환이 곧 모션이다.
+   body에 transition을 쓰는 순간 base.css의 `*` 크로스페이드가 덮이므로 background-color를 같이 적는다. */
+body {
+  transition:
+    padding-inline-start var(--dur)       var(--ease),
+    background-color     var(--dur-theme) var(--ease-fade);
 }
 
 /* ============================================================================
@@ -60,8 +179,13 @@
   min-inline-size: 0;
 }
 
-/* 테마 버튼만 오른쪽으로. .header-actions 래퍼는 v3.0에서 폐기됐다. */
-.site-header > .icon-btn { margin-inline-start: auto; flex: none; }
+/* 헤더의 아이콘 버튼 둘: 햄버거(첫 자식)는 왼쪽 끝, 테마 버튼(마지막 자식)만 오른쪽 끝으로.
+   v3.1의 `.site-header > .icon-btn { margin-inline-start: auto }`는 햄버거까지 가운데로 밀었다.
+   햄버거를 브랜드보다 앞에 두는 이유 — 사이드바가 왼쪽에서 나오므로 여는 손잡이도 왼쪽 끝이어야 한다.
+   버튼과 브랜드 사이는 헤더 gap(20px)보다 좁혀(-8px) 아이콘의 투명 히트 영역이 여백처럼 보이지 않게 한다. */
+.site-header > .icon-btn { flex: none; }
+.site-header > .icon-btn:last-child { margin-inline-start: auto; }
+.site-header > .side-toggle { margin-inline-start: calc(var(--sp-2) * -1); margin-inline-end: calc(var(--sp-2) * -1); }
 
 /* ============================================================================
    2. 메인 / 푸터
@@ -89,28 +213,56 @@
    두 줄이 전부다. 액센트 바도, 통계도, 진입 애니메이션도 없다(계약서 §4-2).
    ========================================================================= */
 .page-head {
-  padding-block-end: var(--sp-7);
+  /* v3.2: --sp-7 → --sp-5. 머리말이 작아졌으니(아래) 아래 숨도 그만큼 줄인다. */
+  padding-block-end: var(--sp-5);
 }
 
+/* v3.2: --fs-2xl(22→30) → --fs-xl(19→23). 목록이 3열 카드가 되면서 화면에 제목(--fs-lg)이
+   수십 개 동시에 놓인다. 그 위에 30px 사이트명이 앉으면 "페이지 제목 아래 목록"이 아니라
+   "간판 아래 목록"이 된다. 23px이면 h1이 카드 제목보다 한 단계 크되 주인공을 뺏지 않는다. */
 .page-title {
-  font-size: var(--fs-2xl);
+  font-size: var(--fs-xl);
   line-height: var(--lh-tight);
   font-weight: 700;
 }
 
 .page-sub {
-  margin-block-start: var(--sp-2);
-  font-size: var(--fs-md);
+  margin-block-start: var(--sp-1);
+  font-size: var(--fs-sm);
   color: var(--c-text-dim);
 }
 
 /* ============================================================================
-   4. 검색 — sticky가 아니다.
-   툴바를 화면에 붙여 둘 이유는 "필터를 계속 만진다"였는데, 필터가 한 줄짜리
-   텍스트 인덱스로 줄면서 스크롤 중에 손이 갈 일이 없어졌다.
-   (생김새는 components.css §3)
+   4. 툴 행 — 분류 인덱스(왼쪽) + 검색(오른쪽) 한 줄 (계약서 §4-3, v3.2)
+   v3.1은 검색 한 줄(720px 폭 전체) 아래 분류 한 줄을 쌓았다. 사용자 판정
+   "검색창이라던지 카테고리라던지 너무 커". 페이지가 1152px로 넓어졌으니 둘을 한 줄에 놓고,
+   검색은 20rem으로 묶는다 — 검색어는 한두 단어라 그 이상은 빈 인풋이다.
+   sticky가 아니다(v3.0 이후 동일).
    ========================================================================= */
-.search { margin-block-end: var(--sp-6); }
+.list-tools {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3) var(--sp-6);
+  margin-block-end: var(--sp-3);
+}
+
+/* 인덱스가 여러 줄로 감겨도 검색이 밀리지 않게 — 검색은 폭이 고정, 인덱스가 남은 폭을 쓴다. */
+.list-tools > .index-row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin-block-end: 0;
+  /* 인덱스 항목 높이(--h-control-sm)와 인풋 높이(--h-control-sm)가 같아 첫 줄이 같은 선에 앉는다. */
+}
+
+.list-tools > .search {
+  flex: 0 1 20rem;
+  min-inline-size: 12rem;
+  margin-block-end: 0;
+}
+
+/* 툴 행 밖에 홀로 남은 .search(post/write에는 없다 — 방어용). */
+.search { margin-block-end: var(--sp-4); }
 
 /* ============================================================================
    5. 인덱스 행 — 분류 / 태그 (계약서 §4-3)
@@ -122,7 +274,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   /* 세로 gap이 가로보다 작다 — 여러 줄로 감겼을 때 "한 덩어리"로 보여야 하기 때문. */
-  gap: var(--sp-1) var(--sp-3);
+  gap: 0 var(--sp-2);
   margin-block-end: var(--sp-3);
 }
 
@@ -131,58 +283,107 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--sp-1) 0;          /* 가로 간격은 구분자(·)가 만든다 — components.css */
+  gap: 0;                      /* 가로 간격은 구분자(·)가 만든다 — components.css */
   min-inline-size: 0;
-  flex: 1 1 18rem;
+  flex: 1 1 12rem;
 }
 
 /* 접힌 태그 인덱스. 열렸을 때만 안쪽 .index-row에 위 여백을 준다. */
-.index-fold { margin-block-end: var(--sp-6); }
-.index-fold[open] > .index-row { margin-block-start: var(--sp-2); }
-
-/* 분류 행과 태그 손잡이 사이는 붙여 둔다(두 축이 한 묶음으로 읽혀야 한다). */
-.index-row + .index-fold { margin-block-start: 0; }
+.index-fold { margin-block-end: var(--sp-5); }
+.index-fold[open] > .index-row { margin-block-start: var(--sp-1); }
 
 /* ============================================================================
-   6. 목록 (계약서 §4-4)
-   한 행 = 날짜 열 + 제목 열. 구분선을 긋지 않는다 —
-   300행짜리 줄무늬는 목록이 아니라 표로 보인다.
+   6. 목록 (계약서 §4-4, v3.2) — 카드 그리드
+   글 하나 = 박스 하나(v3.1). v3.2에서 세로 1열 → 자동 채움 그리드(데스크톱 2~3열).
+   사용자 판정 "리스트 나열보다는 박스 형태로" + "구조가 비어보여".
+   v2.x에서 거부된 것은 회전·압정·광택·그림자·6색 종이였지 박스 자체가 아니다.
+   그래서 박스는 여전히 1px 경계선 + 한 단계 밝은 면 + 작은 반경이 전부다.
+   (박스 안 글자의 생김새는 components.css §4)
    ========================================================================= */
-.post-list { margin-block-start: var(--sp-7); }
+.post-list { margin-block-start: var(--sp-6); }
 
 /* 연도 그룹. 목록 전체가 한 해에 들어가면 JS가 .entry-group-label을 넣지 않는다.
    글 4편 위에 "2026" 한 줄이 떠 있는 것은 정보가 아니라 장식이다(계약서 §4-4). */
 .entry-group + .entry-group { margin-block-start: var(--sp-8); }
 
+/* 연도 라벨은 <ul> 밖(section의 첫 자식)이라 그리드 위에 저절로 full-width로 선다. */
 .entry-group-label {
-  /* 날짜 열과 같은 폭·같은 왼쪽 선. 연도가 날짜 열의 "머리글"로 읽힌다. */
   font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: var(--ls-wide);
-  color: var(--c-text-mute);
+  /* 연도 = 시간. 목록의 날짜와 같은 역할색(계약서 §1-2). */
+  color: var(--c-meta);
   font-variant-numeric: tabular-nums;
-  padding-block-end: var(--sp-2);
-  margin-block-end: var(--sp-2);
-  border-block-end: 1px solid var(--c-border-soft);
+  margin-block-end: var(--sp-3);
+  /* v3.0의 밑선은 뺐다 — 바로 아래 박스 경계선이 오므로 선이 둘 겹친다. */
 }
 
-/* 행 사이에 구분선을 긋지 않는다 — 300행짜리 줄무늬는 목록이 아니라 표로 보인다.
-   분리는 두 가지가 한다: 날짜 열이 만드는 세로 리듬, 그리고 이 row-gap.
-   4px만으로도 행 경계가 잡히고, 이보다 키우면 목록이 "카드 나열"로 되돌아간다.
-   (한 행의 실제 높이는 .entry-title의 세로 패딩이 만든다 — components.css) */
+/* 카드 그리드. 미디어쿼리 없이 auto-fill이 열 수를 정한다 —
+   최소 17rem(272px): 1440px 도킹(본문 1088px) 3열 / 1024px 도킹(700px) 2열 / 768px(704px) 2열 /
+   616px 아래 1열. 15rem으로 두면 1440에서 4열이 되어 제목이 두 줄씩 꺾이고
+   한 줄에 눈이 훑을 카드가 너무 많아진다. min()은 320px 화면에서 카드가 거터를 넘지 않게 한다.
+   간격 16px: 한 행의 카드들이 "한 줄"로 읽히면서도 경계선이 붙어 표로 보이지 않는 최소값. */
 .entry-list {
   display: grid;
-  row-gap: var(--sp-1);
+  grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr));
+  gap: var(--sp-4);
 }
 
 .entry {
-  display: grid;
-  /* 날짜 열이 고정이라 모든 제목의 왼쪽 선이 한 줄로 맞는다.
-     이 목록을 훑는 동작이 바로 그 선을 따라 아래로 내려가는 것이다. */
-  grid-template-columns: var(--w-date) minmax(0, 1fr);
-  column-gap: var(--sp-4);
-  /* 제목이 두 줄로 감겨도 날짜는 첫 줄에 맞춰 선다. */
+  /* .entry-title::after(components.css)가 이 박스를 꽉 채우는 링크 면적이 된다.
+     그래서 position: relative가 이 박스의 "기능"이다 — 빼면 링크가 페이지 전체로 퍼진다. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* 4px + 두 줄의 반행간(≈8px)이 눈에 보이는 간격이다. */
+  gap: var(--sp-1);
+  padding: var(--sp-4) var(--sp-5);
+  /* 그리드가 행 높이를 맞추고, 카드 안에서는 .entry-meta가 바닥에 붙는다(아래).
+     한 줄 제목 카드와 두 줄 제목 카드가 한 행에 있어도 날짜 줄이 같은 높이에 선다. */
+  min-block-size: 0;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  /* 바탕(--c-bg)보다 한 단계 밝은 면. 경계선만으로도 "종이가 얹혀 있다"가 읽혀
+     그림자가 필요 없다(원칙 3). */
+  background: var(--c-surface);
+  /* hover는 경계선만, 테마 토글 때는 면도 함께 건너간다(계약서 §11).
+     background-color를 빼면 이 박스만 테마 전환에서 즉시 튄다. */
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-theme) var(--ease-fade);
+}
+
+/* 박스의 hover 반응은 경계선 색 하나다. 이동·그림자·배경 변화는 없다 —
+   리스트에서 박스가 움직이면 그 아래 전부가 흔들려 보인다.
+   :has를 못 읽는 브라우저는 제목만 반응한다(components.css) — 퇴행 없음. */
+@supports selector(:has(*)) {
+  .entry:has(.entry-title:hover),
+  .entry:has(.entry-title:focus-visible) {
+    border-color: color-mix(in oklab, var(--c-accent) 45%, var(--c-border));
+  }
+}
+
+/* 제목은 남은 높이를 밀어내지 않는다 — 메타가 바닥으로 가는 것은 margin-top:auto가 한다. */
+.entry-title { flex: none; }
+
+/* 마지막 줄: 날짜와 태그가 한 줄에 흐르고, 넘치면 줄바꿈.
+   margin-block-start: auto가 카드 바닥에 붙인다(그리드 행 높이가 카드마다 같으므로). */
+.entry-meta {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
+  gap: var(--sp-1) var(--sp-3);
+  min-inline-size: 0;
+  margin-block-start: auto;
+  padding-block-start: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  min-inline-size: 0;
 }
 
 /* ============================================================================
@@ -211,7 +412,8 @@
   color: var(--c-text-dim);
 }
 
-/* 날짜 줄 — 제목 바로 아래 한 줄 병기(계약서 §5-2, 요구사항 #3). */
+/* 날짜 줄 — 제목 바로 아래 한 줄 병기(계약서 §5-2, 요구사항 #3).
+   색은 목록의 날짜와 같은 --c-meta — "황토색 숫자 = 날짜"가 두 화면에서 같다. */
 .post-dates {
   display: flex;
   flex-wrap: wrap;
@@ -219,7 +421,7 @@
   gap: 0 var(--sp-3);
   margin-block-start: var(--sp-4);
   font-size: var(--fs-sm);
-  color: var(--c-text-mute);
+  color: var(--c-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -365,20 +567,26 @@
   max-block-size: calc(100dvh - var(--sp-12));
 }
 
-/* 에디터 화면은 본문 칼럼보다 넓어야 쓸모가 있다(좌우 분할이 목적이므로).
-   읽는 화면의 기준선(--w-prose)을 여기서만 풀어 준다. */
-.editor-page { max-inline-size: 76rem; }
+/* (.editor-page의 폭은 파일 맨 위 "넓은 페이지 둘" 규칙에 .list-page와 함께 있다.) */
 
 /* ============================================================================
    9. 반응형 — 미디어쿼리는 "배치 전환"에만 쓴다(크기는 clamp이 담당).
    분기점: 360(기준선) / 440 / 768 / 1024   — 계약서 §11-3
+   카드 그리드의 열 수는 미디어쿼리가 아니라 auto-fill이 정한다(§6).
    ========================================================================= */
 
-/* 좁은 폰: 날짜 열 88px은 360px 화면에서 제목에 남기는 폭을 224px까지 떨어뜨린다.
-   날짜 글자를 줄일 수는 없으므로(정보다) 열 사이 간격을 좁혀 제목 쪽에 돌려준다. */
+/* 좁은 폰: 박스의 좌우 패딩을 한 단계 줄여 제목에 폭을 돌려준다.
+   360px 검산 — 거터 20×2 + 패딩 16×2 + 경계선 2 = 74px, 제목에 286px이 남는다(계약서 §4-4). */
 @media (max-width: 440px) {
-  .entry { column-gap: var(--sp-3); }
-  .site-header { gap: var(--sp-4); padding-block: var(--sp-5) var(--sp-4); }
+  .entry { padding: var(--sp-4); }
+  .site-header { gap: var(--sp-3); padding-block: var(--sp-5) var(--sp-4); }
+}
+
+/* 툴 행: 768px 이하에서는 세로로 쌓인다. DOM 순서 그대로(분류 → 검색) —
+   order/row-reverse로 시각 순서만 뒤집는 것은 계약서 §4가 금지한다(Tab 순서 ≠ 시선 순서). */
+@media (max-width: 768px) {
+  .list-tools { flex-direction: column; align-items: stretch; }
+  .list-tools > .search { flex: none; max-inline-size: 20rem; min-inline-size: 0; }
 }
 
 @media (min-width: 768px) {
@@ -390,5 +598,34 @@
 @media (min-width: 1024px) {
   .editor-split[data-mode="split"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* ── 사이드바 도킹 (§0) ──────────────────────────────────────────────────
+     열림 + 고정이면 본문을 밀고, 그림자·스크림·스크롤 잠금을 전부 푼다.
+     html[data-side="pinned"]는 첫 페인트용 같은 뜻의 힌트(§0 주석). 두 선택자를 항상 같이 적는다. */
+  body.side-open.side-pinned,
+  html[data-side="pinned"] body {
+    padding-inline-start: var(--w-side);
+    overflow: visible;
+  }
+
+  :root:has(body.side-open.side-pinned),
+  html[data-side="pinned"] { overflow: visible; }
+
+  html[data-side="pinned"] .side {
+    translate: 0 0;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  /* 도킹된 패널은 "떠 있는 것"이 아니라 페이지의 일부다 — 그림자를 떼고 경계선만 남긴다. */
+  body.side-open.side-pinned .side,
+  html[data-side="pinned"] .side { box-shadow: none; }
+
+  body.side-open.side-pinned .side-scrim,
+  html[data-side="pinned"] .side-scrim {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--dur-fast) var(--ease-fade), visibility 0s linear var(--dur-fast);
   }
 }

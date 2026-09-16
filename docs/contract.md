@@ -1,7 +1,19 @@
-# 마크업 계약서 v3.0
+# 마크업 계약서 v3.2
 
 디자이너(CSS)와 개발자(HTML/JS)가 동시에 작업하기 위한 **단일 진실 공급원**.
 여기 없는 클래스를 임의로 만들지 않는다. 필요하면 이 문서를 먼저 갱신한다.
+
+> **v3.2 (2026-09-16) — 배포 화면을 본 사용자 요청 6건(사이드바·카드 그리드·컨트롤 축소).**
+> 바뀐 절만 읽으려면: §2(`--w-page` 부활, `--w-side` `--z-side` `--z-scrim` 신설, `--h-control-xs` 값) ·
+> §3(헤더 첫 자식 햄버거) · **§3-2 사이드바(신설 — 마크업·상태 클래스·저장 규칙)** ·
+> §4(`.list-page` · `.list-tools` · 카드 그리드 · **`.entry-cat`으로 카드 내용물이 넷**) ·
+> §7 §8(부품·상태 목록) · §11(사이드바 transition 3행, 11-1 분담, 11-2 높이, 11-3 분기) · §12-8 · §13.
+>
+> **v3.0의 두 문장이 뒤집혔다.** "칸 자체를 없앤다"(폭 기준선 하나)와 "사이드바 없음"은
+> 사용자 판정 *"전체적으로 구조가 비어보여"* 와 *"왼쪽 위 햄버거 → 분류로 정리된 목록, 고정 가능"* 으로
+> 폐기됐다. 근거는 §2와 §3-2에 각각 적었다. **글 상세(post.html)의 720px 읽기 칼럼은 그대로다.**
+>
+> v3.1 요약: 역할색 셋(§1-2) · 목록 박스(§4-4) · `#` 삭제(§4-3, §5-3) · 테마 크로스페이드(§11).
 
 ---
 
@@ -31,7 +43,7 @@
 
 | 갈래가 있던 항목 | 고른 것 | 왜 (우리 조건 기준) |
 |---|---|---|
-| 사이드바 (없음 4곳 / 좌측 트리 1곳) | **없음** | 트리는 2단계 분류가 있어야 값을 한다. 우리 `categories.json`은 평면이고, 720px 읽기 칼럼에서 사이드바는 본문 폭을 깎는다 |
+| 사이드바 (없음 4곳 / 좌측 트리 1곳) | ~~**없음**~~ → **v3.2: 있음, 접이식·고정 가능**(§3-2) | v3.0 근거는 "평면 분류엔 트리가 필요 없고 720px 칼럼을 깎는다"였다. 사용자가 뒤집었다 — *"햄버거 누르면 대분류로 정리한 것을 볼 수 있게, 챗 앱처럼 고정 가능"*. 분류 → 글 2단계면 트리가 값을 하고, 기본이 "닫힘"이라 읽기 칼럼은 깎이지 않는다 |
 | 요약문 (없음 3곳 / 발췌 2곳 / 손으로 쓴 1줄 1곳) | **목록엔 없음, 상세엔 있음** | 사용자가 고른 행 형태가 `날짜 + 제목`이다. 요약은 `summary` 필드로 살아서 **검색 대상**과 상세 머리말이 된다 |
 | 분류 UI (인라인 인덱스 / 알약 / 좌측 트리 / 섹션 나열) | **인라인 인덱스 + 개수, 줄바꿈 허용** | 알약·탭은 10개를 넘으면 가로로 넘쳐 스크롤 뒤로 숨는다(v2.x가 실제로 그랬다). 인라인 텍스트는 **100개여도 6줄**이면 끝난다(사례 1 실측) |
 | 상세 메타 (하단 병기 / 상단 한 줄 병기) | **상단 한 줄 병기** | 요구사항 #3은 사용자가 직접 요구한 기능이다. 하단으로 내리면 "표시했지만 안 보이는" 상태가 된다 |
@@ -78,10 +90,23 @@
 
 1. **읽는 데 필요 없는 요소는 화면에 두지 않는다.** 판단이 애매하면
    *"이게 없으면 글을 못 읽거나 못 찾는가?"* 를 묻는다. 아니면 뺀다.
-2. **개성은 색 하나 + 타이포그래피 위계로만 낸다.** 액센트는 `--c-accent`
-   **한 가지**다(v2.x의 `--c-accent-2` 테라코타는 폐기 — 그라디언트를 만들 자리가 없다).
+2. **개성은 역할이 정해진 색 셋 + 타이포그래피 위계로 낸다.** (v3.1 — 사용자 판정
+   *"전체적으로 색깔이 너무 단색이야"* 로 v3.0의 "색 하나"를 개정.)
+
+   | 토큰 | 역할 | 쓰는 곳 |
+   |---|---|---|
+   | `--c-accent` (청록) | **누를 수 있는 것 · 선택된 것** | 링크 hover, 활성 내비/인덱스, 포커스, 버튼, 분류 링크 |
+   | `--c-meta` (황토) | **시간과 수량** | 목록 날짜, 연도 라벨, 인덱스 개수, 상세의 게시·수정일, 코드 언어 라벨 |
+   | `--c-tag` (자주) | **주제(태그)** | 태그 인덱스 항목, 목록 박스의 태그, 상세의 태그 |
+
+   색은 **역할**에 붙지 **글**에 붙지 않는다(§9-2 유지). 같은 역할은 어디서나 같은 색이라
+   300행에서도 눈이 좌우로 튀지 않는다 — v2.x의 "글마다 6색"과 다른 점이 그것이다.
+   v2.x의 `--c-accent-2`(테라코타)는 되살리지 않는다. 그 이름은 "두 번째 액센트"라는
+   뜻뿐이라 어디에 써야 하는지 말해 주지 않았다. 새 토큰은 이름이 곧 사용처다.
 3. **그림자를 쓰지 않는다.** 구분이 필요하면 1px 경계선이나 여백으로 해결한다.
-   예외는 **화면 위에 떠 있는 두 가지**(모달 패널·토스트)뿐이고 토큰도 `--sh-pop` 하나다.
+   예외는 **화면 위에 떠 있는 것**(모달 패널·토스트·**오버레이 상태의 사이드바**)뿐이고
+   토큰도 `--sh-pop` 하나다. 사이드바가 **도킹되면 그림자를 뗀다** — 페이지의 일부이지 떠 있는 것이 아니다(§3-2).
+   목록 카드(§4-4)는 **그림자 없이** 1px 경계선 + 한 단계 밝은 면으로만 선다.
 4. **모션은 상태 변화에만.** 진입 애니메이션·stagger·무한 루프는 없다.
    남은 것은 hover/focus 색 전환과 모달·토스트의 등퇴장뿐이다.
 5. **~~단색 배경 금지~~ (폐기)** — 사용자 판정으로 배경은 `--c-bg` 단색이다.
@@ -94,7 +119,8 @@
 
 ```
 색  : --c-bg --c-bg-2 --c-surface --c-surface-2 --c-border --c-border-soft
-      --c-text --c-text-dim --c-text-mute --c-accent --c-accent-soft
+      --c-text --c-text-dim --c-text-mute
+      --c-accent --c-accent-soft --c-meta --c-tag          (역할색 셋 — §1-2 원칙 2)
       --c-danger --c-warn --c-ok
 보조색: --c-on-accent --c-focus --c-scrim --c-shadow-rgb --c-selection
 코드: --code-bg --code-border --code-text --hl-*(하이라이팅 17종)
@@ -106,29 +132,55 @@
 그림자: --sh-pop (떠 있는 것 전용 — 모달 패널·토스트)
        --ring-w (3px, 포커스 글로우 두께) --sh-focus (인풋 :focus 글로우)
 모션: --ease(cubic-bezier(.16,1,.3,1))  --dur-fast(160ms) --dur(260ms) --dur-slow(420ms)
-치수: --h-control --h-control-sm --h-control-xs --h-nav --w-modal --w-toast --w-date
-레이아웃: --w-prose(45rem) --gutter
-z-index: --z-modal --z-toast
+      --ease-fade(cubic-bezier(.4,0,.2,1)) --dur-theme(240ms)   ← 테마 크로스페이드 전용(§11)
+치수: --h-control --h-control-sm --h-control-xs --h-nav --w-modal --w-toast
+레이아웃: --w-prose(45rem) --w-page(72rem, v3.2 부활) --w-side(260px, v3.2) --gutter
+z-index: --z-scrim(40) --z-side(50) --z-modal(60) --z-toast(80)
 ```
 
-**v2.3에서 삭제된 토큰** — 다른 CSS에 남아 있으면 결함이다.
+**삭제된 토큰** — 다른 CSS에 남아 있으면 결함이다.
 `--c-accent-2` / `--memo-*`(12) / `--memo-*-ink`(12) / `--memo-grain` / `--memo-min` /
 `--mesh-*` / `--grain-alpha` / `--sh-sm` `--sh-md` `--sh-lg` `--sh-memo` `--sh-memo-hover` `--sh-ring` /
 `--ease-in` `--ease-out` `--ease-ambient` / `--dur-ambient` `--dur-loop` /
-`--fs-4xl` / `--w-content` `--w-page` `--w-toc` `--h-header` / `--r-xl` /
-`--z-bg` `--z-base` `--z-sticky` `--z-progress`
+`--fs-4xl` / `--w-content` `--w-toc` `--h-header` / `--r-xl` /
+`--z-bg` `--z-base` `--z-sticky` `--z-progress` /
+**`--w-date`(v3.1 폐기 — 목록이 2열 그리드에서 박스로 바뀌어 날짜 열이 없다, §4-4)**
+(`--w-page`는 v3.0에서 삭제됐다가 **v3.2에서 부활** — 아래)
 
-**신설 2개**
+**v3.2 신설·변경**
 
 | 토큰 | 값 | 왜 필요한가 |
 |---|---|---|
-| `--w-date` | `5.5rem` | §4-4 목록의 날짜 열 **고정 폭**. `auto`로 두면 날짜가 빠진 행에서 열이 접혀 그 행의 제목만 왼쪽으로 튄다. 고정하면 **모든 행의 제목 왼쪽 선이 한 줄로 맞는다** — 이 목록의 스캔은 그 선을 따라 내려가는 동작이다 |
+| `--w-page` | `72rem`(1152px) | **목록 페이지(`.list-page`)만** 쓴다. 1152 = 카드 최소폭 17rem × 3 + 간격 2 + 거터. 글 상세는 여전히 `--w-prose` |
+| `--w-side` | `260px` | 사이드바 폭. 한글 제목 14px 기준 14~15자 + 들여쓰기 + 접기 버튼. 1024 − 260 = 764 → 카드 2열이 선다. 300이면 1024px에서 2열이 깨진다 |
+| `--z-side` | `50` | 스크림 위·모달 아래. 에디터의 확인 모달 위를 사이드바가 덮으면 "확인"을 못 누른다 |
+| `--z-scrim` | `40` | 사이드바 스크림. 본문 위·사이드바 아래 |
+| `--h-control-xs` | 30/40 → **24/36** | `.search-clear` 하나가 쓴다. 인풋이 40 → 32px(`--h-control-sm`)로 줄어 안에 앉는 원판도 따라 내린다. 24 = WCAG 2.2 최소 타깃(2.5.8) 하한 |
+| (신설 안 함) `--h-input` | — | 사양서가 열어 둔 선택지. **`--h-control-sm` 재사용**으로 결정 — 검색 인풋의 역할은 "본문 흐름에 끼는 작은 컨트롤"이고 그 역할의 토큰이 이미 있다. 이름이 둘이면 다음 사람이 어느 걸 쓸지 고민한다 |
+
+**v3.0 신설**
+
+| 토큰 | 값 | 왜 필요한가 |
+|---|---|---|
 | `--sh-pop` | 1단 소프트 섀도 | 원칙 3의 유일한 예외. "떠 있는 것"만 쓴다 |
 
-**폭 토큰이 하나로 합쳐졌다.** v2.x는 `--w-page`(1200px)와 `--w-prose`(45rem) 두 기준선을
-갖고 있었다. v3.0은 **`--w-prose` 하나**다 — 헤더·본문·목록·푸터가 같은 세로 축에 선다.
-1200px 상자 안에 720px 본문이 들어 있으면 그 480px 차이가 "여백"이 아니라
-**채워야 할 빈칸**으로 보이고, 카드·통계·사이드바가 거기로 들어오려 한다. 칸을 없앤다.
+**v3.1 신설 4개**
+
+| 토큰 | 라이트 / 다크 | 왜 필요한가 |
+|---|---|---|
+| `--c-meta` | `#8f5a0d` / `#e0ad4f` | 시간·수량(날짜·연도·개수·코드 언어). 라이트는 `--c-bg` 5.3:1, 박스 면 `--c-surface` 5.7:1, 코드 머리띠 4.8:1 — 전부 AA. 다크 8.9:1 |
+| `--c-tag` | `#7f3f8f` / `#cfa0e0` | 태그(주제). 라이트 6.4:1, 다크 8.4:1. 청록(액센트)·황토와 색상환에서 서로 떨어져 있어 셋이 한 줄에 놓여도 구분된다 |
+| `--dur-theme` | `240ms` | 테마 전환 크로스페이드. `--dur-fast`(160)는 "손보다 빨라야 하는" hover용이라 페이지 전체가 바뀌는 데 쓰면 깜빡임으로 보인다. 300ms를 넘으면 "느리다" |
+| `--ease-fade` | `cubic-bezier(.4,0,.2,1)` | 대칭 곡선. `--ease`(expo-out)는 위치·크기가 "도착"하는 모션용이라 색에 쓰면 절반이 첫 40ms에 끝나 사실상 즉시 전환이다. 두 색의 중간값이 화면에 머물러야 "바뀐다"가 아니라 "건너간다"로 보인다 |
+
+**폭 기준선 — v3.0의 "칸 자체를 없앤다"는 v3.2에서 절반 철회됐다.**
+v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인다"며 `--w-page`를 지우고
+`--w-prose` 하나로 통일했다. 사용자가 배포 화면(1440px)을 보고 *"전체적으로 구조가 비어보여"* 라고
+판정했다 — 720px 한 줄만 쓰면 좌우 360px씩이 빈다. 그 판정이 맞다.
+단, 되살리는 곳은 **목록 페이지뿐**이다. `<main class="site-main list-page">`가 `--w-page`를
+쓰고, **같은 페이지의 헤더·푸터도 `:has(> .list-page)`로 따라간다**(왼쪽 선이 둘이 되면 안 된다).
+글 상세는 읽기 줄길이가 곧 기능이라 720px 그대로다. `.editor-page`(76rem)도 같은 방식으로
+헤더·푸터를 맞춘다(v3.1까지 write.html은 헤더만 720px이었다 — 결함이었다).
 
 다크모드는 `:root[data-theme="dark"]`에서 토큰 값만 재정의한다.
 초기 테마는 `<html data-theme="light|dark">`로 JS가 세팅한다(FOUC 방지 인라인 스크립트).
@@ -141,6 +193,9 @@ z-index: --z-modal --z-toast
 <a class="sr-only" href="#main">본문 바로가기</a>
 
 <header class="site-header">
+  <!-- v3.2: 첫 자식 햄버거. 사이드바가 왼쪽에서 나오므로 손잡이도 왼쪽 끝이다 -->
+  <button class="icon-btn side-toggle" id="sideToggle" type="button"
+          aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
   <nav class="site-nav" aria-label="주요 메뉴">
     <a class="nav-link is-active" href="index.html">글</a>
@@ -149,6 +204,10 @@ z-index: --z-modal --z-toast
   <button class="icon-btn" id="themeToggle" type="button"
           aria-label="테마 전환" aria-pressed="false"></button>
 </header>
+
+<!-- v3.2: 사이드바 + 스크림. <header> 뒤·<main> 앞. 세 페이지 동일(§3-2) -->
+<aside class="side" id="side" aria-label="분류별 글 목록">…</aside>
+<div class="side-scrim" id="sideScrim" hidden></div>
 
 <main class="site-main" id="main" tabindex="-1">…</main>
 
@@ -177,8 +236,12 @@ z-index: --z-modal --z-toast
 - **`.site-header`는 static이다.** sticky·backdrop-filter·`.is-stuck`·밑선 전부 없다.
   헤더가 따라다녀야 할 만큼 이 사이트의 내비게이션은 크지 않고,
   실측 7곳 중 sticky 헤더는 0곳이다. 스크롤 핸들러 하나가 함께 사라진다.
-- 헤더·본문·푸터는 **같은 칼럼**(`--w-prose` + `--gutter`)에 정렬된다.
-  브랜드의 왼쪽 선 = 제목의 왼쪽 선 = 날짜의 왼쪽 선.
+- 헤더·본문·푸터는 **같은 칼럼**에 정렬된다 — post.html은 `--w-prose`, index.html은 `--w-page`(§2),
+  write.html은 76rem. 브랜드의 왼쪽 선 = 제목의 왼쪽 선 = 카드의 왼쪽 선.
+- **햄버거(`.side-toggle`)와 테마 버튼은 둘 다 `.icon-btn`이다.** 오른쪽 끝으로 미는 auto 마진은
+  `.site-header > .icon-btn:last-child`(테마)에만 걸린다. 햄버거 아이콘(세 줄)은 CSS `::before`가
+  그린다 — 테마 버튼과 같은 방식이라 세 HTML에 SVG를 복사하지 않는다.
+  `aria-expanded="true"`이면 액센트색("켜져 있는 것"의 색).
 
 ### 3-1. 스킵 링크
 
@@ -191,7 +254,80 @@ z-index: --z-modal --z-toast
 
 착지점의 포커스 링은 `base.css`가 끈다(`main[tabindex="-1"]`).
 
-### 3-2. `.site-nav`
+### 3-2. 사이드바 `.side` (v3.2 신설)
+
+> **사용자 요청(원문): "왼쪽 사이드 위에 햄버거 메뉴 넣고 누르면 대분류(카테고리)로 정리한것을
+> 볼 수 있게 표시 (클로드 챗이나 지피티 챗처럼 고정 가능, 카테고리 분류 가능)".**
+> v3.0 §0-1의 "사이드바 없음"은 이 요청으로 폐기됐다. 기본은 **닫힘**이라 읽기 칼럼은 깎이지 않고,
+> 사용자가 고정하면 그때만 본문이 밀린다.
+
+**마크업 — 세 페이지 동일, `<header>` 바로 뒤·`<main>` 앞.** Tab 순서가 햄버거 → 사이드바 → 본문이
+되어 열자마자 다음 Tab이 사이드바 안으로 들어간다.
+
+```html
+<aside class="side" id="side" aria-label="분류별 글 목록">
+  <div class="side-head">
+    <span class="side-title">분류</span>
+    <button class="icon-btn side-pin" id="sidePin" type="button"
+            aria-label="사이드바 고정" aria-pressed="false"></button>
+    <button class="icon-btn side-close" id="sideClose" type="button" aria-label="닫기"></button>
+  </div>
+  <nav class="side-tree" id="sideTree"></nav>   <!-- ui.js renderSide()가 채운다 -->
+</aside>
+<div class="side-scrim" id="sideScrim" hidden></div>
+```
+
+`#sideTree` 안에 JS가 그리는 구조:
+
+```html
+<ul class="side-cats">
+  <li class="side-cat is-open">                          <!-- 접히면 is-open 제거 / 글 0편이면 is-empty -->
+    <div class="side-cat-row">
+      <a class="side-cat-name" href="index.html?cat=javascript">JavaScript</a>
+      <span class="side-cat-count">2</span>
+      <button class="side-cat-toggle" type="button" aria-expanded="true"
+              aria-label="JavaScript 접기" aria-controls="sideCat-javascript"></button>
+    </div>
+    <ul class="side-posts" id="sideCat-javascript">
+      <li><a class="side-post is-pinned" href="post.html?id=…" aria-current="page">클로저와 렉시컬 스코프</a></li>
+    </ul>
+  </li>
+</ul>
+```
+
+| 규칙 | 내용 |
+|---|---|
+| 분류 순서 | `store.categoryList(posts)` — `categories.json` `order` → 글 수 내림차순 → 이름(app.js `byIndexOrder`와 같은 규칙). **글 0편인 분류도 그린다**(`.side-cat.is-empty`, `.side-posts` 없음 — CSS가 접기 버튼도 숨긴다) |
+| 글 순서 | 고정 글 먼저(`.side-post.is-pinned`), 그 다음 `created` 내림차순 |
+| `aria-current` | post.html: 현재 글의 `.side-post`에 `"page"`. index.html: `?cat=`이 걸린 `.side-cat-name`에 `"true"` |
+| 미분류 | `_uncategorized`는 글이 있을 때만 맨 아래 |
+| 아이콘 | 핀·닫기·쉐브론 전부 CSS가 그린다. 핀은 **기울어짐 = 고정 안 됨 / 바로 섬 = 고정됨**(`aria-pressed`) — 색만으로 상태를 말하지 않는다 |
+| 색 어휘 | 인덱스와 같다 — 이름 본문색, 개수 `--c-meta`, 선택·현재 `--c-accent`. 사이드바에서만 다른 색을 쓰면 같은 분류가 두 화면에서 다른 것으로 보인다 |
+| 글 제목 | 두 줄까지 허용 후 말줄임. 한 줄 말줄임은 "…스코프"만 남겨 어떤 글인지 못 알아본다 |
+| 빈 상태 | 데이터 실패·글 0편이면 `#sideTree`에 `<p class="side-empty">글이 없습니다</p>` 한 줄 |
+
+**상태 — 전부 `<body>` 클래스, `ui.js`가 붙인다.**
+
+| 상태 | 화면 |
+|---|---|
+| (없음) | 닫힘. 왼쪽 밖 + `visibility: hidden` — Tab 순서·스크린리더에서도 빠진다 |
+| `body.side-open` | **오버레이.** 본문 위로 슬라이드, `--sh-pop` 그림자, 스크림(`--c-scrim` 45%), 뒤 페이지 스크롤 잠금. Esc·스크림 클릭·링크 클릭·바깥 포커스 이동 시 닫힘 |
+| `body.side-open.side-pinned` | **≥1024px에서 도킹.** 페이지(헤더·메인·푸터)가 `padding-inline-start: var(--w-side)`로 밀리고, 그림자·스크림·스크롤 잠금이 풀린다. 경계선 하나로 본문과 나뉜다. 페이지를 옮겨도 열린 채 유지. **<1024px에서는 pinned여도 오버레이**(값은 보존만) |
+| `html[data-side="pinned"]` | 첫 페인트용 힌트. `theme-init.js`가 `blogSide`를 읽어 `pinned && ≥1024`이면 붙인다. CSS는 이것을 `body.side-open.side-pinned`와 **동일하게** 취급한다. **`ui.js` `initSide()`가 body 클래스를 붙인 직후 이 속성을 제거한다** — 남겨 두면 핀을 풀어도 CSS가 계속 도킹한다 |
+
+- 저장: localStorage `blogSide`(config.js `storageKeys.side`), 값은 `{"pinned":true,"closed":["css"]}`.
+  `closed`는 접어 둔 분류 slug. 파싱 실패 시 기본값(`pinned:false, closed:[]`).
+- 햄버거 = 열기/닫기 토글(`aria-expanded` 동기화). 핀 = `aria-pressed` 토글 + 저장;
+  **고정 해제해도 닫히지 않는다**(오버레이로 남는다). 접기 버튼 = `.side-cat.is-open` 토글 + `aria-expanded` + 저장.
+- 포커스: 열릴 때 `.side-head`의 첫 버튼(또는 `#sideTree` 첫 링크)로, 닫힐 때 `#sideToggle`로 복귀.
+- **스크림의 `hidden`은 JS 실행 전 안전장치다.** `initSide()`가 한 번 떼어 내면 그 뒤 표시 여부는
+  CSS가 body 클래스와 뷰포트 폭으로 정한다(1100px 도킹 상태에서 900px로 줄이면 JS 없이 스크림이 켜진다).
+  JS가 계속 토글해도 조건이 같아 어긋나지 않지만, 리사이즈 대응은 CSS가 더 정확하다.
+- 슬라이드 `--dur`(260ms) + `--ease`. `prefers-reduced-motion`이면 즉시(base.css의 `*` 블록이 자른다 — 별도 규칙 없음).
+- API: `Blog.ui.renderSide({ posts, cats, activeId, activeCat })` / `Blog.ui.initSide()` — frontend-dev-2 구현,
+  호출은 app.js(index) · post.js(글 로드 후) · editor.js(index 로드 후, try/catch).
+
+### 3-3. `.site-nav`
 
 - 항목은 세 페이지가 동일하다. 현재 페이지 링크에만 `.nav-link.is-active`.
 - "쓰기"는 `data-admin-only`.
@@ -205,40 +341,44 @@ z-index: --z-modal --z-toast
 ## 4. index.html — 글 목록
 
 ```html
-<main class="site-main" id="main" tabindex="-1">
+<!-- v3.2: .list-page — 이 <main>만 --w-page(72rem)로 넓어진다. 헤더·푸터는 CSS :has()가 따라간다(§2) -->
+<main class="site-main list-page" id="main" tabindex="-1">
 
   <div class="page-head">
     <h1 class="page-title" data-site-title>메모 블로그</h1>
     <p class="page-sub" data-site-sub>공부한 것을 기록하는 곳</p>
   </div>
 
-  <!-- 검색: 컨트롤 한 줄. sticky 아님 -->
-  <div class="search">
-    <label class="sr-only" for="searchInput">글 검색</label>
-    <input class="search-input" id="searchInput" type="search"
-           placeholder="제목 · 요약 · 태그 검색  ( / )"
-           autocomplete="off" enterkeyhint="search">
-    <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
+  <!-- v3.2 툴 행: 분류 인덱스(왼쪽) + 검색(오른쪽, 20rem) 한 줄. 768px 이하에서 세로 스택 -->
+  <div class="list-tools">
+    <!-- 분류 인덱스 — 항상 펼쳐져 있다. 분류가 하나도 없으면 hidden(§4-3) -->
+    <div class="index-row" id="catRow" hidden>
+      <span class="index-label" id="catIndexLabel">분류</span>
+      <nav class="index-list" id="catIndex" aria-labelledby="catIndexLabel">
+        <button class="index-item is-active" type="button" data-cat="*" aria-current="true">
+          <span class="index-name">전체</span><span class="index-count">4</span>
+        </button>
+        <button class="index-item" type="button" data-cat="css">
+          <span class="index-name">CSS</span><span class="index-count">1</span>
+        </button>
+        <button class="index-item is-empty" type="button" data-cat="db">
+          <span class="index-name">DB</span><span class="index-count">0</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- 검색: sticky 아님. 높이 --h-control-sm(32px) -->
+    <div class="search">
+      <label class="sr-only" for="searchInput">글 검색</label>
+      <input class="search-input" id="searchInput" type="search"
+             placeholder="제목 · 요약 · 태그 검색  ( / )"
+             autocomplete="off" enterkeyhint="search">
+      <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
+    </div>
   </div>
 
-  <!-- 분류 인덱스 — 항상 펼쳐져 있다 -->
-  <div class="index-row" id="catRow">
-    <span class="index-label" id="catIndexLabel">분류</span>
-    <nav class="index-list" id="catIndex" aria-labelledby="catIndexLabel">
-      <button class="index-item is-active" type="button" data-cat="*" aria-current="true">
-        <span class="index-name">전체</span><span class="index-count">4</span>
-      </button>
-      <button class="index-item" type="button" data-cat="css">
-        <span class="index-name">CSS</span><span class="index-count">1</span>
-      </button>
-      <button class="index-item is-empty" type="button" data-cat="db">
-        <span class="index-name">DB</span><span class="index-count">0</span>
-      </button>
-    </nav>
-  </div>
-
-  <!-- 태그 인덱스 — 접혀 있다(§4-3) -->
-  <details class="index-fold" id="tagFold">
+  <!-- 태그 인덱스 — 접혀 있다(§4-3). 툴 행 "밖"이다 — 펼치면 여러 줄이 되어 툴 행을 깨뜨린다 -->
+  <details class="index-fold" id="tagFold" hidden>
     <summary class="index-fold-summary">태그 <span class="index-count">12</span></summary>
     <div class="index-row">
       <nav class="index-list" id="tagIndex" aria-label="태그 필터">
@@ -252,14 +392,21 @@ z-index: --z-modal --z-toast
     </div>
   </details>
 
-  <!-- 목록 -->
+  <!-- 목록 — v3.2: 카드 그리드(2~3열). 카드 = 분류 라벨 → 제목 → 날짜·태그(§4-4) -->
   <div class="post-list" id="postList" aria-live="polite">
     <section class="entry-group">
-      <h2 class="entry-group-label">2026</h2>
+      <h2 class="entry-group-label">2026</h2>   <!-- 그리드 위 full-width. 한 해뿐이면 없음 -->
       <ul class="entry-list">
-        <li class="entry">
-          <time class="entry-date" datetime="2026-09-13">2026.09.13</time>
+        <li class="entry is-pinned">
+          <span class="entry-cat">CSS</span>
           <a class="entry-title" href="post.html?id=2026-09-13-css-grid">CSS Grid 정리</a>
+          <div class="entry-meta">
+            <time class="entry-date" datetime="2026-09-13">2026.09.13</time>
+            <ul class="entry-tags" aria-label="태그">
+              <li class="entry-tag">css</li>
+              <li class="entry-tag">layout</li>
+            </ul>
+          </div>
         </li>
       </ul>
     </section>
@@ -275,8 +422,12 @@ z-index: --z-modal --z-toast
 ```
 
 **DOM 순서 = 시선 순서 = Tab 순서.** 어긋나면 결함이다.
-`정체(제목) → 찾기(검색) → 축으로 좁히기(분류·태그) → 목록`.
+v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태그 → 목록`.
+(v3.0의 "검색 → 분류"에서 분류가 앞으로 왔다 — 툴 행에서 분류가 왼쪽, 검색이 오른쪽에 놓이므로
+읽는 순서와 Tab 순서를 화면 배치에 맞춘 것이다.)
 `order`나 `flex-direction: row-reverse`로 시각 순서만 바꾸는 것은 금지다.
+**그래서 768px 이하의 세로 스택도 DOM 순서(분류 위, 검색 아래)다** — 사양서 C의 "검색 위"는
+이 규칙과 충돌해 채택하지 않았다. Tab이 아래에서 위로 가는 화면을 만들지 않는다.
 
 ### 4-1. 이름 대응표 (v2.3 → v3.0)
 
@@ -297,48 +448,71 @@ z-index: --z-modal --z-toast
 | `.board-empty` / `#boardEmpty` | `.list-empty` / `#listEmpty` | |
 | `.board-skeleton` / `#boardSkeleton` / `.skeleton` | `.list-loading` / `#listLoading` | 자리표시자 6장 → 텍스트 한 줄 |
 | `.memo*` 전부 | `.entry` 계열 | §4-4 |
+| — | `.entry-meta` `.entry-tags` `.entry-tag` | **v3.1 신설.** 박스 안의 둘째 줄(§4-4) |
 
 ### 4-2. 페이지 머리말 `.page-head`
 
 - `<h1>`은 **사이트 이름**이다(`data-site-title`). `index.html`의 유일한 h1이므로
   없애면 문서 개요가 깨진다 — 히어로를 지우되 h1은 남긴다.
-- 크기는 `--fs-2xl`(22→30px). `--fs-4xl`(34→60px)은 **콘텐츠가 아닌 것이 화면에서
-  가장 큰 글자가 되는 배치**였다. 이 화면의 주인공은 목록의 제목들이다.
+- 크기는 **`--fs-xl`(19→23px, v3.2)**. v3.0의 `--fs-2xl`(30px)은 세로 1열 목록 위에서는 맞았지만,
+  3열 카드가 되면 화면에 제목(`--fs-lg`)이 수십 개 동시에 놓인다. 그 위의 30px 사이트명은
+  "페이지 제목 아래 목록"이 아니라 "간판 아래 목록"이다. 23px이면 h1이 카드 제목보다
+  한 단계 크되 주인공을 뺏지 않는다. `--fs-4xl`(60px)이 폐기된 이유는 그대로다.
+- `.page-head` 아래 여백은 `--sp-5`(v3.1 `--sp-7`) — 머리말이 작아진 만큼 숨도 줄인다.
 - 액센트 바(`.hero::before`)·통계·진입 애니메이션 없음. 두 줄이 전부다.
-- `.page-sub`는 한 줄(`--fs-md`, `--c-text-dim`). 두 줄이 되면 `index.json`의
+- `.page-sub`는 한 줄(`--fs-sm`, `--c-text-dim`). 두 줄이 되면 `index.json`의
   `site.subtitle`을 줄이라는 뜻이다.
 
 ### 4-3. 인덱스 — 분류·태그 (`.index-*`)
 
-**한 부품으로 두 축을 그린다.** 모양으로 구분하지 않고 **라벨과 `#` 접두사로** 구분한다.
+**한 부품으로 두 축을 그린다.** 모양으로 구분하지 않고 **라벨과 색으로** 구분한다.
+(v3.0의 `#` 접두사는 **v3.1에서 삭제** — 사용자 판정 *"#은 지우고"*.)
 
-| 축 | 라벨 | 접두사 | 선택 | ARIA | 기본 상태 |
+| 축 | 라벨 | 항목 색 | 선택 | ARIA | 기본 상태 |
 |---|---|---|---|---|---|
-| 분류 | `분류` | 없음 | **단일** | `aria-current="true"` (비선택은 **속성 제거**, `false` 아님) | 펼침 |
-| 태그 | `태그` | `#`(CSS `::before`) | **다중** | `aria-pressed="true|false"` | **접힘** |
+| 분류 | `분류` | `--c-text-dim` | **단일** | `aria-current="true"` (비선택은 **속성 제거**, `false` 아님) | 펼침 |
+| 태그 | `태그` (접기 손잡이) | **`--c-tag`** | **다중** | `aria-pressed="true|false"` | **접힘** |
 
 - v2.x는 카테고리(탭+레일+점+밑줄)와 태그(알약+테두리)를 **다섯 가지 시각 신호로** 갈랐다.
   그 다섯 가지가 화면 높이의 4분의 1을 먹었다. 두 축을 구분하는 가장 싼 방법은
   **그냥 이름을 적는 것**이다.
+- **두 축이 구분되는 근거 셋(v3.1)** — `#`이 빠져도 부족하지 않다.
+  ① 라벨 `분류`/`태그`. ② 태그 인덱스는 `<details>` **안**에 있어 손잡이를 연 뒤에야
+  그 아래 들여쓰인 줄로 나타난다 — 위치 자체가 "다른 축"이다.
+  ③ 태그 항목은 `--c-tag`(자주)이고 분류 항목은 본문색이다. 이 색은 목록 박스의 태그·상세의
+  태그와 같은 색이라, 화면 어디서든 **자주색 = 태그**로 학습된다.
 - **`flex-wrap: wrap`이다. 가로 스크롤을 쓰지 않는다.**
   v2.x의 `nowrap` + 가로 스크롤은 카테고리가 10개만 넘어도 **뒤쪽 항목이 화면 밖으로
   숨었고**, 스크롤 가능하다는 사실을 덮개·그림자로 따로 알려야 했다.
   인라인 텍스트는 줄바꿈으로 전부 보인다 — 100개여도 6줄이면 끝난다(실측 사례 1).
 - **항목 이름은 `<span class="index-name">`에 담는다.** 버튼의 텍스트 노드로 두면
-  긴 분류명을 말줄임할 수 없고, 아래 `#` 접두사를 붙일 자리도 없다.
+  긴 분류명을 말줄임할 수 없고, **활성 밑줄을 이름에만 걸 수도 없다**(아래).
 - 항목 사이 구분자 `·`는 **CSS `::before`가 그린다**(`.index-item + .index-item::before`).
   마크업에 문자를 넣지 않는다 — 문자로 넣으면 줄바꿈 위치에서 구분자가 줄 머리에 혼자 떨어진다.
-- **태그의 `#` 접두사도 CSS가 그린다**(`#tagIndex .index-name::before`).
-  `"#css"`를 텍스트로 넣으면 **화면 문자열과 `data-tag` 필터 값이 어긋난다.**
-  `data-tag="*"`(전체)에는 붙지 않는다 — 그건 태그 이름이 아니라 필터 해제 버튼이다.
+- **활성 밑줄은 `.index-name`에만 건다** (`.index-item.is-active .index-name`).
+  v3.0은 `.index-item`(inline-flex 컨테이너)에 `text-decoration`을 걸었는데, 밑줄이 두 flex
+  아이템(`.index-name`·`.index-count`)에 **따로** 전파되고 개수 칸은 글자가 작아(`--fs-xs`)
+  밑줄 높이가 달라져 **숫자 아래에 짧은 `_`가 떨어져 보였다** — 사용자가 본 그 밑줄이다.
+  개수는 밑줄을 갖지 않는다. 선택된 것은 "이름"이지 "개수"가 아니다.
 - `.index-count`는 **실제 정보**다(그 분류에 글이 몇 편). 장식이 아니므로
   `aria-hidden`을 붙이지 않는다. 스크린리더가 "CSS 1"로 읽는 것은 실측 사례 1·6·7이
-  공통으로 감수하는 형태다.
+  공통으로 감수하는 형태다. 색은 `--c-meta`(수량) — 활성이어도 바뀌지 않는다.
 - `.index-item.is-empty` : 글이 0편인 분류. **opacity가 아니라 한 단계 낮은 색 토큰**으로
   내린다(opacity는 대비를 4.5:1 아래로 떨어뜨린다).
 - **정렬 순서: `categories.json`의 `order`** 오름차순, 같으면 글 수 내림차순.
   자동 정렬(글 수 순)을 기본으로 삼지 않는 이유 — `order`는 사용자가 직접 적는 값이고,
   분류의 순서는 이 블로그에서 **사용자의 편집 대상**이다(요구사항: 카테고리 직접 추가).
+
+**컨트롤 축소 (v3.2)** — 사용자 판정 *"검색창이라던지 카테고리라던지 너무 커"*.
+
+| 부품 | v3.1 | v3.2 | 왜 |
+|---|---|---|---|
+| `.search-input` | 높이 `--h-control`(40), 반경 `--r-md`, 폭 720 전체 | 높이 **`--h-control-sm`**(32, coarse 44), 반경 `--r-sm`, **`max-inline-size: 20rem`** | 검색어는 한두 단어다. 720px 인풋의 600px은 빈 칸이었다. 인덱스 항목과 같은 높이 토큰이라 툴 행에서 첫 줄이 같은 선에 앉는다 |
+| 돋보기 | 11px / 2px 선 | 9px / 1.5px 선 | 32px 안에서 11px 렌즈는 글자보다 크다 |
+| `.search-clear` | `--h-control-xs` 30 | `--h-control-xs` **24**(coarse 36) | 인풋을 따라 내린다(§2) |
+| `.index-item` | `--fs-sm`, 좌우 패딩 `--sp-2`, 구분자 간격 `--sp-2` | **`--fs-xs`**, 패딩·간격 **`--sp-1`** | 높이(`--h-control-sm`)는 그대로 — 손가락이 누른다. 글자가 작아져 32px 안에서 위아래 숨이 늘어나 "덩어리"가 아니라 "글자"로 보인다 |
+| `.index-fold-summary` | `--fs-xs`, 패딩 `--sp-2` | `--fs-xs`, 패딩 `--sp-1` | 손잡이도 인덱스 항목과 같은 간격 |
+| `.list-tools` | (없음) | 분류 왼쪽 `flex: 1`, 검색 오른쪽 `flex: 0 1 20rem`, `align-items: flex-start` | 인덱스가 두 줄로 감겨도 검색이 밀리지 않는다 |
 
 **태그를 접어 두는 이유와 그 규칙**
 
@@ -360,32 +534,58 @@ z-index: --z-modal --z-toast
 **지금 만들지 않는 이유: 분류가 0개인 상태에서 시작한다.** 필요해지기 전에 만든 화면이
 곧 "AI티"다.
 
-### 4-4. 목록 `.post-list` — 날짜 + 제목 2단 리스트
+### 4-4. 목록 `.post-list` — 카드 그리드, 글 하나 = 카드 하나 (v3.2)
+
+> **사용자 판정(v3.1): "리스트 나열 보다는 박스 형태로 게시글 [표시]해줘"**, 그리고
+> **v3.2: "전체적으로 구조가 비어보여".** v3.1은 박스를 세로 1열로 쌓았다 — 720px 안에서
+> 박스 하나가 한 줄을 다 쓰니 "리스트에 테두리를 두른 것"이었다. v3.2는 **자동 채움 그리드**다
+> (데스크톱 3열 / 태블릿 2열 / 폰 1열). 박스 자체는 v3.1과 같다 —
+> **1px 경계선 + 한 단계 밝은 면 + 작은 반경**, 그림자·기울기·색 종이 없음.
 
 ```html
 <section class="entry-group">
-  <h2 class="entry-group-label">2026</h2>
-  <ul class="entry-list">
-    <li class="entry">
-      <time class="entry-date" datetime="2026-09-13">2026.09.13</time>
+  <h2 class="entry-group-label">2026</h2>          <!-- <ul> 밖 → 그리드 위 full-width -->
+  <ul class="entry-list">                          <!-- grid: repeat(auto-fill, minmax(17rem, 1fr)) -->
+    <li class="entry is-pinned">
+      <span class="entry-cat">CSS</span>           <!-- v3.2 신설. 분류명. 미분류면 생략 -->
       <a class="entry-title" href="post.html?id=…">CSS Grid 정리</a>
+      <div class="entry-meta">                     <!-- 날짜·태그 둘 다 없으면 생략 -->
+        <time class="entry-date" datetime="2026-09-13">2026.09.13</time>
+        <ul class="entry-tags" aria-label="태그">
+          <li class="entry-tag">css</li>
+        </ul>
+      </div>
     </li>
   </ul>
 </section>
 ```
 
-**한 행의 내용물은 `날짜`와 `제목` 둘뿐이다.** 요약·태그·분류·수정일·색·아이콘 금지.
-사용자가 직접 고른 형태다.
+**DOM 순서 고정: `.entry-cat` → `.entry-title` → `.entry-meta`.** Tab 정지점은 여전히 제목 하나다.
+(v3.0 `날짜 → 제목`, v3.1 `제목 → 메타`, **v3.2 `분류 → 제목 → 메타`. `app.js` `entryRow()` — §12-8.**)
 
-| 규칙 | 근거 |
-|---|---|
-| `.entry`는 `grid-template-columns: var(--w-date) minmax(0, 1fr)` | 날짜 열이 고정이라 **모든 제목의 왼쪽 선이 한 줄로 맞는다.** 이 목록을 훑는 동작은 그 선을 따라 내려가는 것이다 |
-| `.entry-date`는 `--fs-sm` / `--c-text-mute` / `tabular-nums` | 날짜는 부속이고 제목이 주인공이다. 자릿수가 세로로 맞아야 열로 읽힌다 |
-| `.entry-title`은 `--fs-lg` / 굵기 600 / `--c-text` | 화면에서 **가장 눈에 띄는 글자**여야 한다(h1보다도) |
-| 행 사이에 **구분선을 긋지 않는다** | 300행짜리 줄무늬는 표로 보인다. 분리는 행 높이와 날짜 열의 리듬이 이미 하고 있다 |
-| `.entry-title`이 터치 타깃 높이를 갖는다(`--h-control`) | 눌리는 것은 제목 링크다. `<li>`에 패딩을 주면 링크 밖을 눌러도 아무 일이 안 일어난다 |
-| hover/focus = 밑줄 + 액센트 색. **이동·배경·그림자 없음** | 리스트에서 행이 움직이면 그 아래 행 전부가 흔들려 보인다 |
-| `created` 내림차순 고정 | 정렬 컨트롤이 없다(§0-2). 학습 기록의 순서는 시간순 하나다 |
+**카드 안의 내용물은 `분류` / `제목` / `날짜` / `태그` 넷이다.** (v3.1 "셋"에서 개정.)
+요약·수정일·아이콘은 여전히 금지. 분류를 넣은 이유 — v3.1은 "분류는 인덱스가 이미 보여 준다"며
+뺐지만, 그리드에서 카드는 인덱스에서 멀어지고(3열 × 5행이면 인덱스는 화면 밖) 한 행에 다른 분류의
+글이 섞인다. 카드가 스스로 "무슨 분류의 글인지"를 말해야 한다. 그리고 이 한 줄이 카드 안에
+**청록(분류)·황토(날짜)·자주(태그)** 셋을 다 놓아 사용자 판정 *"너무 단색"* 이 실제로 해소된다.
+
+| 요소 | 규칙 | 근거 |
+|---|---|---|
+| `.entry-list` | `display: grid; grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr)); gap: --sp-4` | **미디어쿼리 없이** auto-fill이 열 수를 정한다. 17rem(272px): 1440 도킹(본문 1088) **3열** / 1024 도킹(700) **2열** / 768(704) **2열** / 616 아래 **1열**. 15rem이면 1440에서 4열 — 제목이 두 줄씩 꺾이고 한 줄에 훑을 카드가 너무 많다 |
+| `.entry` | `position: relative` · 세로 flex · 1px `--c-border` · `--r-md` · 면 `--c-surface` · 패딩 `--sp-4 --sp-5`(440px 이하 `--sp-4`) · **그림자 없음** | 면이 바탕보다 한 단계 밝아 "종이가 얹혀 있다"가 경계선만으로 읽힌다. 원칙 3 유지 |
+| **`.entry-cat`** | `--fs-xs` / 700 / `--ls-wide` / **`--c-accent`** / 한 줄 말줄임 / **링크 아님** / `display: block` | 카드의 첫 줄, 작은 소문 라벨. 액센트색인 이유: 분류는 상세의 `.post-cat`과 같은 개념이고 그 색이 청록이다. 링크가 아닌 이유는 태그와 같다(카드 전체가 이미 링크) |
+| `.entry-title` | `--fs-lg` / 600 / `--c-text` / `display: block` / `flex: none` | 화면에서 **가장 눈에 띄는 글자**. 두 줄이 되어도 자르지 않는다(그리드 행 높이가 따라간다) |
+| `.entry-title::after` | `position: absolute; inset: 0` — **카드 전체를 링크 면적으로 늘린다** | `<li>`를 통째로 `<a>`로 감싸면 스크린리더가 카드 내용 전부를 링크 이름으로 읽는다. `::after` 방식은 Tab 정지점이 제목 하나이고 태그·분류는 링크가 아니다(300편 × 4 = Tab 1200번을 만들지 않는다) |
+| `.entry-meta` | `flex-wrap`, `--fs-sm`, `align-items: baseline`, **`margin-block-start: auto`**, 위 패딩 `--sp-2` | 마지막 줄. **카드 바닥에 붙는다** — 한 줄 제목 카드와 두 줄 제목 카드가 한 행에 있어도 날짜 줄이 같은 높이에 선다(그리드가 행 높이를 맞추고 auto 마진이 밀어 내린다) |
+| `.entry-date` | **`--c-meta`** / `tabular-nums` | 시간 = 황토(§1-2). 300개가 같은 색이라 리듬이 된다 |
+| `.entry-tags` `.entry-tag` | `<ul>`/`<li>`, **링크 아님**, **`--c-tag`** | 태그는 "무엇에 관한 메모인지"라 목록에서 정보다. 누르고 싶으면 상세로 가서 누른다 — 여기서 링크로 두면 카드 전체 링크(`::after`)와 충돌한다 |
+| hover / focus-visible | 제목 = 밑줄 + `--c-accent`. 카드 = **경계선만** 액센트 쪽으로 살짝(`color-mix` 45%). **이동·그림자·배경 변화 없음** | 그리드에서 카드가 움직이면 옆·아래 카드가 흔들려 보인다. `:has()`가 없는 브라우저는 제목만 반응한다 — 퇴행 없음 |
+| 카드 사이 | `gap: --sp-4` | 16px. 한 행의 카드가 "한 줄"로 읽히면서도 경계선이 붙어 표로 보이지 않는 최소값(v3.1 1열의 12px보다 4px 넓다 — 가로로도 떨어져야 하기 때문) |
+| 터치 타깃 | **카드 전체**가 링크 면적이다(`::after`). 카드 최소 높이 = 패딩 32 + 라벨 + 제목 + 메타 ≈ 110px > 44px | `.entry-title` 자체의 `--h-control` 규칙은 없다(§11-2) |
+| `created` 내림차순 고정 | 정렬 컨트롤이 없다(§0-2). 학습 기록의 순서는 시간순 하나다 | |
+
+**360px 검산** — 거터 20×2 + 카드 패딩 16×2 + 경계선 2 = 74px. 제목에 **286px**이 남는다(1열).
+`minmax(min(17rem, 100%), 1fr)`의 `min()`이 320px 화면에서도 카드가 거터를 넘지 않게 한다.
 
 **연도 그룹 `.entry-group`**
 
@@ -397,6 +597,11 @@ z-index: --z-modal --z-toast
   4편이면 아무것도 없고, 300편이면 연도 5개가 스크롤의 이정표가 된다.
   실측 7곳 중 페이지네이션을 쓰는 곳은 0곳이었다 — 긴 목록은 자르는 게 아니라 **끊어 읽힌다.**
 - 필터(분류·태그·검색)가 걸린 결과에도 같은 규칙을 적용한다.
+- 라벨은 `--c-meta`(연도 = 시간), `--fs-sm`, 700. **v3.0의 밑선은 뺀다** — 박스 경계선 위에
+  선이 하나 더 있으면 줄이 셋이 된다. 라벨과 첫 박스 사이는 `--sp-3`.
+- v3.2: 라벨은 `<ul class="entry-list">`(그리드) **밖**, `<section>`의 첫 자식이다. 그래서 규칙 없이
+  그리드 위에 full-width로 선다. 그리드 안에 넣고 `grid-column: 1 / -1`을 거는 방식은 쓰지 않는다 —
+  `<ul>` 안에 `<h2>`가 들어가면 유효하지 않은 마크업이다.
 
 **행의 상태 클래스 2종**
 
@@ -404,6 +609,9 @@ z-index: --z-modal --z-toast
 |---|---|---|
 | `.entry.is-pinned` | `app.js` | 고정 글. **연도 그룹보다 위**에 별도 `<section class="entry-group">`(라벨 없음)으로 먼저 온다. 표시는 압정 그림이 아니라 제목 앞의 작은 `고정` 글자 — CSS가 `::before`로 그리므로 **마크업에 문자를 넣지 않는다** |
 | `.entry.is-hidden` | `app.js` | 검색·필터로 걸러진 행. `display: none`이라야 목록에서 실제로 빠진다. 다시 드러낼 때 추가로 불러야 하는 함수는 없다(v2.x의 `reveal()`은 폐기됐다 — §12) |
+
+**이행 중 상태** — `app.js`가 `.entry-cat` 없이 v3.1 순서로 그려도 CSS는 깨지지 않는다
+(카드 첫 줄이 제목이 될 뿐). 다만 그 상태는 계약 위반이므로 §12-8을 마친 뒤에만 라운드를 닫는다.
 
 **빈 상태 / 로딩**
 
@@ -502,6 +710,7 @@ z-index: --z-modal --z-toast
   → `created`는 불변, `updated`는 저장할 때마다 갱신(CLAUDE.md 절대 규칙 4)은 그대로다.
 - **목록(§4-4)에는 게시일만 둔다.** 한 행에 날짜 두 개를 넣으면 제목을 훑는 속도가 떨어지고,
   실측 7곳 중 목록에 수정일을 둔 곳은 0곳이다. 두 날짜는 상세에서 전부 보인다.
+- 색은 `--c-meta`(v3.1) — 목록의 날짜와 같은 색이라 "이 황토색 숫자 = 날짜"가 두 화면에서 같다.
 
 ### 5-3. 분류·태그 `.post-meta`
 
@@ -512,9 +721,12 @@ z-index: --z-modal --z-toast
 - `.post-tags`의 항목은 `<li class="tag"><a href="index.html?tags=…">` 다.
   높이는 `<li>`가 갖고 `<a>`가 `block-size:100%`로 채운다(= 눌리는 면적 = `<li>` 높이).
   태그 문자열은 `encodeURIComponent`로 감싼다. 쉼표가 든 태그는 왕복이 깨지므로 넣지 않는다.
+- **`#` 접두사 없음(v3.1).** v3.0은 `.tag > a::before`로 `#`을 그렸다. 인덱스에서 `#`을 지웠으니
+  상세에서만 남기면 같은 태그가 두 화면에서 다르게 보인다. 태그의 정체는 `#`이 아니라
+  **색(`--c-tag`)** 이 말한다 — 목록 박스·태그 인덱스와 같은 색.
 - v2.x는 분류 라벨에 앞머리 막대·알약 틴트·확대까지 **호버 신호 3종**을 걸었다.
   v3.0에서는 `.post-cat`도 `.tag`도 **밑줄 + 색**으로만 반응한다 — 본문 링크와 같은 어휘다.
-  한 화면에 링크 어휘가 세 가지면 그것 자체가 소음이다.
+  한 화면에 링크 어휘가 세 가지면 그것 자체가 소음이다. hover 색은 `--c-accent`(누를 수 있는 것)다.
 
 ### 5-4. 목차 — 인라인 박스로 남긴다
 
@@ -652,6 +864,10 @@ z-index: --z-modal --z-toast
 
 ```
 .btn .btn-primary .btn-ghost .btn-danger .icon-btn
+.side-toggle                          (헤더의 햄버거 — v3.2, §3)
+.side .side-head .side-title .side-pin .side-close .side-tree .side-scrim         (v3.2 — §3-2)
+.side-cats .side-cat .side-cat-row .side-cat-name .side-cat-count .side-cat-toggle
+.side-posts .side-post .side-empty                                               (ui.js가 그린다)
 .tag
 .toast .toast.is-ok .toast.is-warn .toast.is-err
 .modal .modal-panel .modal-head .modal-body .modal-foot  (열림: body.modal-open + .modal.is-open)
@@ -659,8 +875,11 @@ z-index: --z-modal --z-toast
 .search .search-input .search-clear
 .index-row .index-label .index-list .index-item .index-name .index-count
 .index-fold .index-fold-summary
-.entry-group .entry-group-label .entry-list .entry .entry-date .entry-title
+.list-tools                                             (v3.2 — 툴 행, §4)
+.entry-group .entry-group-label .entry-list .entry .entry-cat .entry-title
+.entry-meta .entry-date .entry-tags .entry-tag          (.entry-cat은 v3.2 — §4-4)
 .list-loading .list-empty
+.list-page     (index.html의 <main>에만 붙는다 — §2, §4)
 .editor-page   (write.html의 <main>에만 붙는다 — §6)
 .back-link .post-nav-item .post-nav-label .post-nav-title
 .toc .toc-title .toc-list .toc-item
@@ -721,6 +940,9 @@ z-index: --z-modal --z-toast
 
 `is-active` `is-open` `is-hidden` `is-dirty` `is-loading` `is-pinned` `is-empty`
 
+(`is-open`은 v3.2부터 `.side-cat`에도 쓴다 — 펼쳐진 분류. `is-pinned`는 `.side-post`에도,
+`is-empty`는 `.side-cat`에도. 같은 뜻이면 같은 이름이다.)
+
 **생성 시점에 정해져 바뀌지 않는 분류 클래스**
 
 `is-h2` `is-h3` — 목차 항목의 등급(`markdown.js`)
@@ -733,8 +955,13 @@ z-index: --z-modal --z-toast
 > `is-visible`을 말한다. 혼동을 없애기 위해 `.toast`의 표시 상태는 그대로 두되
 > `ui.js`의 `reveal()`/IntersectionObserver는 통째로 삭제한다(§12).
 
-`body.modal-open` `body.admin-off` 는 body에만 붙는 예외다.
-그 외 상태 클래스가 필요하면 계약서를 먼저 갱신한다.
+`body.modal-open` `body.admin-off` **`body.side-open` `body.side-pinned`**(v3.2, §3-2) 는 body에만 붙는 예외다.
+`html[data-side="pinned"]`는 `theme-init.js`가 첫 페인트 전에 붙이는 힌트로, `ui.js` `initSide()`가 body를
+동기화한 직후 제거한다. 그 외 상태 클래스가 필요하면 계약서를 먼저 갱신한다.
+
+사이드바 버튼의 상태는 클래스가 아니라 **ARIA 속성**이 곧 상태다 — `.side-toggle[aria-expanded]`,
+`.side-pin[aria-pressed]`, `.side-cat-toggle[aria-expanded]`, `.side-post[aria-current="page"]`,
+`.side-cat-name[aria-current="true"]`. CSS는 이 속성 선택자로 그린다. 클래스를 따로 붙이지 않는다.
 
 ### 8-1. 모션이 JS 타이밍에 거는 제약
 
@@ -849,7 +1076,7 @@ tokens → base → layout → components → prose
 |---|---|---|
 | `tokens.css` | 값의 단일 출처 | 선택자 규칙 |
 | `base.css` | 리셋, 루트 타이포, 폼 기본, 포커스 링, **`prefers-reduced-motion` 전역 블록** | 컴포넌트 이름 |
-| `layout.css` | 화면 골격(헤더/메인/푸터/목록/글/에디터) | 재사용 부품의 생김새 |
+| `layout.css` | 화면 골격(헤더/**사이드바·스크림**/메인/푸터/목록 그리드/글/에디터) | 재사용 부품의 생김새 |
 | `components.css` | 재사용 부품의 생김새 **+ 그 부품의 transition** | 골격 배치 |
 | `prose.css` | 마크다운 결과물(`.prose` 안) | 클래스 기반 규칙 |
 
@@ -860,11 +1087,36 @@ tokens → base → layout → components → prose
 
 | 대상 | 무엇이 | 시간 |
 |---|---|---|
+| **모든 요소 (`*`, `::before`, `::after`) — 테마 크로스페이드 (v3.1)** | `background-color` / `border-color` / `color` | `--dur-theme` + `--ease-fade` |
 | 링크·버튼·인덱스 항목 | `color` / `background-color` / `border-color` / `text-decoration-color` | `--dur-fast` |
-| 인풋 포커스 | `border-color` / `box-shadow` | `--dur-fast` |
+| 목록 박스 `.entry` | `border-color`(hover) + `background-color`(테마) | hover `--dur-fast` / 테마 `--dur-theme` |
+| 인풋 포커스 | `border-color` / `box-shadow` (+ `background-color` / `color`는 테마 시간) | `--dur-fast` |
 | 토스트 | `opacity` / `transform` | `--dur` |
 | 모달 | `opacity` / `transform` | 열림 `--dur-slow` / 닫힘 `--dur-fast` |
 | 목차 접기 화살표(`summary::before`) | `rotate` | `--dur` |
+| **사이드바 `.side` (v3.2)** | `translate`(슬라이드) + `visibility`(닫힐 때만 `--dur` 지연) + `box-shadow`(도킹 전환) | 슬라이드 `--dur` + `--ease` |
+| **스크림 `.side-scrim` (v3.2)** | `opacity` + `visibility` | 등장 `--dur-fast`, 퇴장 `--dur`(패널과 함께 사라진다) |
+| **도킹 시 본문 밀기 `body` (v3.2)** | `padding-inline-start` | `--dur` + `--ease`. 첫 페인트(`html[data-side]`)에는 이전 값이 없어 걸리지 않는다 |
+| 사이드바 안의 핀·쉐브론 | `rotate` / `translate` | `--dur-fast` |
+
+**테마 크로스페이드의 작동 방식 (v3.1, JS 0줄)** — 사용자 요청 *"다크·라이트 바꾸는 속도
+살짝만 줄여서 자연스럽게"*.
+
+- `base.css`의 `*` 규칙이 세 색 속성에 `--dur-theme`(240ms) 전환을 건다. 테마 토글은
+  `:root[data-theme]`의 **토큰 값**만 바꾸므로, 토큰을 참조하는 모든 요소가 같은 시간에 건너간다.
+- **첫 페인트에는 걸리지 않는다.** `theme-init.js`가 `<link>`보다 앞에서 동기로 `data-theme`을
+  정하므로 첫 계산 스타일이 이미 최종 테마다 — transition은 "이전 값"이 있어야 시작되는데
+  그 값이 없다. `ui.js`의 `initTheme()`은 같은 값을 다시 쓸 뿐이라 변화가 아니다.
+  그래서 `ui.js`에 클래스를 붙였다 떼는 협조가 **필요 없다.**
+- 부품별 `transition` 선언은 `*` 규칙을 **통째로 덮는다**(shorthand). 그래서 hover 전환을 가진
+  부품이 면·경계선 색을 함께 전환하지 않으면 테마 토글 때 **그 부품만 즉시 튄다.**
+  면을 가진 부품(`.search-input` `.field` `.entry`)은 자기 선언에 `background-color`를
+  `--dur-theme`로 넣어 두었다. **면·경계선을 가진 부품에 hover transition을 새로 달 때는
+  이 두 속성을 반드시 같이 적는다.** 색만 바뀌는 부품(`.nav-link` 등)은 `--dur-fast`로
+  80ms 먼저 끝나도 눈에 띄지 않아 그대로 둔다.
+- `transition: all`은 금지다. 세 속성만 명시한다 — `all`이면 `display`·`opacity`를 쓰는
+  상태 토글(`[hidden]`, `.post.is-loading`)까지 240ms를 끌고 간다.
+- `prefers-reduced-motion: reduce`에서는 아래 블록이 1ms로 자른다. 즉시 전환이다.
 
 `base.css` 끝의 `@media (prefers-reduced-motion: reduce)` 블록이 `*` 선택자 + `!important`로
 전부를 1ms로 자르고 `scroll-behavior`를 끈다. **새 transition을 추가하면 그 블록도 함께 점검한다.**
@@ -883,13 +1135,17 @@ tokens → base → layout → components → prose
 | 선택자 | 사는 곳 |
 |---|---|
 | `.site-header` `.site-main` `.site-footer` `.page-head` | `layout.css` |
-| `.post-list` `.entry-group` `.entry-list` `.entry`의 **그리드** | `layout.css` |
-| `.entry-date` `.entry-title`의 **생김새** | `components.css` |
+| `.post-list` `.entry-group` `.entry-list` `.entry`(박스·hover 경계선) `.entry-meta` `.entry-tags`의 **배치** | `layout.css` |
+| `.entry-title`(+ `::after` 늘린 링크) `.entry-date` `.entry-tag`의 **생김새** | `components.css` |
 | `.post-nav`의 **그리드와 768px 열 전환** | `layout.css` |
 | `.post-nav-item` `.post-nav-label` `.post-nav-title` `.back-link` | `components.css` |
 | `.index-row`의 **줄 배치** | `layout.css` |
 | `.index-label` `.index-item` `.index-count` `.index-fold*` | `components.css` |
 | `.toc` 계열 전부 | `components.css` (2열 트랙이 사라져 골격과 무관해졌다) |
+| **`.side`의 위치·슬라이드·도킹·`.side-scrim`·`body` 밀기·`.side-head`/`.side-tree`의 flex 골격** (v3.2) | `layout.css` §0 |
+| **`.side-title` `.side-pin` `.side-close` `.side-cat*` `.side-posts` `.side-post` `.side-empty`의 생김새 + `.side-toggle` 아이콘** | `components.css` §15 (햄버거는 §5 테마 아이콘 옆) |
+| **`.list-page` `.list-tools`의 배치, `.entry-list` 그리드, `.entry-meta`의 바닥 정렬** | `layout.css` |
+| **`.entry-cat`의 생김새** | `components.css` §4 |
 
 ### 11-2. 리터럴 금지의 범위
 
@@ -898,7 +1154,6 @@ tokens → base → layout → components → prose
 | 색·그림자·간격·폰트·반경·이징·지속시간 | **금지** | 전부 `tokens.css`에 있다 |
 | **누를 수 있는 것의 최소 크기** | **금지** | `--h-control`(40/44) `--h-control-sm`(32/44) `--h-nav`(36/44) `--h-control-xs`(30/40). **이 넷만 `pointer:coarse`에서 자동 상승한다** — 리터럴로 쓰면 그 상승을 놓친다 |
 | 포커스·상태 글로우의 링 두께 | **금지** | `--ring-w` |
-| 목록 날짜 열 폭 | **금지** | `--w-date` |
 | 누를 수 없는 라벨의 치수(`.tag` 24px 등) | 허용 | 터치 타깃 판정 대상이 아니다 |
 | 한 부품 안에서만 의미를 갖는 도형 치수(돋보기 11px, 표 가장자리 그림자 22px 등) | 허용 | 토큰화해도 재사용처가 없다 |
 
@@ -909,10 +1164,12 @@ tokens → base → layout → components → prose
 
 | 토큰 | coarse | 사용처 |
 |---|---|---|
-| `--h-control` | 40 → 44 | `.btn` `.icon-btn` `.search-input` `.field` `.switch` `.entry-title` `.sr-only:focus` |
-| `--h-control-sm` | 32 → 44 | `.index-item` `.index-fold-summary` `a.post-cat` `.post-tags .tag` `.md-btn` `.code-copy` `.prose summary` `.toc-item` |
+| `--h-control` | 40 → 44 | `.btn` `.icon-btn` `.search-input` `.field` `.switch` `.sr-only:focus` — **`.entry-title`은 v3.1에서 빠졌다.** 목록의 터치 타깃은 박스 전체(`.entry-title::after`, §4-4)이고 박스 높이는 패딩만으로 44px을 넘는다 |
+| `--h-control-sm` | 32 → 44 | `.index-item` `.index-fold-summary` `a.post-cat` `.post-tags .tag` `.md-btn` `.code-copy` `.prose summary` `.toc-item` **+ v3.2: `.search-input` `.side-cat-name` `.side-cat-toggle` `.side-post`** |
 | `--h-nav` | 36 → 44 | `.nav-link` `.brand` `.back-link` |
-| `--h-control-xs` | 30 → 40 | `.search-clear` (하나뿐 — 44px 인풋 안의 44px 원판은 입력칸으로 안 보인다) |
+| `--h-control-xs` | **24 → 36**(v3.2) | `.search-clear` (하나뿐 — 인풋 안에 들어앉는 원판은 인풋보다 한 단계 작아야 "입력칸"으로 보인다) |
+
+`.search-input`이 `--h-control`에서 빠져 `--h-control-sm`으로 내려갔다(v3.2, §4-3). `.icon-btn`(햄버거·핀·닫기·테마)은 `--h-control` 그대로.
 
 **높이 상승은 `tokens.css`의 `@media (pointer: coarse)` 한 곳에서만 한다.**
 다른 파일에서 다시 올리지 않는다(같은 규칙이 두 곳에 있으면 한쪽만 고쳐진다).
@@ -924,12 +1181,14 @@ tokens → base → layout → components → prose
 | 분기 | 방향 | 무엇이 바뀌는가 |
 |---|---|---|
 | 360px | (기준선) | 여기서 가로 스크롤이 생기면 실패다. 분기 자체는 없다 |
-| 440px | `max-width` | 본문 코드·인용·표·목록의 좌우 패딩 압축 / `.entry`의 날짜 열 축소 |
+| 440px | `max-width` | 본문 코드·인용·표·목록의 좌우 패딩 압축 / `.entry` 카드 패딩 `--sp-5` → `--sp-4` |
+| 768px | `max-width` | **`.list-tools` 세로 스택**(DOM 순서: 분류 → 검색, v3.2) |
 | 768px | `min-width` | `.post-nav` 1열 → 2열, 토스트가 오른쪽 아래로 |
-| 1024px | `min-width` | 에디터 split 2열 |
+| 1024px | `min-width` | 에디터 split 2열, **사이드바 도킹**(`body.side-open.side-pinned` / `html[data-side="pinned"]` → 본문 `padding-inline-start: --w-side`, 그림자·스크림·스크롤 잠금 해제) |
 
-**v2.3의 1440px 분기는 폐기됐다**(보드 카드 최소 폭을 키우던 규칙 — 보드가 없다).
-콘텐츠 폭이 `--w-prose` 하나로 고정돼 1440px에서 바뀔 것이 없다.
+**카드 그리드의 열 수에는 분기가 없다** — `repeat(auto-fill, minmax(17rem, 1fr))`이 폭에 따라 3/2/1열을
+정한다(§4-4). 1440px 분기는 여전히 없다. 목록 페이지가 `--w-page`(1152px)에서 멈추므로 1440에서
+바뀔 것이 없고, 도킹되면 1440 − 260 = 1180 안에 1152가 그대로 들어간다.
 
 ---
 
@@ -1009,9 +1268,115 @@ CSS는 **web-designer가 이미 v3.0으로 교체했다.** 아래는 HTML/JS 쪽
 | 37 | 샘플 글·카테고리 비우기 — `posts/index.json`의 `posts: []`, `posts/categories.json`의 `categories: []`, 샘플 `.md` 삭제 |
 | 38 | `index.json`의 `site.subtitle`을 한 줄로(§4-2). 기존 "메모지처럼 붙여두는 곳"은 폐기된 메타포다 |
 
+### 12-7. v3.1 이행 — 목록 박스 (frontend-dev, `app.js` 한 함수)
+
+CSS는 web-designer가 이미 v3.1로 교체했다. **JS에서 바뀌는 것은 `app.js`의 `entryRow()` 하나**다.
+`ui.js`(frontend-dev-2)는 할 일이 **없다** — 테마 크로스페이드는 CSS만으로 동작한다(§11).
+
+| # | 파일 | 할 일 |
+|---|---|---|
+| 39 | `app.js` `entryRow()` (현재 85-110줄) | 자식 순서를 **`.entry-title` → `.entry-meta`** 로 바꾼다. 날짜가 비었을 때 넣던 빈 `<span class="entry-date">`는 **삭제**(열이 없으니 자리를 지킬 이유가 없다). `.entry-meta` 안에 `<time class="entry-date">`(있을 때만)와 `<ul class="entry-tags" aria-label="태그">`(태그가 1개 이상일 때만) — `<li class="entry-tag">`는 **텍스트만, 링크 아님**. 날짜도 태그도 없으면 `.entry-meta` 자체를 넣지 않는다 |
+| 40 | `app.js` 주석 84줄 | "한 행의 내용물은 날짜와 제목 둘뿐" → 박스 규칙(§4-4)으로 문구 갱신 |
+
+참고 구현(계약 그대로 옮긴 것이다 — `U.el`의 시그니처는 기존과 같다):
+
+```js
+function entryRow(post) {
+  var li = U.el('li', { class: 'entry' + (post.pinned ? ' is-pinned' : '') });
+  li.appendChild(U.el('a', {
+    class: 'entry-title',
+    href: 'post.html?id=' + encodeURIComponent(post.id),
+    text: post.title
+  }));
+  var meta = U.el('div', { class: 'entry-meta' });
+  if (post.created) {
+    meta.appendChild(U.el('time', { class: 'entry-date', datetime: post.created, text: U.fmtDot(post.created) }));
+  }
+  if (post.tags && post.tags.length) {
+    var ul = U.el('ul', { class: 'entry-tags', 'aria-label': '태그' });
+    post.tags.forEach(function (tag) { ul.appendChild(U.el('li', { class: 'entry-tag', text: tag })); });
+    meta.appendChild(ul);
+  }
+  if (meta.childNodes.length) li.appendChild(meta);
+  return li;
+}
+```
+
+**바꾸지 않는 것**: `entryGroup()` · `groupByYear()` · `renderList()` · `.is-pinned`/`.is-hidden` 부착 ·
+`indexItem()`(§4-3의 `#`은 원래 CSS가 그렸으므로 JS는 그대로) · `post.js`의 `.tag` 렌더
+(`#`도 원래 CSS `::before`였다).
+
+### 12-8. v3.2 이행 — 사이드바·카드 그리드 (세 사람)
+
+CSS는 web-designer가 v3.2로 교체했다. 사양서(PM 배포)와 이 계약서가 다르면 **계약서가 이긴다** —
+다른 점은 딱 하나, 768px 이하 툴 행의 스택 순서(§4: DOM 순서 그대로, "검색 위" 아님).
+
+| # | 파일 | 할 일 |
+|---|---|---|
+| 41 | 세 HTML | 헤더 첫 자식 `.icon-btn.side-toggle#sideToggle`, `<header>` 뒤에 `.side` + `.side-scrim` (§3, §3-2 마크업 그대로) |
+| 42 | `index.html` | `<main class="site-main list-page">`, `.list-tools`로 `#catRow`와 `.search`를 감싼다(순서: 분류 → 검색). `#tagFold`는 툴 행 **밖** |
+| 43 | `app.js` `entryRow()` | `.entry-cat` → `.entry-title` → `.entry-meta`. 분류명은 `categories.json`의 `name`(없으면 slug), `_uncategorized`면 요소 생략 |
+| 44 | `app.js` / `post.js` / `editor.js` | 로드 후 `Blog.ui.renderSide({posts, cats, activeId, activeCat})` (§3-2 API) |
+| 45 | `ui.js` | `initSide()` `renderSide()` — 상태 클래스·ARIA·저장(`blogSide`)·포커스·Esc. **body 동기화 직후 `html[data-side]` 제거.** 스크림 `hidden`은 `initSide()`에서 한 번 떼고 그 뒤는 CSS에 맡기는 쪽을 권장 |
+| 46 | `theme-init.js` (frontend-dev-2, PM 판정) | `blogSide` 읽어 `pinned && innerWidth ≥ 1024`면 `document.documentElement.dataset.side = 'pinned'` |
+| 47 | `config.js` | `storageKeys.side = 'blogSide'` |
+
 ---
 
 ## 13. 변경 이력
+
+### v3.2 (라운드 7) — 사이드바 신설, 카드 그리드, 컨트롤 축소, 목록 페이지 폭 확장
+
+사용자 판정 원문: *"전체적으로 구조가 비어보여"* / *"검색창이라던지 카테고리라던지 너무 커"* /
+*"왼쪽 사이드 위에 햄버거 메뉴 넣고 누르면 대분류로 정리한 것을 볼 수 있게, 챗 앱처럼 고정 가능"*.
+
+| 절 | v3.1 | v3.2 |
+|---|---|---|
+| §0-1 | 사이드바 "없음" | **뒤집힘** — 접이식·고정 가능 사이드바. 근거를 표 안에 병기 |
+| §1-2 원칙 3 | 그림자 예외 = 모달·토스트 | + **오버레이 상태의 사이드바**. 도킹되면 그림자 없음 |
+| §2 | 폭 기준선 `--w-prose` 하나 ("칸 자체를 없앤다") | **`--w-page`(72rem) 부활 — 목록 페이지만.** `--w-side`(260) `--z-side`(50) `--z-scrim`(40) 신설. `--h-control-xs` 30/40 → 24/36. `--h-input`은 만들지 않음(`--h-control-sm` 재사용) |
+| §3 | 헤더 3덩이 | **첫 자식 햄버거**(`.side-toggle`, CSS `::before` 아이콘). auto 마진은 `:last-child`(테마)에만 |
+| §3-2 | (`.site-nav`) | **신설: 사이드바** — 마크업·트리 구조·상태 3종(`side-open` / `side-pinned` / `html[data-side]`)·저장·포커스·스크림 규칙. 기존 `.site-nav`는 §3-3으로 |
+| §4 | 검색 → 분류 순서, 720px | **`.list-page` + `.list-tools`(분류 → 검색)**. 768 이하 스택도 DOM 순서(사양서와 다름 — 근거 명시) |
+| §4-2 | `.page-title` `--fs-2xl`, 아래 여백 `--sp-7` | **`--fs-xl`**, `--sp-5`, `.page-sub` `--fs-sm` |
+| §4-3 | — | **컨트롤 축소 표** — 검색 32px·20rem, 인덱스 `--fs-xs`·간격 절반 |
+| §4-4 | 박스 세로 1열, 내용물 **셋** | **카드 그리드**(`auto-fill, minmax(17rem, 1fr)`, gap 16), 내용물 **넷**(`.entry-cat` 신설, 액센트색), 메타 바닥 정렬, 연도 라벨은 `<ul>` 밖 |
+| §7 §8 | — | `.side*` 12종·`.list-tools`·`.list-page`·`.entry-cat` 등록. body 클래스 2종 추가. 사이드바 상태는 ARIA 속성이 곧 상태 |
+| §11 | transition 7종 | + 사이드바 슬라이드·스크림·본문 밀기·핀/쉐브론 4행 |
+| §11-1 | — | 사이드바·툴 행·그리드·`.entry-cat`의 파일 분담 |
+| §11-2 | `.search-input`이 `--h-control` | `--h-control-sm`. 사이드바 항목 셋 추가. `--h-control-xs` 값 갱신 |
+| §11-3 | 768 min / 1024 min | + 768 max(툴 행 스택) / 1024 min에 도킹. 그리드는 분기 없음 |
+| §12 | §12-7까지 | **§12-8 신설** — #41-47 |
+
+**같은 라운드에 web-designer가 수행한 CSS 변경**
+
+- `tokens.css` — `--w-page` `--w-side` `--z-side` `--z-scrim` 신설, `--h-control-xs` 24/36, 레이아웃·z-index 주석 갱신
+- `base.css` — reduced-motion 블록 주석에 사이드바 전환 포함 명시(규칙 추가 없음 — `*` 블록이 자른다)
+- `layout.css` — §0 사이드바(fixed·슬라이드·스크림·스크롤 잠금·도킹 시 `body` 밀기) 신설, 넓은 페이지 둘의 헤더·푸터 `:has()` 정렬, 햄버거 auto 마진 결함 수정, `.page-head` 축소, `.list-tools` 신설, `.entry-list` 그리드, `.entry-meta` 바닥 정렬, 768px max 분기·1024px 도킹 분기
+- `components.css` — 인덱스 항목·손잡이 축소, 검색 인풋·돋보기·지우기 축소, `.entry-cat` 신설, `.side-toggle` 햄버거 아이콘, §15 사이드바 부품 전부(핀·닫기·쉐브론 아이콘, 트리, 현재 글 강조, 빈 상태, 트리 안 포커스 링 안쪽)
+- `prose.css` — 변경 없음
+
+### v3.1 (라운드 6) — 배포 화면을 본 사용자 요청 4건
+
+| 절 | v3.0 | v3.1 |
+|---|---|---|
+| §1-2 원칙 2 | "색 하나" | **역할색 셋** — `--c-accent`(누름·선택) / `--c-meta`(시간·수량) / `--c-tag`(주제) |
+| §2 | `--w-date` 신설 | **`--w-date` 폐기**, `--c-meta` `--c-tag` `--dur-theme` `--ease-fade` **신설** |
+| §4-3 | 태그에 `#` 접두사(CSS `::before`), 활성 밑줄을 `.index-item`에 | **`#` 삭제.** 두 축은 라벨 + `<details>` 위치 + 태그 색으로 구분. **활성 밑줄은 `.index-name`에만** — 개수 아래 떨어져 그려지던 `_`의 원인 제거. `.index-count`는 `--c-meta` |
+| §4-4 | `날짜 \| 제목` 2열 행, 구분선 없음 | **박스.** `.entry-title` → `.entry-meta`(날짜 + 태그) 순서. 1px 경계선 + `--c-surface` 면 + `--r-md`, 그림자 없음. `::after`로 박스 전체가 링크 면적. `.entry-meta` `.entry-tags` `.entry-tag` 신설 |
+| §5-2 | 날짜 `--c-text-mute` | `--c-meta` |
+| §5-3 | `.tag`에 `#` `::before` | **삭제.** 색 `--c-tag`, hover `--c-accent` |
+| §11 | transition 5종 | **테마 크로스페이드** 행 추가 + 작동 방식·첫 페인트 예외·`transition: all` 금지 명문화 |
+| §11-2 | `.entry-title`이 `--h-control` | 박스 전체가 타깃. `.entry-title` 제외 |
+| §12 | 38건 | **§12-7 신설** — `app.js` `entryRow()` 1건(#39-40) |
+
+**같은 라운드에 web-designer가 수행한 CSS 변경** — 파일별 상세는 라운드 보고서에.
+
+- `tokens.css` — `--c-meta` `--c-tag`(라이트·다크) `--dur-theme` `--ease-fade` 신설, `--w-date` 삭제
+- `base.css` — 테마 크로스페이드 `*` 규칙(링크 규칙 앞)
+- `layout.css` — `.entry` 2열 그리드 → 박스(세로 flex), `.entry-meta` `.entry-tags` 배치, 연도 라벨 밑선 제거, 440px 분기 갱신
+- `components.css` — `#tagIndex .index-name::before`(`#`) 삭제, 활성 밑줄을 `.index-name`으로 이동, `.index-count`·`.entry-date` → `--c-meta`, 태그 인덱스 항목·`.tag`·`.entry-tag` → `--c-tag`, `.tag > a::before`(`#`) 삭제, `.entry-title::after` 늘린 링크, `.search-input`·`.field`에 테마 시간 `background-color`
+- `prose.css` — `.code-lang` → `--c-meta`
 
 ### v3.0 (라운드 5) — 메모지 보드 폐기, 텍스트 목록으로 전면 재설계
 

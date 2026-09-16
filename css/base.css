@@ -85,6 +85,30 @@ address { font-style: normal; }
    이 속성으로 토글된다. */
 [hidden] { display: none !important; }
 
+/* ── 테마 크로스페이드 (v3.1, 계약서 §11) ─────────────────────────────────
+   사용자 요청: "다크·라이트 바꾸는 속도 살짝만 줄여서 자연스럽게".
+   테마 토글은 :root[data-theme]의 토큰 "값"만 바꾼다. 그래서 세 색 속성에 전환을 걸어
+   두면 토큰을 참조하는 모든 요소가 같은 240ms에 함께 건너간다 — JS 0줄.
+
+   · 첫 페인트에는 걸리지 않는다. theme-init.js가 <link>보다 앞에서 동기로 data-theme을
+     정하므로 첫 계산 스타일이 이미 최종 테마다. transition은 "이전 값"이 있어야
+     시작되는데 그 값이 없다. ui.js의 initTheme()은 같은 값을 다시 쓸 뿐이라 변화가 아니다.
+   · transition: all 금지. 세 속성만 적는다 — all이면 [hidden]·opacity 같은 상태 토글까지
+     240ms를 끌고 간다.
+   · 부품별 transition 선언(shorthand)은 이 규칙을 통째로 덮는다. 면·경계선을 가진 부품이
+     hover 전환을 가지면 background-color를 --dur-theme로 함께 적어야 테마 토글 때
+     그 부품만 즉시 튀지 않는다(.search-input / .field / .entry가 그렇게 돼 있다).
+   · 선택자 특이도가 0이라 아래 a { transition: color … } 같은 규칙이 자연히 이긴다.
+   · prefers-reduced-motion은 이 파일 끝의 블록이 1ms로 자른다 → 즉시 전환. */
+*,
+*::before,
+*::after {
+  transition:
+    background-color var(--dur-theme) var(--ease-fade),
+    border-color     var(--dur-theme) var(--ease-fade),
+    color            var(--dur-theme) var(--ease-fade);
+}
+
 /* ── 링크 ────────────────────────────────────────────────────────────────
    v3.0의 링크 어휘는 하나다: "색 + 밑줄". 알약 틴트·앞머리 막대·확대는 전부 없앴다.
    한 화면에 링크 어휘가 세 가지면 그것 자체가 소음이다(계약서 §5-3). */
@@ -177,7 +201,10 @@ main[tabindex="-1"]:focus-visible { outline: none; }
 /* ============================================================================
    모션 감소 — animations.css가 삭제되면서 이 블록이 여기로 왔다(계약서 §11).
 
-   v3.0에 남아 있는 모션은 색 전환과 모달·토스트 등퇴장뿐이라 이 블록도 짧다.
+   남아 있는 모션은 색 전환, 모달·토스트 등퇴장, 그리고 v3.2의 사이드바 슬라이드(.side의
+   translate)·스크림(opacity)·도킹 시 본문 밀기(body의 padding-inline-start)뿐이라 이 블록도 짧다.
+   사이드바는 별도 규칙이 없다 — 아래 `*` 규칙이 translate·padding 전환도 1ms로 자르고,
+   visibility에 걸어 둔 delay(--dur)도 transition-delay: 0ms가 지워 "즉시 열리고 즉시 닫힌다".
    · duration을 0이 아니라 1ms로 두는 이유:
      0이면 transitionend가 발화하지 않는 브라우저가 있다. JS가 그 이벤트를 기다리면
      화면이 멈춘다. 1ms는 사실상 즉시이면서 이벤트는 남는다.

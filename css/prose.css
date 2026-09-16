@@ -455,7 +455,9 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--c-text-mute);
+  /* 언어 라벨은 "이 블록이 무엇인지"를 말하는 메타 — 역할색 --c-meta(계약서 §1-2).
+     머리띠 배경(surface-2 55% + code-bg) 대비 4.8:1로 AA를 지킨다. */
+  color: var(--c-meta);
   font-family: var(--ff-mono);
 }
 

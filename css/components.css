@@ -10,7 +10,8 @@
      v2.x의 "정지/모션 분업"(transform은 애니메이션 전용, translate는 hover 전용)은
      폐기됐다 — 나눌 대상이 없다.
    · 그림자를 쓰지 않는다. 구분은 1px 경계선과 여백이 한다.
-     예외는 화면 위에 진짜로 떠 있는 둘(.modal-panel / .toast)뿐이고 토큰도 --sh-pop 하나다.
+     예외는 화면 위에 진짜로 떠 있는 것(.modal-panel / .toast / 오버레이 상태의 .side)뿐이고
+     토큰도 --sh-pop 하나다. 사이드바가 도킹되면 그림자를 뗀다(layout.css §0).
    ========================================================================= */
 
 /* ============================================================================
@@ -44,10 +45,11 @@
 /* ============================================================================
    2. 인덱스 — 분류 / 태그 (계약서 §4-3)
    ----------------------------------------------------------------------------
-   두 축을 "모양"이 아니라 "라벨과 # 접두사"로 구분한다.
+   두 축을 "모양"이 아니라 "라벨과 색"으로 구분한다.
    v2.x는 카테고리(탭+레일+점+밑줄)와 태그(알약+테두리)를 다섯 가지 시각 신호로
    갈랐고, 그 다섯 가지가 화면 높이의 4분의 1을 먹었다.
    두 축을 구분하는 가장 싼 방법은 그냥 이름을 적는 것이다.
+   v3.0의 `#` 접두사는 v3.1에서 삭제됐다(사용자 판정). 그 자리는 태그 색(--c-tag)이 맡는다.
    ========================================================================= */
 .index-label {
   flex: none;
@@ -58,6 +60,9 @@
   color: var(--c-text-mute);
 }
 
+/* v3.2 축소 — 사용자 판정 "카테고리가 너무 커". 글자 --fs-sm → --fs-xs, 좌우 패딩·구분자 간격 절반.
+   높이(--h-control-sm)는 그대로다 — 손가락이 누르는 것이라 줄이지 않는다. 대신 글자가 작아져
+   32px 안에서 위아래 숨이 늘어나 "덩어리"가 아니라 "글자"로 보인다. */
 .index-item {
   display: inline-flex;
   align-items: baseline;
@@ -65,11 +70,11 @@
   /* 손가락이 누르는 것이라 높이 토큰을 쓴다(coarse에서 44px로 자동 상승). */
   min-block-size: var(--h-control-sm);
   /* 좌우 패딩이 곧 항목 사이 간격이다. 구분자(·)가 그 한가운데에 놓인다. */
-  padding-inline: var(--sp-2);
+  padding-inline: var(--sp-1);
   background: none;
   border: 0;
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   line-height: 1.5;
   white-space: nowrap;
   color: var(--c-text-dim);
@@ -82,7 +87,7 @@
    ::before는 항목에 붙어 있으므로 항상 앞 항목과 같은 줄에 머문다. */
 .index-item + .index-item::before {
   content: "·";
-  margin-inline-end: var(--sp-2);
+  margin-inline-end: var(--sp-1);
   color: var(--c-border);
   font-weight: 400;
 }
@@ -90,51 +95,55 @@
 .index-item:hover { color: var(--c-text); }
 
 /* 선택됨. 배경을 채우지 않는다 — 40개가 늘어선 줄에서 채운 알약은
-   "누를 수 있는 것"이 아니라 "얼룩"으로 보인다. 색 + 굵기 + 밑줄로 못박는다. */
+   "누를 수 있는 것"이 아니라 "얼룩"으로 보인다. 색 + 굵기 + 밑줄로 못박는다.
+   밑줄은 아래 .index-name 규칙이 긋는다 — 여기(inline-flex 컨테이너)에 걸면 안 된다. */
 .index-item.is-active {
   color: var(--c-accent);
   font-weight: 700;
+}
+
+/* ★ 활성 밑줄은 이름에만 (v3.1 — 사용자가 본 "숫자 아래 _"의 원인 수정).
+   v3.0은 .index-item에 text-decoration을 걸었다. .index-item은 inline-flex라 밑줄이
+   두 flex 아이템(.index-name / .index-count)에 "따로" 전파되는데, 개수 칸은 글자가
+   작아서(--fs-xs) 밑줄 높이가 달라지고, 두 칸 사이 gap에서 선이 끊긴다.
+   결과가 이름 밑줄과 어긋난 높이로 숫자 아래 떨어져 그려지는 짧은 `_`였다.
+   선택된 것은 "이름"이지 "개수"가 아니므로 밑줄도 이름에만 긋는다. */
+.index-item.is-active .index-name {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 0.3em;
 }
 
-/* 개수. 실제 정보이므로(그 분류에 글이 몇 편) 읽히는 색을 유지한다. */
+/* 개수. 실제 정보이므로(그 분류에 글이 몇 편) 읽히는 색을 유지한다.
+   수량 = 황토(--c-meta, 계약서 §1-2). 활성이어도 바뀌지 않는다 — 선택은 이름이 말한다. */
 .index-count {
   font-size: var(--fs-xs);
   font-weight: 600;
-  color: var(--c-text-mute);
-  transition: color var(--dur-fast) var(--ease);
+  color: var(--c-meta);
 }
-
-.index-item.is-active .index-count { color: inherit; }
 
 /* 글이 0편인 분류. opacity로 흐리게 하면 대비가 4.5:1 아래로 떨어진다.
    "약한 색"이 아니라 "한 단계 낮은 색 토큰"으로 내린다. */
 .index-item.is-empty { color: var(--c-text-mute); }
 .index-item.is-empty:hover { color: var(--c-text-dim); }
 
-/* 이름 칸. 긴 분류명이 줄을 통째로 밀지 않게 한다. */
+/* 이름 칸. 긴 분류명이 줄을 통째로 밀지 않게 한다.
+   overflow: clip + clip-margin — hidden이면 0.3em 아래 밑줄(위 규칙)까지 잘린다.
+   clip-margin을 모르는 브라우저는 밑줄 아랫부분이 살짝 얇아질 뿐 기능은 같다. */
 .index-name {
   min-inline-size: 0;
-  overflow: hidden;
+  max-inline-size: 16rem;       /* 이보다 긴 분류명은 이름이 아니라 문장이다 — 말줄임 */
+  overflow: clip;
+  overflow-clip-margin: 4px;
   text-overflow: ellipsis;
 }
 
-/* 태그 항목만 # 접두사를 갖는다. 이것이 분류와 태그를 가르는 두 번째 신호다
-   (첫 번째는 .index-label). 마크업에 문자를 넣지 않는 이유 —
-   "#css"가 텍스트가 되면 검색·필터 값과 화면 문자열이 어긋나고,
-   .index-item의 ::before는 이미 구분자(·)가 쓰고 있어 자리가 없다.
-   그래서 .index-name의 ::before가 그린다.
-   색을 낮춰 접두사가 이름 자체를 이기지 않게 한다. */
-#tagIndex .index-name::before {
-  content: "#";
-  margin-inline-end: 1px;
-  color: var(--c-text-mute);
-}
-
-/* "전체" 항목에는 붙이지 않는다 — 그건 태그 이름이 아니라 필터 해제 버튼이다. */
-#tagIndex .index-item[data-tag="*"] .index-name::before { content: none; }
+/* 태그 축의 항목은 태그 색(--c-tag)이다. 이것이 `#` 대신 두 축을 가르는 신호이며,
+   목록 박스의 .entry-tag·상세의 .tag와 같은 색이라 "자주색 = 태그"가 사이트 전체에서 같다.
+   선택되면 다른 축과 똑같이 --c-accent + 굵기 + 밑줄 — "선택됨"의 어휘는 하나여야 한다. */
+#tagIndex .index-item { color: var(--c-tag); }
+#tagIndex .index-item:hover { color: color-mix(in oklab, var(--c-tag) 65%, var(--c-text)); }
+#tagIndex .index-item.is-active { color: var(--c-accent); }
 
 /* 접힌 태그 인덱스의 손잡이. <details>/<summary>는 JS 0줄이다. */
 .index-fold-summary {
@@ -142,8 +151,8 @@
   align-items: center;
   gap: 0.35em;
   min-block-size: var(--h-control-sm);
-  padding-inline: var(--sp-2);
-  margin-inline-start: calc(var(--sp-2) * -1);   /* 왼쪽 선을 라벨과 맞춘다 */
+  padding-inline: var(--sp-1);
+  margin-inline-start: calc(var(--sp-1) * -1);   /* 왼쪽 선을 라벨과 맞춘다 */
   border-radius: var(--r-sm);
   list-style: none;
   cursor: pointer;
@@ -181,16 +190,17 @@
   color: var(--c-text-mute);   /* 돋보기·X 글리프가 이 색을 currentColor로 받는다 */
 }
 
-/* 돋보기: 렌즈(::before) + 손잡이(::after). 아이콘 파일 요청 없이 2px 선으로 그린다. */
+/* 돋보기: 렌즈(::before) + 손잡이(::after). 아이콘 파일 요청 없이 선으로 그린다.
+   v3.2: 인풋이 32px로 줄어 렌즈 11 → 9px, 선 2 → 1.5px. 11px 렌즈는 32px 안에서 글자보다 커 보인다. */
 .search::before {
   content: "";
   position: absolute;
   z-index: 1;
-  inset-inline-start: var(--sp-4);
-  inset-block-start: calc(50% - 8px);
-  inline-size: 11px;
-  block-size: 11px;
-  border: 2px solid currentColor;
+  inset-inline-start: var(--sp-3);
+  inset-block-start: calc(50% - 7px);
+  inline-size: 9px;
+  block-size: 9px;
+  border: 1.5px solid currentColor;
   border-radius: var(--r-full);
   opacity: .6;
   pointer-events: none;
@@ -200,10 +210,10 @@
   content: "";
   position: absolute;
   z-index: 1;
-  inset-inline-start: calc(var(--sp-4) + 10px);
-  inset-block-start: calc(50% + 2px);
-  inline-size: 2px;
-  block-size: 7px;
+  inset-inline-start: calc(var(--sp-3) + 8px);
+  inset-block-start: calc(50% + 1px);
+  inline-size: 1.5px;
+  block-size: 6px;
   border-radius: var(--r-full);
   background: currentColor;
   rotate: -45deg;
@@ -212,18 +222,26 @@
   pointer-events: none;
 }
 
+/* v3.2 축소 — 사용자 판정 "검색창이 너무 커". 높이 --h-control(40) → --h-control-sm(32, coarse 44).
+   인덱스 항목과 같은 높이 토큰이라 툴 행에서 첫 줄이 같은 선에 앉는다(layout.css §4).
+   --h-input을 따로 만들지 않은 이유: "인풋"이 아니라 "본문 흐름에 끼는 작은 컨트롤"이 이 인풋의
+   역할이고, 그 역할의 토큰이 이미 있다. 이름이 둘이면 다음 사람이 어느 걸 쓸지 고민한다. */
 .search-input {
   inline-size: 100%;
-  block-size: var(--h-control);
-  padding-inline: calc(var(--sp-4) + 22px) calc(var(--sp-2) + 36px);
-  border-radius: var(--r-md);
+  block-size: var(--h-control-sm);
+  padding-inline: calc(var(--sp-3) + 18px) calc(var(--sp-1) + var(--h-control-xs) + var(--sp-1));
+  border-radius: var(--r-sm);
   border: 1px solid var(--c-border);
   background: var(--c-surface);
   font-size: var(--fs-sm);
   color: var(--c-text);
+  /* 면·글자색은 테마 시간으로 — 이 선언이 base.css의 `*` 크로스페이드를 통째로 덮으므로
+     빼면 테마 토글 때 검색창만 즉시 튄다(계약서 §11). */
   transition:
     border-color var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease);
+    box-shadow var(--dur-fast) var(--ease),
+    background-color var(--dur-theme) var(--ease-fade),
+    color var(--dur-theme) var(--ease-fade);
 }
 
 .search-input:hover { border-color: color-mix(in oklab, var(--c-accent) 35%, var(--c-border)); }
@@ -235,14 +253,14 @@
 }
 
 /* 입력이 있을 때만 JS가 hidden을 떼어 낸다. 내용은 비어 있으므로 X를 CSS로 그린다.
-   크기는 --h-control-xs(30 → coarse 40). 인풋 안에 들어앉는 유일한 컨트롤이라
-   --h-control(40 → 44)보다 한 단계 작은 전용 토큰을 쓴다.
+   크기는 --h-control-xs(24 → coarse 36). 인풋 안에 들어앉는 유일한 컨트롤이라
+   인풋(--h-control-sm, 32 → 44)보다 한 단계 작은 전용 토큰을 쓴다.
    오른쪽 여백은 리터럴이 아니라 두 토큰 차이의 절반 — 인풋 높이가 어떻게 바뀌든
    버튼이 상하좌우 같은 간격으로 앉는다. */
 .search-clear {
   position: absolute;
   z-index: 2;
-  inset-inline-end: calc((var(--h-control) - var(--h-control-xs)) / 2);
+  inset-inline-end: calc((var(--h-control-sm) - var(--h-control-xs)) / 2);
   inset-block-start: 50%;
   translate: 0 -50%;
   display: inline-flex;
@@ -260,7 +278,7 @@
 .search-clear::after {
   content: "";
   position: absolute;
-  inline-size: 11px;
+  inline-size: 9px;      /* 24px 원판 안의 X. 11px이면 원판 가장자리에 닿는다 */
   block-size: 1.5px;
   border-radius: var(--r-full);
   background: currentColor;
@@ -275,52 +293,79 @@
 }
 
 /* ============================================================================
-   4. 목록 행 (계약서 §4-4)
-   .entry의 그리드는 layout.css. 여기는 두 칸의 생김새만.
+   4. 목록 카드의 내용물 (계약서 §4-4, v3.2)
+   박스 자체(경계선·면·패딩·hover 경계선·그리드)는 layout.css. 여기는 글자 넷의 생김새.
+   순서: .entry-cat → .entry-title → .entry-meta(.entry-date + .entry-tags > .entry-tag)
    ========================================================================= */
 
-/* 날짜는 부속이다. 제목이 주인공이고, 날짜는 그 왼쪽에 선 눈금자다.
-   tabular-nums가 없으면 자릿수가 흔들려 "열"로 읽히지 않는다. */
-.entry-date {
-  font-size: var(--fs-sm);
-  color: var(--c-text-mute);
-  font-variant-numeric: tabular-nums;
+/* 분류 라벨(v3.2 신설). 카드의 첫 줄, 작고 넓은 자간의 액센트색 소문(小文).
+   왜 액센트색인가 — 분류는 "누르면 그 분류로 간다"(상세의 .post-cat)와 같은 개념이고,
+   색 셋 중 청록만 카드에 없었다. 이 한 줄로 카드 안에 청록(분류)·황토(날짜)·자주(태그)가
+   다 놓여 사용자 판정 "너무 단색"이 실제로 해소된다.
+   링크가 아니다(카드 전체가 이미 링크). 미분류 글에는 이 요소 자체가 없다. */
+.entry-cat {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  line-height: 1.4;
+  color: var(--c-accent);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 이 화면에서 가장 눈에 띄는 글자여야 한다 — h1(.page-title)보다도.
    목록의 주인공은 사이트 이름이 아니라 글 제목이다. */
 .entry-title {
   display: block;
-  /* 눌리는 것은 이 링크다. <li>에 패딩을 주면 링크 밖을 눌러도 아무 일이 안 일어난다.
-     세로 패딩으로 높이를 만들고, --h-control이 coarse에서 44px를 보장한다. */
-  min-block-size: var(--h-control);
-  padding-block: var(--sp-2);
   font-size: var(--fs-lg);
   font-weight: 600;
   line-height: 1.45;
   color: var(--c-text);
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  /* 평상시엔 밑줄이 거의 보이지 않는다. "링크임"은 남기되 300행이 줄무늬로 보이지 않게. */
+  /* 평상시엔 밑줄이 거의 보이지 않는다. "링크임"은 남기되 300개가 줄무늬로 보이지 않게. */
   text-decoration-color: transparent;
   transition:
     color var(--dur-fast) var(--ease),
     text-decoration-color var(--dur-fast) var(--ease);
 }
 
-/* 배경도, 이동도 없다. 리스트에서 행이 움직이면 그 아래 행 전부가 흔들려 보인다. */
+/* 박스 전체를 링크 면적으로 늘린다(.entry가 position: relative — layout.css).
+   박스가 되면 사용자는 박스 어디를 눌러도 열리길 기대한다. <li>를 통째로 <a>로 감싸면
+   스크린리더가 박스 내용 전부를 링크 이름으로 읽고, 태그를 링크로 두면 300편 × 태그 3개
+   = Tab 정지점 900개가 된다. 이 방식은 Tab 정지점이 제목 하나로 유지된다.
+   ::before는 .is-pinned의 "고정" 배지가 쓰고 있어 ::after다. */
+.entry-title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* 배경도, 이동도 없다. 리스트에서 박스가 움직이면 그 아래 전부가 흔들려 보인다.
+   ::after 덕에 박스 어디에 올려도 이 :hover가 켜진다. */
 .entry-title:hover,
 .entry-title:focus-visible {
   color: var(--c-accent);
   text-decoration-color: currentColor;
 }
 
-/* 날짜 칸도 함께 반응해야 "이 행"이 통째로 잡힌다(행 전체가 링크는 아니지만
-   눈에는 한 줄이 한 덩어리다). :has를 못 읽는 브라우저는 제목만 반응한다 — 퇴행 없음. */
-@supports selector(:has(*)) {
-  .entry:has(.entry-title:hover) .entry-date,
-  .entry:has(.entry-title:focus-visible) .entry-date { color: var(--c-text-dim); }
+/* 날짜 = 시간(--c-meta). 300개가 같은 색이라 리듬이 된다.
+   tabular-nums가 없으면 자릿수가 흔들려 세로로 훑을 때 눈이 튄다. */
+.entry-date {
+  color: var(--c-meta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 태그 = 주제(--c-tag). 링크가 아니다 — 박스 전체 링크와 충돌하고 Tab 정지점을 늘린다.
+   누르고 싶으면 상세로 가서 누른다(.tag). 굵기를 살짝 올려 작은 글자가 색을 잃지 않게. */
+.entry-tag {
+  color: var(--c-tag);
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* 고정 글. 목록 맨 앞에 오며, 압정 그림 대신 한 글자로 표시한다. */
@@ -476,9 +521,26 @@
   mask-image: radial-gradient(circle at 116% -6%, transparent 54%, currentColor 56%);
 }
 
+/* ── 햄버거 (사이드바 열기, v3.2) ───────────────────────────────────────────
+   헤더의 첫 자식. 테마 버튼과 같은 방식 — 가운데 막대 하나를 그리고 box-shadow로 위아래 두 줄.
+   16×2px, 줄 간격 5px: 40px 버튼 안에서 테마 아이콘(15px)과 같은 시각 무게.
+   열려 있을 때(aria-expanded="true")는 액센트색 — "지금 켜져 있는 것"의 색. */
+.side-toggle::before {
+  content: "";
+  inline-size: 16px;
+  block-size: 2px;
+  border-radius: var(--r-full);
+  background: currentColor;
+  box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
+}
+
+.side-toggle[aria-expanded="true"] { color: var(--c-accent); }
+
 /* ============================================================================
    6. 태그 (글 상세)
-   목록에는 태그가 없다(계약서 §4-4). 이 부품은 post.html 전용이다.
+   목록의 태그는 링크가 아닌 .entry-tag(§4)다. 누를 수 있는 태그는 post.html의 이것뿐.
+   v3.1: `#` 접두사(::before) 삭제 — 인덱스에서 지웠으니 여기만 남기면 같은 태그가
+   두 화면에서 다르게 보인다. 태그의 정체는 색(--c-tag)이 말한다.
    ========================================================================= */
 .tag {
   display: inline-flex;
@@ -490,7 +552,7 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   white-space: nowrap;
-  color: var(--c-text-mute);
+  color: var(--c-tag);
 }
 
 .tag > a {
@@ -503,12 +565,7 @@
   transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
 }
 
-.tag > a::before {
-  content: "#";
-  margin-inline-end: 1px;
-  opacity: .6;
-}
-
+/* hover는 "누를 수 있는 것"의 색(--c-accent)으로 — 링크 어휘는 사이트 전체에서 하나다. */
 .tag > a:hover {
   background: var(--c-accent-soft);
   color: color-mix(in oklab, var(--c-accent) 82%, var(--c-text));
@@ -869,7 +926,13 @@ select.field {
   background: var(--c-surface-2);
   font-size: var(--fs-sm);
   color: var(--c-text);
-  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  /* :focus에서 면이 surface-2 → surface로 바뀌는 것도 이 시간을 탄다(160ms면 눈에 안 띈다).
+     테마 토글 때 인풋만 튀지 않게 background-color·color를 함께 적는다(계약서 §11). */
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    background-color var(--dur-theme) var(--ease-fade),
+    color var(--dur-theme) var(--ease-fade);
 }
 
 /* 셀렉트: 네이티브 화살표를 지우고 그라디언트 두 장으로 caret을 그린다.
@@ -1164,3 +1227,229 @@ select.field {
   .index-item { padding-inline: var(--sp-3); }
   .index-item + .index-item::before { margin-inline-end: var(--sp-3); }
 }
+
+/* ============================================================================
+   15. 사이드바의 부품 (계약서 §3-2, v3.2)
+   패널의 위치·슬라이드·도킹·스크림은 layout.css §0. 여기는 안에 놓이는 것들의 생김새.
+   구조: .side-head(.side-title + .side-pin + .side-close)
+         .side-tree > .side-cats > .side-cat(.is-open/.is-empty)
+                        > .side-cat-row(.side-cat-name + .side-cat-count + .side-cat-toggle)
+                        > .side-posts > li > .side-post(.is-pinned / [aria-current="page"])
+   어휘는 목록 인덱스와 같다 — 이름은 본문색, 개수는 황토, 선택은 액센트. 사이드바에서만
+   다른 색을 쓰면 같은 분류가 두 화면에서 다른 것으로 보인다.
+   ========================================================================= */
+
+/* 머리 제목. .index-label과 같은 규칙 — "분류"라는 같은 말이 두 화면에서 같은 모습이어야 한다. */
+.side-title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--c-text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 핀 ────────────────────────────────────────────────────────────────────
+   브라우저 탭의 핀 아이콘과 같은 관습: 기울어진 핀 = 고정 안 됨, 바로 선 핀 = 고정됨.
+   머리(::before, 둥근 직사각)와 바늘(::after, 가는 선)을 currentColor로 그린다.
+   aria-pressed="true"이면 바로 세우고 액센트색으로 채운다 — 색만으로 상태를 말하지 않는다(각도가 같이 바뀐다). */
+.side-pin::before,
+.side-pin::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 50%;
+  border-radius: var(--r-full);
+  background: currentColor;
+  transition:
+    rotate            var(--dur-fast)  var(--ease),
+    background-color  var(--dur-theme) var(--ease-fade);
+}
+
+.side-pin::before {
+  inset-block-start: calc(50% - 8px);
+  inline-size: 8px;
+  block-size: 9px;
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  rotate: 40deg;
+}
+
+.side-pin::after {
+  inset-block-start: calc(50% + 1px);
+  inline-size: 2px;
+  block-size: 8px;
+  translate: -50% 0;
+  transform-origin: 50% 0%;
+  rotate: 40deg;
+}
+
+.side-pin[aria-pressed="true"] { color: var(--c-accent); }
+.side-pin[aria-pressed="true"]::before,
+.side-pin[aria-pressed="true"]::after { rotate: 0deg; }
+
+/* ── 닫기 ──────────────────────────────────────────────────────────────────
+   .search-clear와 같은 X. 원판은 없다 — 머리 줄에 채운 원이 있으면 눈이 거기부터 간다. */
+.side-close::before,
+.side-close::after {
+  content: "";
+  position: absolute;
+  inline-size: 14px;
+  block-size: 1.5px;
+  border-radius: var(--r-full);
+  background: currentColor;
+}
+
+.side-close::before { rotate: 45deg; }
+.side-close::after  { rotate: -45deg; }
+
+/* ── 분류 줄 ───────────────────────────────────────────────────────────── */
+.side-cats { display: flex; flex-direction: column; }
+
+.side-cat + .side-cat { margin-block-start: var(--sp-1); }
+
+.side-cat-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-inline-size: 0;
+}
+
+/* 분류 이름 = 그 분류로 가는 링크. 줄의 남은 폭을 다 쓴다(누르는 면적이 넓어야 한다). */
+.side-cat-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--h-control-sm);
+  padding-inline: var(--sp-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--c-text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition:
+    color            var(--dur-fast)  var(--ease),
+    background-color var(--dur-fast)  var(--ease);
+}
+
+.side-cat-name:hover { color: var(--c-accent); background: var(--c-surface-2); }
+
+/* 현재 보고 있는 분류(index.html?cat=…). 인덱스의 .is-active와 같은 어휘: 액센트 + 굵기. */
+.side-cat-name[aria-current="true"] {
+  color: var(--c-accent);
+  font-weight: 700;
+  background: var(--c-accent-soft);
+}
+
+.side-cat-count {
+  flex: none;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--c-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 접기 버튼. 정사각 히트 영역(--h-control-sm) 안에 6px 쉐브론 하나.
+   닫힘 = 오른쪽(▸), 열림(.is-open) = 아래(▾). 회전 90°가 상태 변화 그 자체다. */
+.side-cat-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--h-control-sm);
+  block-size: var(--h-control-sm);
+  border-radius: var(--r-sm);
+  color: var(--c-text-mute);
+  transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.side-cat-toggle::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-block-end: 1.5px solid currentColor;
+  border-inline-end: 1.5px solid currentColor;
+  rotate: -45deg;
+  translate: -1px 0;
+  transition: rotate var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease);
+}
+
+.side-cat-toggle:hover { color: var(--c-text); background: var(--c-surface-2); }
+
+.side-cat.is-open > .side-cat-row .side-cat-toggle::before { rotate: 45deg; translate: 0 -1px; }
+
+/* 글 0편인 분류: 이름을 한 단계 낮은 색으로(opacity 금지 — 대비가 떨어진다), 접기 버튼은 자리째 없앤다.
+   펼칠 것이 없는 화살표는 "고장난 버튼"으로 보인다. */
+.side-cat.is-empty .side-cat-name { color: var(--c-text-mute); font-weight: 500; }
+.side-cat.is-empty .side-cat-toggle { display: none; }
+
+/* ── 글 목록 ───────────────────────────────────────────────────────────────
+   접힌 분류(.is-open 없음)의 목록은 display:none — 화면에서도 Tab에서도 빠진다.
+   왼쪽 1px 안내선이 "이 글들은 위 분류에 속한다"를 말한다. 들여쓰기만으로는 5분류 × 10편에서
+   어디까지가 한 분류인지 세로로 훑을 때 놓친다. */
+.side-posts {
+  display: flex;
+  flex-direction: column;
+  margin-inline-start: calc(var(--sp-3) + 4px);
+  padding-inline-start: var(--sp-2);
+  padding-block: var(--sp-1);
+  border-inline-start: 1px solid var(--c-border-soft);
+}
+
+.side-cat:not(.is-open) > .side-posts { display: none; }
+
+.side-post {
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--c-text-dim);
+  /* 260px 안에서 한글 제목 14px은 14자면 찬다. 두 줄까지 허용하고 그 뒤는 말줄임 —
+     한 줄 말줄임은 "…스코프"만 남겨 어떤 글인지 못 알아본다. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+/* 한 줄 제목이 32px에 못 미치지 않게(터치 타깃). 두 줄 제목은 자연히 더 높다. */
+.side-post { min-block-size: var(--h-control-sm); }
+
+.side-post:hover { color: var(--c-accent); background: var(--c-surface-2); }
+
+/* 지금 읽고 있는 글(post.html). 왼쪽 안내선 위에 2px 액센트 막대를 겹쳐 "여기"를 세로로도 찾게 한다. */
+.side-post[aria-current="page"] {
+  color: var(--c-accent);
+  font-weight: 700;
+  background: var(--c-accent-soft);
+  box-shadow: calc(var(--sp-2) * -1 - 1px) 0 0 0 var(--c-accent);   /* 안내선 자리(패딩 8 + 선 1)에 정확히 겹친다 */
+}
+
+/* 고정 글. 목록 카드와 같은 "고정" 소문 배지 — 같은 뜻은 같은 모양. */
+.side-post.is-pinned::before {
+  content: "고정";
+  display: inline-block;
+  margin-inline-end: var(--sp-1);
+  padding-inline: var(--sp-1);
+  border-radius: var(--r-sm);
+  background: var(--c-accent-soft);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: color-mix(in oklab, var(--c-accent) 80%, var(--c-text));
+}
+
+/* 데이터 실패·글 0편. 텍스트 한 줄(.list-loading과 같은 무게). */
+.side-empty {
+  padding: var(--sp-3) var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--c-text-mute);
+}
+
+/* 트리 안의 포커스 링은 안쪽으로 — 바깥 3px 링은 overflow: auto인 .side-tree에 잘린다. */
+.side-tree :focus-visible { outline-offset: -2px; }

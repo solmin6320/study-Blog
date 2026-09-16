@@ -1742,6 +1742,34 @@
     U.toast('분류가 아직 없어요. "+ 새 분류"로 만들면 내보낼 때 categories.json도 함께 내려받습니다.', 'warn');
   }
 
+  /* ---------- 사이드바(v3.2) ----------
+     세 페이지가 같은 분류 트리를 보여 준다. 여기서는 index.json을 받은 뒤 한 번 그리면 된다
+     (쓰기 화면이라 현재 글·현재 분류가 없다 → activeId/activeCat 모두 null).
+     분류 순서는 app.js byIndexOrder와 같은 규칙(order → 글 수 내림차순 → 이름). 규칙이 갈리면
+     같은 사이드바가 페이지마다 다른 순서로 보인다.
+     에디터의 본업(작성·내보내기)과 무관하므로 무엇이 실패하든 여기서 삼킨다 —
+     ui.js가 옛 버전이라 renderSide가 없어도, 트리 그리기가 던져도 에디터는 그대로 돌아야 한다. */
+  function bySideOrder(a, b) {
+    if (a.order !== b.order) return a.order - b.order;
+    if (a.count !== b.count) return b.count - a.count;
+    return String(a.name).localeCompare(String(b.name), 'ko');
+  }
+
+  function drawSide(data) {
+    try {
+      var ui = Blog.ui;
+      if (!ui || typeof ui.renderSide !== 'function') return;
+      var posts = (data && Array.isArray(data.posts)) ? data.posts : [];
+      var cats = posts.length && typeof store.categoryList === 'function'
+        ? store.categoryList(posts).slice().sort(bySideOrder)
+        : [];
+      ui.renderSide({ posts: posts, cats: cats, activeId: null, activeCat: null });
+    } catch (err) {
+      /* 사이드바는 부가 기능이다. 실패를 콘솔에만 남기고 에디터는 계속 간다. */
+      if (window.console && console.warn) console.warn('[editor] 사이드바 그리기 실패:', err);
+    }
+  }
+
   /* ---------- 배포 도메인 잠금 ----------
      관리자 판정이 false(= localhost가 아님)면 폼·툴바·미리보기를 DOM에서 통째로 제거하고
      안내 문단(#editorVisitor, 계약서 §6의 .editor-visitor)만 남긴다.
@@ -1773,7 +1801,13 @@
     promised(function () { return store.loadIndex(); }).then(function (data) {
       state.indexData = data;
       fillSite();
-    }).catch(function () { /* 기본 사이트명 유지 */ });
+    }).catch(function () { /* 기본 사이트명 유지 */ }).then(function () {
+      /* 사이드바는 분류 목록까지 받은 뒤 그린다(글 0편 분류도 보여야 세 페이지가 같아 보인다).
+         store.loadCategories()는 reject하지 않지만, 혹시 던져도 사이드바만 비고 안내문은 남는다. */
+      return promised(function () { return store.loadCategories(); }).catch(function () { return null; });
+    }).then(function () {
+      drawSide(state.indexData);
+    });
   }
 
   function start() {
@@ -1828,6 +1862,9 @@
       fillSite();
       fillCategoryOptions();
       noticeCategoryState();
+      /* 분류 목록까지 받은 뒤에 그린다 — store.categoryList가 등록된 분류(글 0편 포함)를 알려면
+         loadCategories()가 먼저 끝나 있어야 한다. indexJob은 실패를 이미 삼켰으니 결과만 본다. */
+      drawSide(state.indexData);
 
       var id = U.getQuery().id;
       if (id) loadForEdit(id);

@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/prose.css">
 
-<!-- 목록 화면은 마크다운을 렌더하지 않는다(행의 내용물은 날짜와 제목뿐이다).
+<!-- 목록 화면은 마크다운을 렌더하지 않는다(카드의 내용물은 분류·제목·날짜·태그 — 전부 index.json의 메타다).
      그래서 marked / DOMPurify / highlight.js 와 js/markdown.js는 여기서 로드하지 않는다 — 상세 페이지의 몫.
      ※ 목록이 언젠가 본문 일부를 마크다운으로 그리게 되면 markdown.js와 CDN 셋을 함께 올려야 한다. -->
 <script defer src="js/config.js"></script>
@@ -41,8 +41,12 @@
 <body>
 <a class="sr-only" href="#main">본문 바로가기</a>
 
-<!-- 헤더는 static이다. sticky도, 밑선도, 로고 마크도 없다(계약서 §3). -->
+<!-- 헤더는 static이다. sticky도, 밑선도, 로고 마크도 없다(계약서 §3).
+     햄버거는 첫 자식이다 — 사이드바가 왼쪽에서 나오므로 여는 버튼도 왼쪽 끝에 있어야 한다.
+     아이콘은 CSS ::before가 그린다(테마 버튼과 같은 방식). 세 페이지 마크업이 같아야 한다. -->
 <header class="site-header">
+  <button class="icon-btn side-toggle" id="sideToggle" type="button"
+          aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
   <!-- 항목은 세 페이지가 동일하다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
@@ -52,29 +56,51 @@
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
 
-<!-- tabindex="-1"은 스킵 링크의 착지점이다. 없으면 스크롤만 되고 포커스는 헤더에 남는다(계약서 §3-1). -->
-<main class="site-main" id="main" tabindex="-1">
+<!-- 사이드바 — 분류별 글 목록. 세 페이지 마크업이 바이트 단위로 같다(사양 B).
+     <header> 뒤·<main> 앞에 두는 이유: Tab 순서가 햄버거 → 사이드바 → 본문이 되어야
+     열자마자 다음 Tab이 사이드바 안으로 들어간다. #sideTree는 ui.js renderSide()가 채운다.
+     열림·고정 상태는 <body> 클래스(side-open / side-pinned)로, ui.js가 붙인다. -->
+<aside class="side" id="side" aria-label="분류별 글 목록">
+  <div class="side-head">
+    <span class="side-title">분류</span>
+    <button class="icon-btn side-pin" id="sidePin" type="button"
+            aria-label="사이드바 고정" aria-pressed="false"></button>
+    <button class="icon-btn side-close" id="sideClose" type="button" aria-label="닫기"></button>
+  </div>
+  <nav class="side-tree" id="sideTree"></nav>
+</aside>
+<!-- 오버레이 모드에서만 보인다(고정 도킹이면 스크림 없음). hidden 토글은 ui.js 몫. -->
+<div class="side-scrim" id="sideScrim" hidden></div>
 
-  <!-- DOM 순서 = 시선 순서 = Tab 순서: 정체 → 찾기 → 좁히기 → 목록 (계약서 §4). -->
+<!-- tabindex="-1"은 스킵 링크의 착지점이다. 없으면 스크롤만 되고 포커스는 헤더에 남는다(계약서 §3-1).
+     list-page: 목록만 폭을 넓힌다(--w-page). 카드 그리드가 2~3열이 되려면 720px로는 모자란다. -->
+<main class="site-main list-page" id="main" tabindex="-1">
+
+  <!-- DOM 순서 = 시선 순서 = Tab 순서: 정체 → 좁히기(분류) → 찾기(검색) → 태그 → 목록 (계약서 §4).
+       v3.2에서 분류가 검색보다 앞으로 왔다 — 툴 행에서 분류가 왼쪽, 검색이 오른쪽에 놓이므로
+       읽는 순서와 Tab 순서를 화면 배치에 맞춘 것이다. -->
   <div class="page-head">
     <h1 class="page-title" data-site-title>메모 블로그</h1>
     <p class="page-sub" data-site-sub>공부한 것을 기록하는 곳</p>
   </div>
 
-  <div class="search">
-    <label class="sr-only" for="searchInput">글 검색</label>
-    <input class="search-input" id="searchInput" type="search"
-           placeholder="제목 · 요약 · 태그 검색  ( / )"
-           autocomplete="off" enterkeyhint="search">
-    <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
-  </div>
+  <!-- 툴 행 — 분류 인덱스(왼쪽) + 검색(오른쪽) 한 줄. 768px 이하에서는 CSS가 세로로 쌓는다(검색 위). -->
+  <div class="list-tools">
+    <!-- 분류 인덱스 — 항상 펼쳐져 있다. 항목은 app.js가 그린다.
+         분류가 하나도 없으면 행 전체가 hidden이 된다(계약서 §4-3):
+         "분류  전체 0" 한 줄은 정보가 아니라 고장으로 읽힌다. 그래서 시작 상태도 hidden이다. -->
+    <div class="index-row" id="catRow" hidden>
+      <span class="index-label" id="catIndexLabel">분류</span>
+      <nav class="index-list" id="catIndex" aria-labelledby="catIndexLabel"></nav>
+    </div>
 
-  <!-- 분류 인덱스 — 항상 펼쳐져 있다. 항목은 app.js가 그린다.
-       분류가 하나도 없으면 행 전체가 hidden이 된다(계약서 §4-3):
-       "분류  전체 0" 한 줄은 정보가 아니라 고장으로 읽힌다. 그래서 시작 상태도 hidden이다. -->
-  <div class="index-row" id="catRow" hidden>
-    <span class="index-label" id="catIndexLabel">분류</span>
-    <nav class="index-list" id="catIndex" aria-labelledby="catIndexLabel"></nav>
+    <div class="search">
+      <label class="sr-only" for="searchInput">글 검색</label>
+      <input class="search-input" id="searchInput" type="search"
+             placeholder="제목 · 요약 · 태그 검색  ( / )"
+             autocomplete="off" enterkeyhint="search">
+      <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
+    </div>
   </div>
 
   <!-- 태그 인덱스 — 접혀 있다. 여닫는 일은 <details>가 한다(JS 0줄).
