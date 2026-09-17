@@ -449,6 +449,24 @@ body {
   margin-block-start: var(--sp-9);
 }
 
+/* ── 연관 글 (계약서 §5-8, v3.3) ──────────────────────────────────────────
+   글을 다 읽은 자리에서 "같은 주제의 다른 글"로 건너가는 문. .post-foot 다음, .post-nav 앞.
+   카드는 목록의 .entry를 그대로 재사용한다 — 같은 물건(글 한 편)은 같은 모양이어야 두 화면에서
+   같은 것으로 읽힌다. 다른 점은 이 그리드가 720px 읽기 칼럼(내용폭 656px) 안에 산다는 것뿐이라
+   카드 최소폭만 17rem → 13rem으로 내린다: 656 = 13rem(208) × 3 + 간격 16 × 2. 17rem이면 2열 + 외톨이
+   1장으로 놓여 "3개"가 3개로 안 보인다. 616px 아래에서는 목록과 같이 1열. */
+.post-related {
+  margin-block-start: var(--sp-9);
+  padding-block-start: var(--sp-6);
+  border-block-start: 1px solid var(--c-border-soft);
+}
+
+.post-related .entry-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
+}
+
+/* (.post-related-title과 카드 제목 크기 보정은 components.css §7 — 생김새는 저쪽 몫이다.) */
+
 .post-nav {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -510,7 +528,9 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: var(--sp-3);
-  align-items: center;
+  /* v3.3: 칸마다 라벨이 위에 붙어(.field-group) 셀이 높아졌다. 라벨이 없는 고정 스위치는
+     바닥(입력칸 줄)에 맞춰야 한 줄에 놓인 것으로 읽힌다 — center면 스위치만 반 칸 떠 보인다. */
+  align-items: end;
 }
 
 .editor-actions {
@@ -580,6 +600,8 @@ body {
 @media (max-width: 440px) {
   .entry { padding: var(--sp-4); }
   .site-header { gap: var(--sp-3); padding-block: var(--sp-5) var(--sp-4); }
+  /* v3.3: 본문(.prose, prose.css §11)과 같은 이유 — 좁은 폰에서는 어절 보존을 풀어 줄을 채운다. */
+  .post-summary { word-break: normal; }
 }
 
 /* 툴 행: 768px 이하에서는 세로로 쌓인다. DOM 순서 그대로(분류 → 검색) —

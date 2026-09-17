@@ -1,5 +1,7 @@
-/* post.js — post.html 전용. ?id= 로 글을 찾아 렌더하고 목차·이전/다음을 붙인다.
-   v3.0: 읽기 진행바·읽는 시간·스크롤 스파이는 폐기됐다. 이 파일에 스크롤 핸들러는 없다. */
+/* post.js — post.html 전용. ?id= 로 글을 찾아 렌더하고 목차·연관 글·이전/다음을 붙이고,
+   사이드바의 현재 글 아래에 절 목록을 끼워 현재 절을 표시한다(v3.3).
+   v3.0: 읽기 진행바·읽는 시간은 폐기됐다. 현재 절 표시는 IntersectionObserver 하나로 한다 —
+   이 파일에 스크롤 핸들러는 없다. */
 (function (window, document) {
   'use strict';
 
@@ -127,7 +129,8 @@
   }
 
   /* ---------- 목차 (계약서 §5-4) ----------
-     본문 위 인라인 박스다. 사이드바·sticky·스크롤 스파이는 폐기됐다.
+     본문 위 인라인 박스다. 여기에는 "지금 여기" 표시가 없다 — 스크롤과 함께 화면 밖으로 나가는 박스에
+     현재 절을 표시할 이유가 없다. 현재 절 표시는 사이드바의 .side-toc가 맡는다(아래 mountSideToc).
      표시 조건은 h2 3개 이상 — 이 블로그의 글은 대부분 "메모"라 h2가 0~2개다.
      그 글들에 목차가 뜨면 목차는 기능이 아니라 장식이 된다.
      조건을 못 넘겨도 제목의 id는 남는다(markdown.js) — 특정 절 직접 링크는 그 자체로 쓸모가 있다. */
@@ -168,6 +171,148 @@
     U.clear(dom.nav);
     dom.nav.appendChild(frag);
     U.setHidden(dom.nav, !dom.nav.children.length);
+  }
+
+  /* ---------- 연관 글 (계약서 §5-8) ----------
+     점수: 겹치는 태그 1개당 +2, 같은 분류 +1. 태그가 분류보다 잘아서 두 배다 — 분류 "JavaScript"에
+     100편이 있어도 태그 closure는 서너 편이다. 그리고 태그 1개 + 같은 분류(3)가 태그 1개 + 다른 분류(2)를
+     이겨 분류가 동점 처리기로 작동한다. 동점은 created 내림차순(목록의 기본 순서). 0점은 제외 —
+     채우려고 아무 글이나 넣지 않는다. pinned·updated·summary는 점수에 들어가지 않는다. */
+  var RELATED_MAX = 3;
+
+  function normTag(tag) { return String(tag).trim().toLowerCase(); }
+
+  /* 반환 순서가 곧 "가장 가까운 글부터". shared는 그 글의 tags 순서 그대로다(카드는 그 글의 것). */
+  function relatedTo(meta, posts) {
+    var mySlug = store.categorySlug(meta.category);
+    var myTags = meta.tags.map(normTag);
+    return posts
+      .filter(function (p) { return p.id !== meta.id; })
+      .map(function (p) {
+        var shared = p.tags.filter(function (t) { return myTags.indexOf(normTag(t)) !== -1; });
+        var score = shared.length * 2 + (store.categorySlug(p.category) === mySlug ? 1 : 0);
+        return { post: p, shared: shared, score: score };
+      })
+      .filter(function (r) { return r.score > 0; })
+      .sort(function (a, b) {
+        return b.score - a.score || String(b.post.created).localeCompare(String(a.post.created));
+      })
+      .slice(0, RELATED_MAX);
+  }
+
+  /* 후보는 index.json 전부. loadPost가 loadIndex를 먼저 기다리므로 이 시점엔 동기로 읽힌다 —
+     index.json이 실패했으면 null이고, 그때는 그리지 않는다(본문은 그대로).
+     카드의 태그 줄에는 겹치는 태그만 넣는다 — 전체 태그를 다 적으면 "왜 이 글이 연관인지"가 안 보인다.
+     분류만 같아서 뽑힌 글은 태그 줄이 없고 .entry-cat이 그 이유를 말한다. */
+  function renderRelated(meta) {
+    if (!dom.related || !dom.relatedList) return;
+    var data = store.getIndexSync();
+    var picks = data ? relatedTo(meta, data.posts) : [];
+    if (!picks.length) { U.setHidden(dom.related, true); return; }
+
+    var frag = document.createDocumentFragment();
+    picks.forEach(function (r) {
+      frag.appendChild(U.entryCard(r.post, { tags: r.shared, tagsLabel: '겹치는 태그', pinned: false }));
+    });
+    U.clear(dom.relatedList);
+    dom.relatedList.appendChild(frag);
+    U.setHidden(dom.related, false);
+  }
+
+  /* ---------- 사이드바 목차 + 현재 절 (계약서 §5-4, v3.3) ----------
+     인라인 목차(.toc)는 스크롤과 함께 화면 밖으로 나가므로 "지금 여기"를 거기 표시해도 아무도 못 본다.
+     화면에 붙어 있는 것은 사이드바뿐이다 — 현재 글(.side-post[aria-current="page"]) 바로 아래에
+     절 목록(ol.side-toc)을 끼우고, 현재 절 항목에 aria-current="location"을 옮긴다.
+     표시 조건은 인라인 목차와 같다(h2 3개 이상) — 조건이 둘이면 "왜 여기엔 있고 저기엔 없지"가 된다.
+     ui.js renderSide()는 이 목록을 모른다. 다시 부르면 사라지므로 이 페이지에서는 한 번만 부른다. */
+
+  /* 트리는 index.json을 기다려 그려지고 본문은 .md를 기다려 그려진다. 둘 중 나중 것이 끼워야 하므로
+     트리 쪽 약속을 들고 있다가 본문 렌더 끝에 이어 붙인다(start()가 채운다. 실패해도 resolve한다). */
+  var sideReady = Promise.resolve();
+
+  function mountSideToc(headings) {
+    var h2Count = headings.filter(function (h) { return h.level === 2; }).length;
+    if (h2Count < TOC_MIN_H2) return;
+
+    /* 현재 글 항목이 없다 = 이 글이 index.json에 없다. 끼울 자리가 없으니 아무것도 안 한다. */
+    var current = U.qs('.side-tree .side-post[aria-current="page"]');
+    if (!current || !current.parentNode) return;
+
+    var items = [];
+    var ol = U.el('ol', { class: 'side-toc', id: 'sideToc', 'aria-label': '이 글의 목차' });
+    headings.forEach(function (h) {
+      /* 등급 클래스(is-h2/is-h3)와 href는 인라인 목차(markdown.buildToc)와 같은 규칙이다. */
+      var a = U.el('a', {
+        class: 'side-toc-item is-h' + h.level,
+        href: '#' + encodeURIComponent(h.id),
+        text: h.text
+      });
+      items.push(a);
+      ol.appendChild(U.el('li', null, [a]));
+    });
+    current.parentNode.insertBefore(ol, current.nextSibling);
+
+    initSpy(headings, items);
+  }
+
+  /* 현재 절 = 화면 위쪽 40% 선을 넘은 마지막 제목. 아무 제목도 안 넘었으면(글 머리) 없음(-1).
+     IntersectionObserver는 "어느 제목이 그 띠를 건넜다"는 트리거로만 쓰고 판정은 매번 다시 계산한다 —
+     IO의 entry만 보면 위로 스크롤해 되돌아올 때 어느 것이 현재인지 알 수 없다.
+     제목 수 ≤ 50이라 getBoundingClientRect() 전수 조회가 싸다. */
+  var SPY_LINE = 0.4;
+
+  function pickCurrent(headings) {
+    var limit = window.innerHeight * SPY_LINE;
+    var found = -1;
+    for (var i = 0; i < headings.length; i += 1) {
+      if (headings[i].el.getBoundingClientRect().top <= limit) found = i;
+    }
+    return found;
+  }
+
+  /* 활성 항목이 .side-tree의 보이는 영역 밖이면 scrollTop을 직접 맞춘다.
+     scrollIntoView()는 쓰지 않는다 — 조상 스크롤 컨테이너를 전부 건드려 본문까지 튄다.
+     사이드바가 닫혀 있어도(visibility hidden) 레이아웃은 있으므로 rect 차이는 그대로 맞다. */
+  function keepInTree(tree, item) {
+    if (!tree) return;
+    var box = tree.getBoundingClientRect();
+    var rect = item.getBoundingClientRect();
+    var pad = 16;
+    if (rect.top < box.top + pad) tree.scrollTop += rect.top - box.top - pad;
+    else if (rect.bottom > box.bottom - pad) tree.scrollTop += rect.bottom - box.bottom + pad;
+  }
+
+  function initSpy(headings, items) {
+    /* 없는 브라우저면 스파이만 건너뛴다 — 목차는 링크로서 그대로 동작한다. */
+    if (!('IntersectionObserver' in window)) return;
+
+    var tree = U.qs('.side-tree');
+    var active = -1;
+
+    /* 상태는 aria-current 하나다. 클래스를 따로 붙이지 않는다(계약서 §8 "ARIA 속성이 곧 상태"). */
+    function setActive(index) {
+      if (index === active) return;
+      if (active !== -1) items[active].removeAttribute('aria-current');
+      active = index;
+      if (index === -1) return;
+      items[index].setAttribute('aria-current', 'location');
+      keepInTree(tree, items[index]);
+    }
+
+    var io = new IntersectionObserver(function () {
+      setActive(pickCurrent(headings));
+    }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
+    headings.forEach(function (h) { io.observe(h.el); });
+
+    /* 목차 클릭·직접 링크는 해시의 id로 즉시 옮긴다. 스크롤이 뒤따르면 IO가 다시 판정한다.
+       깨진 퍼센트 인코딩은 jumpToHash와 같은 이유로 그냥 포기한다. */
+    U.on(window, 'hashchange', function () {
+      var id;
+      try { id = decodeURIComponent(window.location.hash.slice(1)); } catch (err) { return; }
+      for (var i = 0; i < headings.length; i += 1) {
+        if (headings[i].id === id) { setActive(i); return; }
+      }
+    });
   }
 
   /* ---------- index.json 어긋남 안내 ---------- */
@@ -255,6 +400,7 @@
     }
 
     buildToc(result.headings);
+    renderRelated(meta);
     renderNav(meta.id);
     noticeIndexDrift(meta);
 
@@ -262,6 +408,9 @@
     Blog.admin.apply(dom.post);
 
     jumpToHash();
+
+    /* 사이드바 트리가 먼저 그려졌으면 즉시, 아니면 트리가 끝난 뒤에 끼운다(둘 중 나중 것). */
+    sideReady.then(function () { mountSideToc(result.headings); });
   }
 
   function start() {
@@ -278,6 +427,8 @@
     dom.tocList = U.qs('.toc-list', dom.toc);
     dom.body = document.getElementById('postBody');
     dom.nav = document.getElementById('postNav');
+    dom.related = document.getElementById('postRelated');
+    dom.relatedList = document.getElementById('postRelatedList');
     dom.editLink = document.getElementById('postEdit');
 
     Blog.ui.initShell();
@@ -295,8 +446,10 @@
        본문(loadPost)과 별개로 굴려서 글이 없거나 본문이 실패해도 분류 트리는 살아 있게 한다
        (그래야 "그런 글은 없습니다" 화면에서 다른 글로 갈 길이 남는다).
        분류(categories.json)를 같이 기다리는 이유 — 없으면 categoryList()가 글에서 유추한 이름·순서로 트리를 그린다.
-       loadPost도 같은 두 약속을 쓰므로 요청은 늘지 않고, loadCategories()는 실패해도 reject하지 않는다. */
-    Promise.all([store.loadIndex(), store.loadCategories()])
+       loadPost도 같은 두 약속을 쓰므로 요청은 늘지 않고, loadCategories()는 실패해도 reject하지 않는다.
+       이 약속을 sideReady로 들고 있는 이유 — 사이드바 목차(mountSideToc)는 트리 안의 현재 글 항목 아래에
+       끼우므로 트리가 그려진 뒤여야 한다. 실패 경로도 resolve라 본문 렌더가 이걸 기다리다 막히지 않는다. */
+    sideReady = Promise.all([store.loadIndex(), store.loadCategories()])
       .then(function (results) {
         var data = results[0];
         fillSite(data.site);

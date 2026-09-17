@@ -1,53 +1,44 @@
 ---
 name: preview
-description: 학습 블로그를 로컬에서 띄워 확인한다. 정적 서버를 실행하고 브라우저로 열며, 포트 충돌·CORS·경로 문제를 해결한다. "실행해줘", "띄워줘", "확인해보자", "로컬에서 열어", "서버 켜줘" 같은 요청에서 사용한다.
+description: 학습 블로그를 로컬에서 띄워 브라우저로 확인한다. start.ps1(PowerShell 서버)을 실행하고, Browser 도구로 화면·콘솔을 보고, 끝나면 종료한다. "실행해줘", "띄워줘", "확인해보자", "화면 보여줘" 요청에서 사용한다.
 ---
 
-# 로컬 미리보기
+# /preview — 로컬 확인
 
-## 왜 서버가 필요한가
+이 PC에는 Python·Node가 없다. 서버는 **`start.ps1`**(Windows PowerShell의 `HttpListener`) 하나다.
 
-`index.html`을 더블클릭하면 `file://`로 열린다. 이때 브라우저 보안정책이 `fetch()`를 막아 **글이 하나도 안 보인다.** 반드시 HTTP로 띄워야 한다. GitHub Pages도 HTTP이므로 로컬 서버 환경이 실제 배포 환경과 같다.
+## 띄우기
 
-## 실행
-
-```bash
-cd "C:/기술 블로그"
-python -m http.server 5500
+```powershell
+$p = Start-Process -WindowStyle Hidden -FilePath powershell.exe -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','start.ps1','-NoBrowser' -WorkingDirectory "C:\Users\user\Downloads\기술 블로그\기술 블로그" -PassThru; Start-Sleep 2; "PID: $($p.Id)"; (Invoke-WebRequest http://localhost:5500/index.html -UseBasicParsing).StatusCode
 ```
-Python이 없으면 확인 순서: `py -m http.server 5500` → `npx serve`(Node 정책상 최후 수단, 사용자에게 먼저 확인) → PowerShell 간이 서버.
+- 오케스트레이터는 **5500**. 에이전트 포트는 5501~5503(에이전트 정의 참조).
+- 5500이 이미 쓰이면 `netstat -ano | grep :5500`으로 PID를 찾아 이전 세션 잔재인지 확인하고 종료한다. 이 포트를 쓰는 다른 프로그램은 없다.
+- `localhost`로만 응답한다(`127.0.0.1`은 400). 관리자 UI는 hostname이 `localhost`면 자동으로 켜진다 — `?admin=` 쿼리는 v3.0에서 폐기됐다.
 
-**서버는 반드시 백그라운드로 실행한다.** 포그라운드로 띄우면 대화가 멈춘다.
+## 보기
 
-띄운 뒤 안내할 주소:
-- 목록 `http://localhost:5500/index.html`
-- 관리자 모드로 진입 `http://localhost:5500/index.html?admin=1`
-  (localhost는 자동으로 관리자로 인식되지만, 명시적으로 켜고 싶을 때)
-- 에디터 `http://localhost:5500/write.html`
+`mcp__Claude_Browser__preview_start`(url: `http://localhost:5500/index.html`) → 스크린샷 → `read_console_messages`. 확인 순서:
+1. 목록 `index.html` — 콘솔 에러 0, CSP 위반 0
+2. 상세 `post.html?id=<글 id>` — 글이 없으면 `/fixture`
+3. 에디터 `write.html` — 분류 0개여도 `미분류`로 뜬다
+4. 테마 토글 한 번, 360px(`resize_window` preset mobile)
 
-## 포트가 이미 쓰이는 경우
+좌표 클릭 전엔 반드시 그 화면의 스크린샷을 먼저 찍는다. 화면이 바뀌면 다시 찍는다.
 
-```bash
-netstat -ano | grep :5500
-```
-점유 중이면 5501, 5502로 올린다. **기존 프로세스를 임의로 죽이지 않는다** — 사용자의 다른 작업일 수 있다.
-
-## 확인할 것 (띄운 뒤 사용자에게 안내)
-
-1. 메모지 목록이 실제로 렌더되는가 (안 되면 `index.json` 경로·JSON 문법 문제)
-2. 글을 클릭하면 본문이 뜨는가 (안 되면 `.md` 파일명과 `id` 불일치)
-3. 게시일·수정일이 **둘 다** 보이는가
-4. 다크모드 토글, 검색, 태그 필터
-5. `write.html`에서 미리보기가 실제 글과 같아 보이는가
-
-## 안 될 때 진단 순서
+## 안 될 때
 
 | 증상 | 원인 |
 |---|---|
-| 목록이 빈 채로 멈춤 | `posts/index.json` JSON 문법 오류 (쉼표·따옴표) 또는 404 |
-| 글 클릭 시 에러 화면 | `id`와 실제 파일명 불일치 |
-| 스타일이 전혀 없음 | CSS 경로 오타 또는 로드 순서 문제 |
-| 한글이 깨짐 | 파일이 UTF-8이 아님. `<meta charset="utf-8">` 확인 |
-| 콘솔에 `Blog is not defined` | `<script>` 로드 순서가 의존성과 어긋남 |
+| 목록이 "불러오는 중"에서 멈춤 | `posts/index.json` 문법 오류. `git diff posts/` |
+| 스타일 없음 | CSS 5개 중 하나 404. `css/animations.css`는 삭제된 파일 — HTML에 링크가 남았는지 |
+| 콘솔에 CSP 위반 | 인라인 `<script>`/`<style>`/`style=`/`on*=`가 HTML에 들어감 |
+| `Blog.ui.reveal is not a function` 류 | 폐기된 함수 호출이 남음. 계약서 §12 삭제 목록 대조 |
+| `write.html`이 "로컬에서만 동작" 문구만 | hostname이 `localhost`가 아님 |
 
-브라우저 개발자도구 콘솔을 열어보라고 안내하고, 사용자가 에러 메시지를 붙여주면 그걸로 진단한다.
+## 끝내기 — 반드시
+
+```powershell
+Stop-Process -Id <PID> -Force
+```
+서버를 켜 둔 채 세션을 끝내면 다음 세션이 "포트 사용 중"으로 시작한다.

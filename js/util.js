@@ -145,6 +145,56 @@
     return (list || []).slice().sort(byCatOrder);
   }
 
+  /* ---------- 글 카드 (계약서 §4-4) ----------
+     목록(app.js)과 연관 글(post.js)이 같은 카드를 그린다. 마크업 출처가 둘이면 다음 개정에서 한쪽만 고쳐진다 —
+     그래서 여기 한 곳에 둔다(계약서 §12-9 #50). 순서 고정: .entry-cat → .entry-title → .entry-meta(날짜 · 태그).
+     요약·수정일·아이콘은 없다 — 카드는 "무슨 글인지"까지만 말하고 나머지는 상세가 한다.
+     태그는 링크가 아니다(카드 전체가 .entry-title::after로 링크 면적이라 안에 링크가 겹치면 안 된다).
+       opts.tags       태그 줄에 넣을 태그. 기본은 post.tags 전부. 연관 글은 "겹치는 태그만" 넘긴다(§5-8).
+       opts.tagsLabel  .entry-tags의 aria-label. 기본 '태그'.
+       opts.pinned     .is-pinned 여부. 기본 post.pinned. 연관 글은 false — 고정은 목록의 정렬 정보라 거기선 뜻이 없다.
+     store는 호출 시점에 찾는다(util.js가 store.js보다 먼저 로드된다). */
+  function entryCard(post, opts) {
+    var o = opts || {};
+    var store = Blog.store;
+    var pinned = o.pinned === undefined ? Boolean(post.pinned) : Boolean(o.pinned);
+    var tags = Array.isArray(o.tags) ? o.tags : (post.tags || []);
+
+    var li = el('li', { class: 'entry' + (pinned ? ' is-pinned' : '') });
+
+    /* 미분류는 라벨을 생략한다. "미분류"는 정보가 아니라 "분류를 안 했다"는 고백이라
+       카드마다 찍히면 목록이 미완성으로 보인다. */
+    if (store.categorySlug(post.category) !== CFG.category.fallbackSlug) {
+      li.appendChild(el('span', { class: 'entry-cat', text: store.categoryName(post.category) }));
+    }
+
+    li.appendChild(el('a', {
+      class: 'entry-title',
+      href: 'post.html?id=' + encodeURIComponent(post.id),
+      text: post.title
+    }));
+
+    /* created가 비면 <time datetime=""> 라는 무효 마크업이 된다.
+       store가 updated → id 앞머리 순으로 되살리므로 여기까지 빈 값이 오는 경우는
+       "날짜를 어디서도 알 수 없는 글" 하나뿐이다. 그때는 날짜를 그리지 않는다 —
+       카드는 그리드 셀이라 자리 지킴(빈 span)이 필요 없다. 날짜·태그 둘 다 없으면 메타 줄째 뺀다. */
+    var meta = [];
+    if (post.created) {
+      meta.push(el('time', {
+        class: 'entry-date',
+        datetime: post.created,
+        text: fmtDot(post.created)
+      }));
+    }
+    if (tags.length) {
+      meta.push(el('ul', { class: 'entry-tags', 'aria-label': o.tagsLabel || '태그' },
+        tags.map(function (tag) { return el('li', { class: 'entry-tag', text: tag }); })));
+    }
+    if (meta.length) li.appendChild(el('div', { class: 'entry-meta' }, meta));
+
+    return li;
+  }
+
   /* ---------- 날짜 ----------
      표시용 값은 ISO 문자열에서 직접 뽑는다. Date로 바꿔 로컬 시간대로 찍으면
      +09:00으로 쓴 글이 해외 방문자에게 하루 밀려 보인다. 상대 시간 계산에만 Date를 쓴다. */
@@ -359,7 +409,7 @@
     qs: qs, qsa: qsa, el: el, on: on, append: append, clear: clear, setHidden: setHidden,
     escapeHtml: escapeHtml, hashCode: hashCode, hashUnit: hashUnit,
     slugHeading: slugHeading, slugAscii: slugAscii, clamp: clamp, pad2: pad2,
-    sortCats: sortCats,
+    sortCats: sortCats, entryCard: entryCard,
     toDate: toDate, fmtDot: fmtDot, fmtKo: fmtKo, yearOf: yearOf,
     fmtRelative: fmtRelative, sameMoment: sameMoment,
     nowIsoKst: nowIsoKst, todayStampKst: todayStampKst,

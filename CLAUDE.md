@@ -29,10 +29,19 @@
 
 개발 투입은 `/round-start`, 회의는 `/blog-meeting`. 회의록은 `docs/meeting-NN.md`에 남긴다.
 
-## 스킬 (18개)
+## 스킬 (22개)
+
+반복 작업은 스킬로 고정해 프롬프트 토큰을 아낀다. 에이전트 투입 시 공통 머리말(읽을 파일·소유권·픽스처·포트·보고 형식)은 **에이전트 정의의 "작업 규칙"에 있으므로 프롬프트에 다시 쓰지 않는다.**
+
+**매 라운드 반복**
+- `/sync` — 다른 세션이 푸시한 작업 받아오기 (fetch → 비교 → stash → pull)
+- `/round-start` — web-designer 선행 → dev 2인 병렬 투입. 프롬프트는 할 일만
+- `/resume-agent` — 한도·필터로 끊긴 에이전트를 새로 띄우지 않고 재개
+- `/fixture` — 글 0편 상태에서 검증용 임시 글 넣고 흔적 없이 지우기 (에이전트가 따름)
+- `/preview` — start.ps1로 띄워 Browser 도구로 확인, 끝나면 종료
+- `/ship` — 커밋 · 푸시 · Pages 반영 확인
 
 **작업 흐름**
-- `/round-start` — 개발 라운드 시작, 4인 작업 분배·병렬 투입
 - `/blog-meeting` — 4인 통합 회의, 회의록 작성
 - `/blog-spec` — 확정 규약 조회
 - `/contract-update` — 마크업 계약서 개정 절차
@@ -52,8 +61,7 @@
 - `/security-check` — XSS 살균 경로·innerHTML·CDN
 
 **운영**
-- `/preview` — 로컬 서버 실행 및 진단
-- `/deploy-pages` — GitHub Pages 배포
+- `/deploy-pages` — Pages 설정 점검, 새 저장소·새 PC 최초 연결 (일상 푸시는 `/ship`)
 - `/theme-tune` — 색·테마 조정 (토큰만)
 - `/dep-request` — 새 의존성 승인 절차
 

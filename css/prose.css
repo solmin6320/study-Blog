@@ -413,7 +413,11 @@
   background: color-mix(in oklab, var(--c-surface-2) 80%, transparent);
   color: var(--c-accent);
   letter-spacing: 0;
-  word-break: break-all;
+  /* v3.3: break-all 폐기. 줄 끝에 걸린 `count`가 "coun / t", `ReferenceError`가 "ReferenceEr / ror"로
+     잘려 그려졌다 — 토큰이 두 조각이면 코드가 아니라 오타로 읽힌다. body의 overflow-wrap: anywhere를
+     그대로 두면 "한 줄에 못 들어가는 긴 토큰"만 잘리고, 들어가는 토큰은 통째로 다음 줄로 간다. */
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 /* 링크·제목 안의 코드는 부모 색을 따라가야 한 덩어리로 읽힌다. */
@@ -492,17 +496,10 @@
    지웠다. --h-control-sm이 이미 coarse에서 44px로 올라가므로 값이 같은 재선언이었고,
    높이 재선언을 여러 파일에 두면 토큰을 고치는 순간 한쪽만 따라온다 — components.css §16 참조.) */
 
-.code-wrap > pre {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  min-inline-size: 0;
-  margin: 0;
-  padding: var(--sp-5);
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-}
-
-/* .code-wrap 밖에 남은 pre(JS 실패 시)도 최소한의 꼴은 갖춘다. */
+/* .code-wrap 밖에 남은 pre(JS 실패 시)도 최소한의 꼴은 갖춘다.
+   ★ 이 규칙이 아래 .code-wrap > pre보다 "앞"에 있어야 한다. 둘은 특이도가 같아(0,1,1) 뒤에 오는 쪽이
+   이기는데, v3.2까지는 이 규칙이 뒤에 있어서 머리띠 안의 pre에도 margin-block 32px이 붙었다 —
+   모든 코드블록의 머리띠와 첫 줄 사이에 52px(마진 32 + 패딩 20)의 빈 띠가 생기던 원인이다(v3.3 수정). */
 .prose pre {
   margin-block: var(--sp-7);
   padding: var(--sp-5);
@@ -511,7 +508,16 @@
   overflow-x: auto;
 }
 
-.code-wrap > pre { border-radius: 0; }
+.prose .code-wrap > pre {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-inline-size: 0;
+  margin: 0;                  /* 블록 사이 여백은 .code-wrap이 갖는다. 안쪽 pre는 0 */
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
 
 .prose pre code {
   display: block;
@@ -701,10 +707,18 @@
    440px는 현행 대형 폰(430px)까지 덮는 최소값이다. 계약서 §11-3에 등재.
    ========================================================================= */
 @media (max-width: 440px) {
-  /* 코드 블록의 좌우 패딩이 크면 한 줄에 들어가는 글자 수가 급감한다. */
-  .code-wrap > pre,
+  /* 코드 블록의 좌우 패딩이 크면 한 줄에 들어가는 글자 수가 급감한다.
+     (선택자 특이도를 위 §7의 .prose .code-wrap > pre와 맞춘다 — 낮으면 여기서 진다.) */
+  .prose .code-wrap > pre,
   .prose pre { padding-inline: var(--sp-4); }
   .prose blockquote { padding-inline: var(--sp-4); }
+
+  /* v3.3: 좁은 폰에서는 어절 보존(keep-all)을 푼다. 360px에서 한 줄이 한글 17자인데 keep-all은
+     "자바스크립트에서"(8자)를 통째로 다음 줄로 보내 줄마다 3~6자씩 비었다 — 실측 첫 문단이
+     7줄 중 4줄이 60% 아래로 찼다. 음절 단위로 끊으면 줄이 차고 문단이 한 줄 이상 짧아진다.
+     본문만 대상이다(요약 .post-summary는 layout.css의 같은 분기에서 같은 값). 제목·카드·사이드바는
+     짧은 문구라 어절이 끊기는 손해가 더 크다. */
+  .prose { word-break: normal; }
   .prose th,
   .prose td { padding: var(--sp-3); }
   .prose ul,

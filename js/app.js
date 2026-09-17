@@ -81,45 +81,11 @@
 
   /* ---------- 목록 (계약서 §4-4) ---------- */
 
-  /* 카드 한 장. 순서 고정: .entry-cat → .entry-title → .entry-meta(날짜 · 태그).
-     요약·수정일·아이콘은 여기 없다 — 카드는 "무슨 글인지"까지만 말하고 나머지는 상세가 한다.
-     태그는 링크가 아니다(카드 전체가 .entry-title::after로 링크 면적이라 안에 링크가 겹치면 안 된다).
-     분류 라벨(액센트)·날짜(황토)·태그(자주)가 색 셋이 실제로 보이는 자리다(계약서 §4-4). */
+  /* 카드 한 장. 마크업은 U.entryCard 한 곳에 있다 — 상세의 연관 글(post.js)과 같은 부품이라
+     여기서 따로 그리면 다음 개정에서 두 화면이 어긋난다(계약서 §5-8, §12-9 #50).
+     목록은 전체 태그·고정 표시 그대로(기본값)다. */
   function entryRow(post) {
-    var li = U.el('li', { class: 'entry' + (post.pinned ? ' is-pinned' : '') });
-
-    /* 미분류는 라벨을 생략한다. "미분류"는 정보가 아니라 "분류를 안 했다"는 고백이라
-       카드마다 찍히면 목록이 미완성으로 보인다. */
-    var slug = slugById[post.id] || store.categorySlug(post.category);
-    if (slug !== CFG.category.fallbackSlug) {
-      li.appendChild(U.el('span', { class: 'entry-cat', text: store.categoryName(post.category) }));
-    }
-
-    li.appendChild(U.el('a', {
-      class: 'entry-title',
-      href: 'post.html?id=' + encodeURIComponent(post.id),
-      text: post.title
-    }));
-
-    /* created가 비면 <time datetime=""> 라는 무효 마크업이 된다.
-       store가 updated → id 앞머리 순으로 되살리므로 여기까지 빈 값이 오는 경우는
-       "날짜를 어디서도 알 수 없는 글" 하나뿐이다. 그때는 날짜를 그리지 않는다 —
-       카드는 그리드 셀이라 v3.1의 자리 지킴(빈 span)이 필요 없다. 날짜·태그 둘 다 없으면 메타 줄째 뺀다. */
-    var meta = [];
-    if (post.created) {
-      meta.push(U.el('time', {
-        class: 'entry-date',
-        datetime: post.created,
-        text: U.fmtDot(post.created)
-      }));
-    }
-    if (post.tags.length) {
-      meta.push(U.el('ul', { class: 'entry-tags', 'aria-label': '태그' },
-        post.tags.map(function (tag) { return U.el('li', { class: 'entry-tag', text: tag }); })));
-    }
-    if (meta.length) li.appendChild(U.el('div', { class: 'entry-meta' }, meta));
-
-    return li;
+    return U.entryCard(post);
   }
 
   function entryGroup(label, posts) {

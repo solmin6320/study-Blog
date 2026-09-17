@@ -1,45 +1,43 @@
 ---
 name: round-start
-description: 학습 블로그의 새 개발 라운드를 시작한다. 회의록의 지시사항을 읽어 4인 에이전트(web-designer, frontend-dev, frontend-dev-2)에게 파일 충돌 없이 작업을 분배하고 병렬 투입한다. "라운드 시작", "개선안대로 개발해", "다음 개발 진행" 같은 요청에서 사용한다.
+description: 개발 라운드를 시작한다. 회의록이나 사용자 지시를 web-designer → frontend-dev·frontend-dev-2 순으로 파일 충돌 없이 배분하고 병렬 투입한다. "라운드 시작", "개선안대로 개발해", "이거 고쳐줘"(여러 파일에 걸칠 때) 요청에서 사용한다.
 ---
 
-# 개발 라운드 시작
+# /round-start — 개발 라운드
 
-사용자가 정한 사이클: **개발 → 통합 회의 → 개선안 → 개발 → 반복**. 이 스킬은 "개발" 구간이다.
+## 원칙
 
-## 1단계 — 지시사항 확보
+- **프롬프트는 짧게.** 읽을 파일·소유권·픽스처·서버·보고 형식은 에이전트 정의(`.claude/agents/*.md`)의 "작업 규칙"에 있다. 프롬프트에 다시 쓰지 않는다.
+- 프롬프트에 넣는 것은 **이 라운드에서 할 일**뿐: 사용자 원문 인용(왜 하는지) + 항목 목록 + 계약서 절 번호 + 다른 에이전트와의 접점(함수 이름·시그니처를 내가 정해서 양쪽에 똑같이).
 
-`docs/` 에서 가장 최근 회의록(`meeting-NN.md`)의 "담당자별 지시" 섹션을 읽는다.
-회의록이 없으면(첫 라운드) 사용자의 요구사항과 `docs/contract.md`를 기준으로 직접 작업을 나눈다.
+## 순서
 
-## 2단계 — 파일 충돌 검사 (가장 중요)
+1. **구조·클래스가 바뀌는가?** → `web-designer` 먼저(계약서 개정 + CSS). `run_in_background: true`로 띄우고 완료 알림을 기다린다. 개발자는 계약서 없이는 시작 못 한다.
+2. web-designer 보고에서 **"개발자가 할 일"** 부분을 그대로 개발자 프롬프트에 붙인다. 요약하지 말 것 — 클래스명·줄 번호가 정확해야 한다.
+3. `frontend-dev`와 `frontend-dev-2`를 **한 메시지에 두 Agent 호출**로 병렬 투입. 둘 사이에 함수 의존이 있으면(예: store export ↔ editor 소비) 시그니처를 내가 정해 양쪽에 똑같이 적는다.
+4. 둘 다 끝나면 `/preview`로 직접 확인 → `/ship`.
+5. 끊긴 에이전트는 `/resume-agent`.
 
-작업을 나누기 전에 **어떤 에이전트도 같은 파일을 건드리지 않는지** 반드시 확인한다.
+## 소유권 (이걸 어기면 서로 덮어쓴다)
 
-| 에이전트 | 소유 파일 |
-|---|---|
-| web-designer | `docs/contract.md`, `css/*` |
-| frontend-dev | `index.html` `post.html`, `js/{config,util,store,markdown,app,post}.js`, `posts/*` |
-| frontend-dev-2 | `write.html`, `js/{editor,ui,admin}.js`, `start.bat` |
+| 에이전트 | 수정 가능 | 포트 |
+|---|---|---|
+| `web-designer` | `docs/contract.md`, `css/*` | 5503 |
+| `frontend-dev` | `index.html` `post.html`, `js/{config,util,store,markdown,app,post}.js`, `posts/*` | 5501 |
+| `frontend-dev-2` | `write.html`, `js/{editor,ui,admin}.js`, `start.bat` `start.ps1` | 5502 |
+| `pm-integrator` | `docs/meeting-*.md`, `CLAUDE.md`, `docs/HANDOFF.md` | — |
 
-한 파일을 두 에이전트가 고쳐야 하는 작업이라면 **병렬로 돌리지 말고 순차로** 진행한다.
-계약서(구조·클래스명) 변경이 포함된 라운드라면 **web-designer를 먼저 단독 실행**해서 계약서를 확정한 뒤, 개발자들을 투입한다. 순서를 지키지 않으면 개발자가 없는 클래스를 향해 코딩한다.
+`js/theme-init.js`는 `frontend-dev` 소유로 본다(HTML `<head>`가 부른다).
 
-## 3단계 — 투입
+## 프롬프트 뼈대
 
-충돌이 없으면 **한 메시지에서 동시에** 에이전트를 띄운다. 각 프롬프트에 반드시 포함할 것:
+```
+사용자 원문: "…"
+계약서 v3.x §N 기준.
 
-1. `.claude/agents/<이름>.md`를 먼저 읽고 그 역할로 행동하라
-2. `docs/contract.md`를 읽고 클래스명·구조를 그대로 지켜라
-3. **네 담당 파일 목록** (그 외는 읽기만)
-4. 이번 라운드에 할 일 — 구체적 지시문으로. "개선해줘" 같은 추상적 지시 금지
-5. 완료 보고는 한국어로, 변경 파일과 판단 근거 포함
+1. (항목) — 파일:위치, 무엇을 어떻게
+2. …
 
-## 4단계 — 통합 확인
-
-에이전트들이 끝나면 곧바로 통합 점검을 한다.
-- CSS가 쓰는 클래스와 HTML이 쓰는 클래스가 실제로 일치하는가 (`/code-audit`)
-- JS 파일 간 함수명이 맞물리는가
-- 계약서에 없는 클래스가 새로 생기지 않았는가
-
-그다음 사용자에게 결과를 간결히 보고하고 `/blog-meeting`을 제안한다.
+다른 에이전트 접점: Blog.store.foo(id, hint) → Promise<post|null>  (양쪽 동일)
+```
+이 정도면 된다. 200단어를 넘기면 에이전트 정의에 있어야 할 내용이 섞인 것이다.

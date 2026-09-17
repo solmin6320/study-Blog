@@ -1,8 +1,19 @@
-# 마크업 계약서 v3.2
+# 마크업 계약서 v3.3
 
 디자이너(CSS)와 개발자(HTML/JS)가 동시에 작업하기 위한 **단일 진실 공급원**.
 여기 없는 클래스를 임의로 만들지 않는다. 필요하면 이 문서를 먼저 갱신한다.
 
+> **v3.3 (2026-09-17) — 사용자 요청 3건: 연관 글 자동 추천 · 목차 스크롤 스파이 · 읽기 편의.**
+> 바뀐 절만 읽으려면: §3-2(트리 안 `.side-toc`) · §5(마크업에 `.post-related`) ·
+> **§5-4(목차 — 사이드바에 현재 글의 목차 + 스크롤 스파이, `aria-current="location"`)** ·
+> **§5-8(신설 — 연관 글: 구조·점수 규칙·JS)** · §6(`.field-group` `.field-label`) · §7 §8 ·
+> §11(transition 1행, 11-1 분담, 11-2 높이, 11-3 440px 분기) · **§12-9(개발자 작업 #48-53)** · §13.
+> CSS는 web-designer가 이미 v3.3으로 교체했다 — 계약서의 마크업대로 그리면 바로 맞는다.
+>
+> 스크롤 스파이는 v3.0이 폐기한 "사이드바형 목차(2열 그리드·sticky·rAF)"의 부활이 **아니다.**
+> v3.2에 이미 있는 사이드바(§3-2)에 현재 글의 절 목록을 끼우고 IntersectionObserver 하나로 현재 절을
+> 옮긴다. 본문 위 인라인 목차는 그대로다(거기엔 스파이가 없다 — 근거는 §5-4).
+>
 > **v3.2 (2026-09-16) — 배포 화면을 본 사용자 요청 6건(사이드바·카드 그리드·컨트롤 축소).**
 > 바뀐 절만 읽으려면: §2(`--w-page` 부활, `--w-side` `--z-side` `--z-scrim` 신설, `--h-control-xs` 값) ·
 > §3(헤더 첫 자식 햄버거) · **§3-2 사이드바(신설 — 마크업·상태 클래스·저장 규칙)** ·
@@ -65,7 +76,7 @@
 | 읽는 시간 `.post-read` | 실측 7곳 중 0곳. "메모"에 붙는 "5분"은 정보가 아니다 |
 | 정렬 셀렉트 `#sortSelect` | 실측 7곳 중 0곳. 학습 기록의 순서는 **시간순 하나**다. 3가지 정렬은 4편짜리 블로그에서 고를 이유가 없고, "수정순"은 목록에 수정일이 없는 새 구조와도 어긋난다 |
 | **글·카테고리의 `color` 필드 + 메모지 6색 토큰** | §9-2에 근거 전문 |
-| 사이드바형 목차(2열 그리드·sticky·스크롤 스파이) | §5-4에 근거 전문. **목차 자체는 인라인 박스로 남는다** |
+| 사이드바형 목차(2열 그리드·sticky·스크롤 스파이) | §5-4에 근거 전문. **목차 자체는 인라인 박스로 남는다.** (v3.3: "현재 절 표시"만 사용자 요청으로 되살아났다 — 2열 그리드·sticky 트랙·rAF 없이 §3-2 사이드바 안의 `.side-toc` + IntersectionObserver 하나로. 이 폐기 행의 "기계"는 여전히 폐기다) |
 | 헤더 sticky (`.is-stuck`) + 헤더 밑선 + `.brand-mark` | 실측 7곳 중 sticky 헤더 0곳. 밑선이 그어지는 연출과 회전하는 로고 마크는 "메모지" 어휘의 잔재다 |
 | 헤더의 "새 메모" 버튼 | `.site-nav`의 "쓰기"와 **같은 목적지**다. 같은 곳으로 가는 문이 헤더에 둘 있을 이유가 없다 |
 | `.site-nav`의 440px 소거 규칙 | 헤더가 3덩이(브랜드·내비·테마)로 줄어 좁은 화면에서도 경쟁하지 않는다. 링크를 숨기는 규칙 자체가 사라지는 편이 낫다 |
@@ -289,7 +300,14 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
               aria-label="JavaScript 접기" aria-controls="sideCat-javascript"></button>
     </div>
     <ul class="side-posts" id="sideCat-javascript">
-      <li><a class="side-post is-pinned" href="post.html?id=…" aria-current="page">클로저와 렉시컬 스코프</a></li>
+      <li>
+        <a class="side-post is-pinned" href="post.html?id=…" aria-current="page">클로저와 렉시컬 스코프</a>
+        <!-- v3.3: post.html에서만, 현재 글 바로 아래. ui.js가 아니라 post.js가 끼운다(§5-4) -->
+        <ol class="side-toc" id="sideToc" aria-label="이 글의 목차">
+          <li><a class="side-toc-item is-h2" href="#lexical-scope" aria-current="location">렉시컬 스코프란</a></li>
+          <li><a class="side-toc-item is-h3" href="#execution-context">실행 컨텍스트와 환경 레코드</a></li>
+        </ol>
+      </li>
     </ul>
   </li>
 </ul>
@@ -304,6 +322,7 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
 | 아이콘 | 핀·닫기·쉐브론 전부 CSS가 그린다. 핀은 **기울어짐 = 고정 안 됨 / 바로 섬 = 고정됨**(`aria-pressed`) — 색만으로 상태를 말하지 않는다 |
 | 색 어휘 | 인덱스와 같다 — 이름 본문색, 개수 `--c-meta`, 선택·현재 `--c-accent`. 사이드바에서만 다른 색을 쓰면 같은 분류가 두 화면에서 다른 것으로 보인다 |
 | 글 제목 | 두 줄까지 허용 후 말줄임. 한 줄 말줄임은 "…스코프"만 남겨 어떤 글인지 못 알아본다 |
+| **현재 글의 목차** (v3.3) | post.html에서 `.side-post[aria-current="page"]`의 **형제**로 `ol.side-toc`. `renderSide()`는 모른다 — `post.js`가 트리가 그려진 뒤 끼운다(§5-4). `renderSide()`를 다시 부르면 사라지므로 **한 페이지에서 두 번 부르지 않는다** |
 | 빈 상태 | 데이터 실패·글 0편이면 `#sideTree`에 `<p class="side-empty">글이 없습니다</p>` 한 줄 |
 
 **상태 — 전부 `<body>` 클래스, `ui.js`가 붙인다.**
@@ -664,6 +683,21 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
       <a class="btn" id="postEdit" href="write.html?id=…" data-admin-only>수정</a>
     </footer>
 
+    <!-- v3.3: 연관 글(§5-8). 점수 > 0인 글이 하나도 없으면 hidden 그대로 — 빈 문구를 두지 않는다 -->
+    <section class="post-related" id="postRelated" aria-labelledby="postRelatedTitle" hidden>
+      <h2 class="post-related-title" id="postRelatedTitle">연관 글</h2>
+      <ul class="entry-list" id="postRelatedList">
+        <li class="entry">                                    <!-- 목록 카드(§4-4)와 같은 부품. is-pinned는 붙이지 않는다 -->
+          <span class="entry-cat">CSS</span>
+          <a class="entry-title" href="post.html?id=…">CSS Grid 정리</a>
+          <div class="entry-meta">
+            <time class="entry-date" datetime="2026-09-13">2026.09.13</time>
+            <ul class="entry-tags" aria-label="겹치는 태그"><li class="entry-tag">css</li></ul>
+          </div>
+        </li>
+      </ul>
+    </section>
+
     <nav class="post-nav" id="postNav" aria-label="이전 글 · 다음 글" hidden>
       <a class="post-nav-item is-prev" href="…">
         <span class="post-nav-label">이전</span><span class="post-nav-title">…</span>
@@ -728,9 +762,64 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
   v3.0에서는 `.post-cat`도 `.tag`도 **밑줄 + 색**으로만 반응한다 — 본문 링크와 같은 어휘다.
   한 화면에 링크 어휘가 세 가지면 그것 자체가 소음이다. hover 색은 `--c-accent`(누를 수 있는 것)다.
 
-### 5-4. 목차 — 인라인 박스로 남긴다
+### 5-4. 목차 — 인라인 박스 유지 + 사이드바에 현재 절 표시 (v3.3)
 
-**결정: 사이드바형 목차는 폐기, 본문 위 인라인 목차는 유지. 조건은 h2 3개 이상.**
+> **사용자 요청(원문): "목차 진행바 — 긴 글 읽을 때 현재 절을 목차에 표시(스크롤 스파이)".**
+> v3.0은 스파이를 폐기했다(아래 표). 사용자가 되돌렸다. 단, 되살리는 것은 "현재 절 표시"이지
+> v2.3의 2열 그리드·sticky 트랙·rAF 핸들러가 아니다.
+
+**결정: 인라인 목차(`.toc`)는 그대로. 현재 절 표시는 사이드바(§3-2) 안의 `.side-toc`가 맡는다.**
+
+세 후보를 놓고 골랐다.
+
+| 후보 | 무엇 | 왜 안 골랐나 / 골랐나 |
+|---|---|---|
+| A. 1024px+ 오른쪽 sticky 목차 | v2 방식 복귀 | 2열 그리드를 다시 만든다. 그리고 **도킹된 1024px에서는 자리가 없다** — 1024 − 260(사이드바) = 764px에 720px 칼럼이 들어가면 오른쪽에 44px이 남는다. 1280px 이상에서만 켜는 규칙이 하나 더 필요해진다 |
+| B. 화면 상단 얇은 "현재 절: ○○" 띠 | 새 sticky 요소 | "어디 있는지"는 말하지만 "어디로 갈 수 있는지"는 못 말한다 — 목차가 아니다. 사용자는 **목차에** 표시하라고 했다. 헤더가 static인 사이트(§3)에 sticky 띠 하나가 새로 생기는 것도 어휘를 하나 늘린다 |
+| **C. 사이드바에 현재 글의 목차** | 있는 것에 끼운다 | 사이드바는 이미 fixed이고, 고정하면 1024px 이상에서 화면에 붙어 있다. 트리는 이미 "분류 → 글"이라 그 아래 "→ 절"이 자연스럽게 한 단계 더 들어간다. 새 패널·새 분기·새 그리드가 **없다** |
+
+C의 한계를 숨기지 않는다. 사이드바 기본은 닫힘이라 **고정해 두지 않은 사용자는 현재 절 표시를
+스크롤 중에 보지 못한다.** 그 대신 햄버거를 여는 순간 "지금 어느 절인지"가 이미 표시된 채로 열린다
+(스파이는 사이드바가 닫혀 있어도 돈다 — 옵저버 하나에 대상 ≤ 50개라 비용이 없다).
+이 블로그의 사이드바 고정은 사용자 본인이 요구한 기능이고(§3-2), 긴 글을 자주 읽는 사람이
+그것을 켜 두는 것이 이 설계의 전제다.
+
+**마크업** — `post.js`가 `renderSide()` 뒤에 끼운다(§3-2 트리 예시 참조).
+
+```html
+<a class="side-post" href="post.html?id=…" aria-current="page">클로저와 렉시컬 스코프</a>
+<ol class="side-toc" id="sideToc" aria-label="이 글의 목차">
+  <li><a class="side-toc-item is-h2" href="#lexical-scope" aria-current="location">렉시컬 스코프란</a></li>
+  <li><a class="side-toc-item is-h3" href="#execution-context">실행 컨텍스트와 환경 레코드</a></li>
+</ol>
+```
+
+| 규칙 | 내용 |
+|---|---|
+| 표시 조건 | **인라인 목차와 같다 — h2 3개 이상.** 조건이 둘이면 "왜 여기엔 있고 저기엔 없지"가 된다. 조건 미달이면 `.side-toc`를 만들지 않는다 |
+| 항목 | `markdown.js` `collectHeadings()`가 준 h2·h3 전부, 문서 순서. `href`는 인라인 목차와 같은 `#id`(`encodeURIComponent`) |
+| 등급 클래스 | `is-h2` / `is-h3` — 인라인 목차와 같은 생성 시 고정 클래스(§8). h3만 한 단계 들여쓴다 |
+| **현재 절 상태** | **`aria-current="location"`** 하나. 클래스(`is-active`)를 따로 붙이지 않는다 — 사이드바의 다른 상태와 같은 규칙("ARIA 속성이 곧 상태", §8). CSS는 `.side-toc-item[aria-current="location"]`으로 그린다: 액센트색 + 굵기 + 안내선 위에 2px 액센트 선(색만으로 말하지 않는다) |
+| 위치 | 현재 글 `.side-post[aria-current="page"]`의 **다음 형제**(같은 `<li>` 안). 그 요소가 없으면(글이 index.json에 없다) 끼우지 않는다 |
+| 인라인 `.toc` | **바뀌지 않는다. `.toc-item`에는 `aria-current`도 `is-active`도 붙이지 않는다** — 스크롤과 함께 화면 밖으로 나가는 박스에 "지금 여기"를 표시할 이유가 없다는 v3.0 근거는 그대로 맞다 |
+| 360px | 사이드바가 오버레이라 닫혀 있는 동안은 보이지 않는다. 스파이를 끄지는 않는다 — 열면 현재 절이 표시된 채 열린다. 별도 분기 없음 |
+| 사이드바 안 스크롤 | 현재 절 항목이 `.side-tree`의 보이는 영역 밖이면 **`scrollTop`을 직접 조정**해 안으로 들인다. `scrollIntoView()`는 쓰지 않는다 — 조상 스크롤 컨테이너를 전부 건드려 본문 스크롤까지 움직일 수 있다 |
+
+**JS가 할 일(`post.js`, 한 문단)** — `render()`가 `result.headings`를 얻고 `renderSide()`의 Promise가
+끝난 뒤(둘 다 비동기라 둘 중 나중 것이 `mountSideToc()`를 부른다) h2가 3개 이상이면 위 마크업을 만들어
+현재 글 아래 끼운다. 그다음 `IntersectionObserver`를 하나 만들어 모든 제목 요소(`heading.el`)를
+`rootMargin: '0px 0px -60% 0px'`(화면 위쪽 40% 띠) · `threshold: 0`으로 관찰한다. 콜백은 "어느 제목이
+띠를 건넜다"는 신호로만 쓰고, 실제 판정은 매번 다시 계산한다 — **`top ≤ innerHeight × 0.4`인 마지막
+제목**이 현재 절이다(제목 수 ≤ 50이라 `getBoundingClientRect()` 전수 조회가 싸다). 아무 제목도 그 선을
+넘지 않았으면(글 머리) 현재 절이 없다 — 어느 항목에도 붙이지 않는다. 판정이 바뀌면 이전 항목의
+`aria-current`를 떼고 새 항목에 `"location"`을 붙이고, 그 항목이 `.side-tree` 밖이면 `scrollTop`을 맞춘다.
+`hashchange`(목차 클릭·직접 링크)에서는 해시의 id로 즉시 같은 갱신을 한다. `IntersectionObserver`가
+없는 브라우저면 스파이만 건너뛴다(목차는 링크로서 그대로 동작). 스크롤 핸들러·rAF는 쓰지 않는다.
+
+---
+
+**v3.0의 결정(기록용): 사이드바형 목차는 폐기, 본문 위 인라인 목차는 유지. 조건은 h2 3개 이상.**
+아래 표와 항목은 인라인 목차의 근거로 여전히 유효하다. `.toc-item.is-active`는 v3.3에서도 없다.
 
 | | 사이드바형(v2.3) | 인라인형(v3.0) |
 |---|---|---|
@@ -741,9 +830,10 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
 - **표시 조건: `h2`가 3개 이상**(v2.3은 "제목 2개 이상"이었다).
   이 블로그의 글은 대부분 "메모"라 h2가 0~2개다. 그 글들에는 목차가 나오지 않는다.
   진짜 긴 정리글에서만 나타나야 목차가 **기능**이지 장식이 아니다.
-- `.toc-item.is-h2` / `.is-h3` 는 유지한다(h3만 들여쓴다).
-  **`.is-active`와 스크롤 스파이는 폐기한다** — 화면에서 스크롤과 함께 사라지는 박스에
-  "지금 여기"를 표시할 이유가 없다. 이 결정으로 `post.js`의 rAF 스크롤 핸들러가 사라진다.
+- `.toc-item.is-h2` / `.is-h3` 는 유지한다(h3만 들여쓴다. **v3.3: 크기는 h2 항목과 같은 `--fs-sm`** —
+  12px로 내려 두었더니 목차에서 가장 읽기 힘든 글자가 됐다. 등급은 들여쓰기와 색(mute)이 말한다).
+  **인라인 박스의 `.is-active`는 없다** — 화면에서 스크롤과 함께 사라지는 박스에
+  "지금 여기"를 표시할 이유가 없다. 현재 절 표시는 v3.3부터 사이드바 `.side-toc`가 맡는다(위).
 - 제목의 `id` 생성은 **유지한다**(`markdown.js`). 목차가 없는 글에서도
   특정 절로 직접 링크를 걸 수 있는 것은 그 자체로 쓸모가 있다.
 
@@ -780,6 +870,69 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
     `aria-label`에 있다 — 빼지 않으면 언어명을 두 번 읽는다).
   - 언어가 없으면 `TEXT`로 채운다. 라벨 칸을 비우면 머리띠 높이가 블록마다 달라진다.
 - 표는 `.table-wrap` 안의 `.prose table` — 규칙 전체는 §7-1.
+- **코드블록 안 `pre`의 여백(v3.3 수정)**: `.prose pre`(JS 실패 시 폴백)의 `margin-block: --sp-7`이
+  `.code-wrap > pre`에도 먹어 머리띠와 첫 줄 사이에 52px 빈 띠가 있었다(특이도가 같아 뒤 규칙이 이겼다).
+  `prose.css`가 `.prose .code-wrap > pre { margin: 0 }`로 고쳤다. 마크업은 그대로다.
+
+### 5-8. 연관 글 `.post-related` (v3.3 신설)
+
+> **사용자 요청(원문): "연관 글 자동 추천 — 같은 태그·같은 분류 글을 상세 하단에 3개 표시".**
+
+**위치: `.post-foot` 다음, `.post-nav` 앞.** 글을 다 읽은 자리에서 먼저 보여야 하는 것은
+"같은 주제의 다른 글"(연관)이고, 시간순 이웃(이전/다음)은 그다음이다. 이전/다음은 두 줄짜리라
+맨 아래에 있어도 잃을 것이 없다.
+
+**카드는 목록의 `.entry`(§4-4)를 그대로 쓴다.** 같은 물건(글 한 편)은 두 화면에서 같은 모양이어야
+같은 것으로 읽힌다. 시각적으로 구분할 필요는 소제목 "연관 글"과 자리(글 아래)가 이미 채운다.
+목록 카드와 다른 점은 **둘뿐**이고 전부 CSS가 처리한다 — 720px 칼럼(내용폭 656px)에 세 장이 들어가도록
+카드 최소폭 17rem → 13rem, 제목 `--fs-lg` → `--fs-md`(208px 카드에 19px은 한 줄 10자).
+
+```html
+<section class="post-related" id="postRelated" aria-labelledby="postRelatedTitle" hidden>
+  <h2 class="post-related-title" id="postRelatedTitle">연관 글</h2>
+  <ul class="entry-list" id="postRelatedList">
+    <li class="entry">
+      <span class="entry-cat">CSS</span>                        <!-- 그 글의 분류명. 미분류면 생략(§4-4와 같음) -->
+      <a class="entry-title" href="post.html?id=…">CSS Grid 정리</a>
+      <div class="entry-meta">
+        <time class="entry-date" datetime="2026-09-13">2026.09.13</time>   <!-- created -->
+        <ul class="entry-tags" aria-label="겹치는 태그">           <!-- 현재 글과 겹치는 태그만. 0개면 <ul> 생략 -->
+          <li class="entry-tag">css</li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+</section>
+```
+
+| 규칙 | 내용 |
+|---|---|
+| 카드 내용물 | 분류(`.entry-cat`) / 제목 / 게시일 / **겹치는 태그만**. 전체 태그를 다 적으면 "왜 이 글이 연관인지"가 안 보인다. 분류만 같아서 뽑힌 글은 태그 줄이 없고 `.entry-cat`이 그 이유를 말한다 |
+| 태그 순서 | 그 글의 `tags` 순서 그대로(현재 글 순서가 아니다 — 카드는 그 글의 것) |
+| `.is-pinned` | **붙이지 않는다.** 고정은 목록의 정렬 정보라 여기서는 뜻이 없다 |
+| 빈 상태 | 점수 > 0인 글이 없으면 `#postRelated`는 `hidden` 그대로. **"연관 글이 없습니다" 같은 문구를 두지 않는다** |
+| 개수 | 최대 3. 3개 미만이면 있는 만큼(1개여도 그린다) |
+| 링크 면적 | 카드 전체(`.entry-title::after`, §4-4). Tab 정지점은 제목 하나 |
+| 로딩 실패 | `index.json`이 없으면 그리지 않는다(본문은 그대로) |
+
+**점수 규칙 — `post.js`가 그대로 구현한다.** 후보 = `index.json`의 글 전부에서 **자기 자신 제외**.
+
+| 항목 | 점수 | 왜 이 값인가 |
+|---|---|---|
+| 겹치는 태그 1개당 | **+2** | 태그는 분류보다 잘다. 분류 "JavaScript"에 100편이 있어도 태그 `closure`는 서너 편이다. 태그 하나가 분류 하나보다 많은 것을 말하므로 두 배다 |
+| 같은 분류 | **+1** | 태그가 하나도 안 겹쳐도 같은 분류면 후보다(사용자 원문 "같은 태그·같은 분류"). 그리고 태그 1개 + 같은 분류(3)가 태그 1개 + 다른 분류(2)를 이겨 **분류가 동점 처리기**로 작동한다 |
+| 동점 | `created` 내림차순 | 학습 기록의 기본 순서(§4-4). 같은 값이면 최신 글이 더 이어 읽을 만하다 |
+| 점수 0 | 제외 | 태그도 분류도 안 겹치면 연관이 아니다. 채우려고 아무 글이나 넣지 않는다 |
+
+- 태그 비교는 **`trim()` + 소문자**로 한다(`CSS`와 `css`는 같은 태그). 분류 비교는 `store.categorySlug()`
+  결과로 한다(`.md`에 한글 이름이 적혀 있어도 slug로 맞춘다 — `driftKeys()`와 같은 방법).
+- `pinned`·`updated`·`summary`는 점수에 들어가지 않는다.
+- 상위 3개를 **점수 내림차순 → created 내림차순** 순서로 그린다. 순서가 곧 "가장 가까운 글부터"다.
+
+**JS가 할 일(`post.js`)** — `render()` 안에서 `renderNav(meta.id)` 옆에 `renderRelated(meta)`.
+후보는 `store.getIndexSync().posts`(loadPost가 loadIndex를 먼저 기다리므로 그 시점엔 있다).
+카드 빌더는 `app.js`의 `entryRow()`와 **같은 마크업**이어야 한다 — `util.js`로 옮겨 `U.entryCard(post, { tags })`
+하나를 두 파일이 쓰는 것을 권한다(둘 다 frontend-dev 소유). `is-hidden`/`is-pinned`는 붙이지 않는다.
 
 ---
 
@@ -813,9 +966,20 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
       <button class="btn btn-ghost" type="button" id="btnCancelCat">취소</button>
     </div>
 
+    <!-- v3.3: 라벨이 보인다. 셋 다 .field-group으로 묶는다(고정 스위치는 그대로) -->
     <div class="editor-fields">
-      <input class="field" id="fSummary"> <input class="field" id="fTags">
-      <input class="field" id="fId">
+      <div class="field-group">
+        <label class="field-label" for="fSummary">한 줄 요약</label>
+        <input class="field" id="fSummary" placeholder="예: auto-fill과 minmax로 반응형 그리드 만들기">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="fTags">태그 (쉼표로 구분)</label>
+        <input class="field" id="fTags" placeholder="css, layout">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="fId">파일 id</label>
+        <input class="field" id="fId" placeholder="제목에서 자동 생성">
+      </div>
       <label class="switch"><input type="checkbox" id="fPinned"><span class="switch-ui"></span>고정</label>
     </div>
 
@@ -850,6 +1014,12 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
   → `.editor-actions` → `.editor-status`.
   분류는 **글이 저장될 폴더(`posts/<slug>/`)를 정하는 유일한 필드**라 요약·태그보다 앞이다.
   읽는 화면(§4의 분류 → 검색)과 쓰는 화면에서 축의 순서가 뒤집히면 안 된다.
+- **`.editor-fields`의 요약·태그·id는 `.field-group`(라벨 + 입력칸) 셋이다(v3.3).** v3.2까지 라벨이
+  `.sr-only`라 기존 글을 열면 값이 찬 상자 셋이 이름 없이 놓였다 — "함수가 선언된 위치의 스코프를…" /
+  "js, scope, closure" / "2026-09-15-closure" 중 어느 칸이 무엇인지는 값을 읽고 추측해야 했다.
+  placeholder는 입력을 시작하면 사라지는 라벨이라 라벨이 아니다. `title` 속성은 뗀다(툴팁은 터치·키보드에서
+  안 보인다 — §9-3과 같은 근거). 라벨 문구: `한 줄 요약` / `태그 (쉼표로 구분)` / `파일 id`.
+  placeholder는 **예시 값**으로 바꾼다(라벨이 이름을 맡았으니 placeholder는 형식을 보여 준다).
 - `.cat-new-hint`는 **입력칸보다 먼저** 온다. slug를 되돌릴 수 없다는 사실은 타이핑 전에 읽혀야 한다.
 - `.cat-new`는 `hidden` 속성으로만 토글한다.
 - `.editor-split[data-mode]` : `split` / `write` / `preview`. 1024px 미만에서는 세로로 쌓인다.
@@ -868,6 +1038,9 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
 .side .side-head .side-title .side-pin .side-close .side-tree .side-scrim         (v3.2 — §3-2)
 .side-cats .side-cat .side-cat-row .side-cat-name .side-cat-count .side-cat-toggle
 .side-posts .side-post .side-empty                                               (ui.js가 그린다)
+.side-toc .side-toc-item                                (v3.3 — post.js가 현재 글 아래 끼운다, §5-4)
+.post-related .post-related-title                       (v3.3 — §5-8. 안의 카드는 .entry 계열 재사용)
+.field-group .field-label                               (v3.3 — 에디터 입력칸 라벨, §6)
 .tag
 .toast .toast.is-ok .toast.is-warn .toast.is-err
 .modal .modal-panel .modal-head .modal-body .modal-foot  (열림: body.modal-open + .modal.is-open)
@@ -945,7 +1118,7 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
 
 **생성 시점에 정해져 바뀌지 않는 분류 클래스**
 
-`is-h2` `is-h3` — 목차 항목의 등급(`markdown.js`)
+`is-h2` `is-h3` — 목차 항목의 등급(`markdown.js`의 `.toc-item`, **v3.3: `post.js`의 `.side-toc-item`도 같은 클래스**)
 `is-prev` `is-next` — 이전/다음 링크(`post.js`)
 `is-ok` `is-warn` `is-err` — 토스트 종류(`ui.js`)
 
@@ -961,7 +1134,10 @@ v3.2: `정체(제목) → 축으로 좁히기(분류) → 찾기(검색) → 태
 
 사이드바 버튼의 상태는 클래스가 아니라 **ARIA 속성**이 곧 상태다 — `.side-toggle[aria-expanded]`,
 `.side-pin[aria-pressed]`, `.side-cat-toggle[aria-expanded]`, `.side-post[aria-current="page"]`,
-`.side-cat-name[aria-current="true"]`. CSS는 이 속성 선택자로 그린다. 클래스를 따로 붙이지 않는다.
+`.side-cat-name[aria-current="true"]`, **`.side-toc-item[aria-current="location"]`(v3.3 — 현재 절, 스크롤
+스파이가 옮긴다)**. CSS는 이 속성 선택자로 그린다. 클래스를 따로 붙이지 않는다.
+`aria-current`의 값 셋은 뜻이 다르다: `page` = 지금 열린 문서, `true` = 걸린 필터, `location` = 문서 안의 현재 위치.
+한 `<nav>` 안에 `page`와 `location`이 동시에 있는 것은 정상이다(글과 그 글 안의 절).
 
 ### 8-1. 모션이 JS 타이밍에 거는 제약
 
@@ -1098,6 +1274,7 @@ tokens → base → layout → components → prose
 | **스크림 `.side-scrim` (v3.2)** | `opacity` + `visibility` | 등장 `--dur-fast`, 퇴장 `--dur`(패널과 함께 사라진다) |
 | **도킹 시 본문 밀기 `body` (v3.2)** | `padding-inline-start` | `--dur` + `--ease`. 첫 페인트(`html[data-side]`)에는 이전 값이 없어 걸리지 않는다 |
 | 사이드바 안의 핀·쉐브론 | `rotate` / `translate` | `--dur-fast` |
+| **`.side-toc-item` (v3.3)** | `color` / `background-color` — `.side-post`와 같다. 현재 절이 옮겨 갈 때 색이 건너간다(위치·크기 모션 없음) | `--dur-fast` |
 
 **테마 크로스페이드의 작동 방식 (v3.1, JS 0줄)** — 사용자 요청 *"다크·라이트 바꾸는 속도
 살짝만 줄여서 자연스럽게"*.
@@ -1146,6 +1323,10 @@ tokens → base → layout → components → prose
 | **`.side-title` `.side-pin` `.side-close` `.side-cat*` `.side-posts` `.side-post` `.side-empty`의 생김새 + `.side-toggle` 아이콘** | `components.css` §15 (햄버거는 §5 테마 아이콘 옆) |
 | **`.list-page` `.list-tools`의 배치, `.entry-list` 그리드, `.entry-meta`의 바닥 정렬** | `layout.css` |
 | **`.entry-cat`의 생김새** | `components.css` §4 |
+| **`.post-related`의 여백·경계선·그리드 열(13rem)** (v3.3) | `layout.css` §7 |
+| **`.post-related-title` + `.post-related .entry-title` 크기 보정** (v3.3) | `components.css` §7 |
+| **`.side-toc` `.side-toc-item`** (v3.3) | `components.css` §15 (사이드바 부품 옆) |
+| **`.field-group` `.field-label`** (v3.3) | `components.css` §11 (`.editor-fields`의 `align-items`만 `layout.css`) |
 
 ### 11-2. 리터럴 금지의 범위
 
@@ -1165,7 +1346,7 @@ tokens → base → layout → components → prose
 | 토큰 | coarse | 사용처 |
 |---|---|---|
 | `--h-control` | 40 → 44 | `.btn` `.icon-btn` `.search-input` `.field` `.switch` `.sr-only:focus` — **`.entry-title`은 v3.1에서 빠졌다.** 목록의 터치 타깃은 박스 전체(`.entry-title::after`, §4-4)이고 박스 높이는 패딩만으로 44px을 넘는다 |
-| `--h-control-sm` | 32 → 44 | `.index-item` `.index-fold-summary` `a.post-cat` `.post-tags .tag` `.md-btn` `.code-copy` `.prose summary` `.toc-item` **+ v3.2: `.search-input` `.side-cat-name` `.side-cat-toggle` `.side-post`** |
+| `--h-control-sm` | 32 → 44 | `.index-item` `.index-fold-summary` `a.post-cat` `.post-tags .tag` `.md-btn` `.code-copy` `.prose summary` `.toc-item` **+ v3.2: `.search-input` `.side-cat-name` `.side-cat-toggle` `.side-post`** **+ v3.3: `.side-toc-item`** |
 | `--h-nav` | 36 → 44 | `.nav-link` `.brand` `.back-link` |
 | `--h-control-xs` | **24 → 36**(v3.2) | `.search-clear` (하나뿐 — 인풋 안에 들어앉는 원판은 인풋보다 한 단계 작아야 "입력칸"으로 보인다) |
 
@@ -1181,7 +1362,7 @@ tokens → base → layout → components → prose
 | 분기 | 방향 | 무엇이 바뀌는가 |
 |---|---|---|
 | 360px | (기준선) | 여기서 가로 스크롤이 생기면 실패다. 분기 자체는 없다 |
-| 440px | `max-width` | 본문 코드·인용·표·목록의 좌우 패딩 압축 / `.entry` 카드 패딩 `--sp-5` → `--sp-4` |
+| 440px | `max-width` | 본문 코드·인용·표·목록의 좌우 패딩 압축 / `.entry` 카드 패딩 `--sp-5` → `--sp-4` / **v3.3: `.prose` `.post-summary`의 `word-break: keep-all` → `normal`**(360px에서 한 줄 17자인데 어절 보존이 줄마다 3~6자를 비웠다 — 본문·요약만, 제목·카드·사이드바는 그대로 keep-all) |
 | 768px | `max-width` | **`.list-tools` 세로 스택**(DOM 순서: 분류 → 검색, v3.2) |
 | 768px | `min-width` | `.post-nav` 1열 → 2열, 토스트가 오른쪽 아래로 |
 | 1024px | `min-width` | 에디터 split 2열, **사이드바 도킹**(`body.side-open.side-pinned` / `html[data-side="pinned"]` → 본문 `padding-inline-start: --w-side`, 그림자·스크림·스크롤 잠금 해제) |
@@ -1321,9 +1502,79 @@ CSS는 web-designer가 v3.2로 교체했다. 사양서(PM 배포)와 이 계약�
 | 46 | `theme-init.js` (frontend-dev-2, PM 판정) | `blogSide` 읽어 `pinned && innerWidth ≥ 1024`면 `document.documentElement.dataset.side = 'pinned'` |
 | 47 | `config.js` | `storageKeys.side = 'blogSide'` |
 
+### 12-9. v3.3 이행 — 연관 글 · 스크롤 스파이 · 에디터 라벨
+
+CSS는 web-designer가 v3.3으로 교체했다. **`ui.js`는 손대지 않는다** — `renderSide()` API 그대로.
+
+| # | 파일 | 담당 | 할 일 |
+|---|---|---|---|
+| 48 | `post.html` | frontend-dev | `.post-foot` 뒤·`.post-nav` 앞에 §5의 `<section class="post-related" id="postRelated" … hidden>` 골격(소제목 + 빈 `<ul class="entry-list" id="postRelatedList">`). 그 밖의 마크업 변경 없음 |
+| 49 | `post.js` `renderRelated(meta)` | frontend-dev | §5-8 점수 규칙 그대로. `render()`에서 `renderNav()` 옆에서 호출. 카드는 `.entry-cat → .entry-title → .entry-meta(.entry-date + 겹치는 태그만 .entry-tags)`. 0개면 `hidden` 유지, 있으면 `hidden` 제거 |
+| 50 | `util.js` (권장) | frontend-dev | `entryRow()`의 카드 빌더를 `U.entryCard(post, { tags })`로 옮겨 `app.js`·`post.js`가 공유. 마크업 출처가 둘이면 한쪽만 고쳐진다 |
+| 51 | `post.js` `mountSideToc(headings)` | frontend-dev | §5-4 마크업. `render()`의 `result.headings`와 `renderSide()` Promise가 **둘 다** 끝난 뒤 한 번. h2 < 3이면 아무것도 안 한다. `.side-post[aria-current="page"]` 다음 형제로 `ol.side-toc#sideToc` |
+| 52 | `post.js` `initSpy(headings, items)` | frontend-dev | §5-4의 "JS가 할 일" 문단 그대로 — IO(`rootMargin '0px 0px -60% 0px'`, threshold 0) + `hashchange`. 판정: `top ≤ innerHeight × 0.4`인 마지막 제목. `aria-current="location"` 이동, `.side-tree.scrollTop` 보정. **스크롤 핸들러·rAF 금지.** 파일 머리 주석 "이 파일에 스크롤 핸들러는 없다"는 그대로 참이어야 한다 |
+| 53 | `write.html` | frontend-dev-2 | `.editor-fields`의 요약·태그·id 셋을 `.field-group > label.field-label + input.field`로. `label`의 `sr-only` 제거, `title` 속성 제거, placeholder를 예시 값으로(§6). `editor.js` 변경 없음(id 그대로) |
+
+참고 구현(계약 그대로 옮긴 것이다 — 점수·정렬·3개 자르기):
+
+```js
+function relatedTo(meta, posts) {
+  var mySlug = store.categorySlug(meta.category);
+  var myTags = meta.tags.map(function (t) { return t.trim().toLowerCase(); });
+  return posts
+    .filter(function (p) { return p.id !== meta.id; })
+    .map(function (p) {
+      var shared = p.tags.filter(function (t) { return myTags.indexOf(t.trim().toLowerCase()) !== -1; });
+      var score = shared.length * 2 + (store.categorySlug(p.category) === mySlug ? 1 : 0);
+      return { post: p, shared: shared, score: score };
+    })
+    .filter(function (r) { return r.score > 0; })
+    .sort(function (a, b) {
+      return b.score - a.score || String(b.post.created).localeCompare(String(a.post.created));
+    })
+    .slice(0, 3);
+}
+```
+
 ---
 
 ## 13. 변경 이력
+
+### v3.3 (라운드 8) — 연관 글, 사이드바 목차 스크롤 스파이, 읽기 편의
+
+사용자 요청 원문: *"연관 글 자동 추천 — 같은 태그·같은 분류 글을 상세 하단에 3개 표시"* /
+*"목차 진행바 — 긴 글 읽을 때 현재 절을 목차에 표시(스크롤 스파이)"* /
+*"전체적으로 읽기 편하도록 편의성과 가독성 측면의 개선할 부분 개선해"*.
+
+| 절 | v3.2 | v3.3 |
+|---|---|---|
+| §3-2 | 트리 = 분류 → 글 | 트리 = 분류 → 글 → **절**(`ol.side-toc`, 현재 글 아래만, post.js가 끼움) |
+| §5 | `.post-foot` → `.post-nav` | `.post-foot` → **`.post-related`** → `.post-nav` |
+| §5-4 | 인라인 목차만, 스파이 폐기 | 인라인 목차 유지 + **사이드바 목차에 현재 절**(`aria-current="location"`, IO 하나). 후보 A/B/C 비교와 C의 한계 명시. `.toc-item.is-h3` 크기 `--fs-xs` → `--fs-sm` |
+| §5-7 | — | `.code-wrap > pre` 32px 마진 결함 기록(CSS 수정) |
+| §5-8 | 없음 | **신설** — 연관 글 구조·카드 재사용 근거·점수 규칙(태그 +2 / 분류 +1 / 동점 최신순 / 0점 제외 / 최대 3 / 0개면 hidden) |
+| §6 | 요약·태그·id 라벨 `sr-only` | **`.field-group` + `.field-label` 보이는 라벨**, placeholder는 예시 값 |
+| §7 §8 | — | `.side-toc*` `.post-related*` `.field-*` 등록. `is-h2/is-h3`가 `.side-toc-item`에도. `aria-current="location"` |
+| §11 | — | `.side-toc-item` 색 전환 1행. 11-1 분담 4행. 11-2 `.side-toc-item`. 11-3 440px에 `word-break` |
+| §12 | §12-8까지 | **§12-9 신설** — #48-53 + 점수 참고 구현 |
+
+**같은 라운드에 web-designer가 수행한 CSS 변경 — 읽기 편의 항목은 "무엇이 불편했고 → 어떻게 고쳤나"**
+
+- `prose.css`
+  - 코드블록: 머리띠와 첫 줄 사이 52px 빈 띠(`.prose pre`의 `margin-block` 32px이 `.code-wrap > pre`에 새어 들어옴 — 같은 특이도, 뒤 규칙 승) → `.prose .code-wrap > pre { margin: 0 }`로 순서·특이도 정리. 세로 패딩 `--sp-5` → `--sp-4`
+  - 인라인 코드가 줄 끝에서 `coun / t`, `ReferenceEr / ror`로 잘림(`word-break: break-all`) → `normal` + `overflow-wrap: anywhere`. 들어가는 토큰은 통째로 다음 줄, 못 들어가는 긴 토큰만 잘린다
+  - 440px 이하 `.prose` `word-break: normal` — 360px에서 어절 보존이 줄마다 3~6자를 비워 첫 문단 7줄 중 4줄이 60% 아래로 찼다 → 음절 단위 줄바꿈으로 줄이 찬다
+  - 440px 분기의 코드 패딩 선택자를 새 특이도에 맞춤(`.prose .code-wrap > pre`)
+- `components.css`
+  - 인덱스 항목 사이 `·`와 날짜 줄 `·`가 다크에서 안 보임(`--c-border` #3d392d ↔ 바탕 1.4:1) → `--c-text-mute`. 구분자는 "여기서 끊긴다"는 정보다
+  - 인라인 목차 h3 항목 12px(`--fs-xs`)이 목차에서 가장 읽기 힘든 글자 → h2와 같은 `--fs-sm`, 등급은 들여쓰기 + mute 색
+  - 사이드바 두 줄 말줄임 제목 아래로 세 번째 줄 머리 4px이 새어 나옴(`overflow: hidden`이 패딩 상자에서 자름) → `.side-post` 아래 패딩 0 + 아래 마진 4
+  - 신설: `.side-toc` `.side-toc-item`(현재 절 = 액센트 + 굵기 + 2px 선, border라 overflow에 안 잘림) / `.post-related-title` + 카드 제목 `--fs-md` / `.field-group` `.field-label`
+- `layout.css`
+  - 신설 `.post-related`(위 경계선·`--sp-9` 여백·13rem 열) / 440px에 `.post-summary word-break: normal` / `.editor-fields align-items: end`(라벨이 생겨 셀이 높아진 뒤 스위치가 반 칸 떠 보이지 않게)
+- `tokens.css` `base.css` — 변경 없음
+
+**점검했지만 바꾸지 않은 것(근거)** — 본문 줄길이 656px(칼럼 720 − 거터 64)·18.5px·행간 1.75 = 라틴 71자·한글 35자로 65~75자 안. h1 38 / h2 30 + 액센트 선 / h3 23 / h4 19 굵게 — 네 단계가 크기·여백으로 갈린다. 본문 링크 = 액센트색 + 밑줄(색만이 아니다). 표는 `.table-wrap` 가로 스크롤 + 헤더 행 면·굵기·실선. 상단 메타(날짜·분류·태그)는 제목 아래 두 줄, 제목보다 작고 낮은 색. 카드 제목은 자르지 않는다(그리드 행 높이가 따라간다), 터치 타깃 = 카드 전체. 사이드바 도킹 1024px에서 본문 720px 그대로(764 남음). 포커스 링은 `base.css :focus-visible` 전역 + 사이드바 안쪽 링. 다크 대비: 본문 15:1 / dim 8.3:1 / mute 6:1 / 액센트 7:1+ / 황토 8.9:1 / 자주 8.4:1.
 
 ### v3.2 (라운드 7) — 사이드바 신설, 카드 그리드, 컨트롤 축소, 목록 페이지 폭 확장
 
