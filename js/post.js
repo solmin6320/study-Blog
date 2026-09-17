@@ -48,7 +48,6 @@
   function fillSite(site) {
     if (!site) return;
     U.qsa('[data-site-title]').forEach(function (node) { node.textContent = site.title; });
-    U.qsa('[data-site-sub]').forEach(function (node) { node.textContent = site.subtitle; });
   }
 
   /* ---------- 머리말 ---------- */

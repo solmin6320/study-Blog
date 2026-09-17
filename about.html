@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<!-- CSP — index.html / post.html / write.html과 문자열이 같아야 한다(네 페이지가 한 정책).
+     GitHub Pages는 HTTP 헤더를 못 바꾸므로 <meta>가 유일한 수단이다.
+     인라인 <script> / <style> / style="…" / on*="…" / eval 을 전부 막는다.
+     그래서 이 파일에는 인라인 코드가 한 줄도 없어야 한다. 테마 초기화도 js/theme-init.js로 뺐다. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' https: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- 첫 페인트 전에 테마를 확정한다(FOUC 방지). 그래서 defer 없이 동기로 싣는다.
+     'blogTheme' 문자열은 config.js의 storageKeys.theme과 반드시 같아야 한다. -->
+<script src="js/theme-init.js"></script>
+
+<title>소개 · 메모 블로그</title>
+<meta name="description" content="">
+<meta name="color-scheme" content="light dark">
+<!-- 파비콘 404 요청을 만들지 않기 위한 빈 아이콘 -->
+<link rel="icon" href="data:,">
+
+<!-- 로드 순서 고정: tokens → base → layout → components → prose (계약서 §11) -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/prose.css">
+
+<!-- 소개는 정적 HTML이다(계약서 §3-4). 마크다운을 렌더하지 않으므로
+     marked / DOMPurify / highlight.js 와 js/markdown.js는 싣지 않는다 — JS가 실패해도 본문은 남는다.
+     JS가 하는 일은 셸(테마·사이드바·관리자 표시)과 사이트명 채우기뿐이다. -->
+<script defer src="js/config.js"></script>
+<script defer src="js/util.js"></script>
+<script defer src="js/store.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/admin.js"></script>
+<script defer src="js/about.js"></script>
+</head>
+
+<body>
+<a class="sr-only" href="#main">본문 바로가기</a>
+
+<!-- 헤더는 static이다. sticky도, 밑선도, 로고 마크도 없다(계약서 §3).
+     햄버거는 첫 자식이다 — CSS가 흐름에서 빼 화면 왼쪽 끝(absolute)에 앉힌다. DOM 순서는 그대로라
+     Tab 순서(햄버거 → 브랜드 → 내비 → 테마)는 변하지 않는다.
+     아이콘은 CSS ::before가 그린다(테마 버튼과 같은 방식). 네 페이지 마크업이 같아야 한다. -->
+<header class="site-header">
+  <button class="icon-btn side-toggle" id="sideToggle" type="button"
+          aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
+  <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
+  <!-- 항목·순서는 네 페이지가 동일하다(계약서 §3-3). 현재 페이지 표시는 aria-current="page" — 이 페이지는 "소개". -->
+  <nav class="site-nav" aria-label="주요 메뉴">
+    <a class="nav-link" href="index.html">글</a>
+    <a class="nav-link" href="index.html#tags">태그</a>
+    <a class="nav-link" href="about.html" aria-current="page">소개</a>
+    <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
+  </nav>
+  <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
+</header>
+
+<!-- 사이드바 — 분류별 글 목록. 네 페이지 마크업이 바이트 단위로 같다(계약서 §3-2).
+     <header> 뒤·<main> 앞에 두는 이유: Tab 순서가 햄버거 → 사이드바 → 본문이 되어야
+     열자마자 다음 Tab이 사이드바 안으로 들어간다. #sideTree는 ui.js renderSide()가 채운다.
+     열림·고정 상태는 <body> 클래스(side-open / side-pinned)로, ui.js가 붙인다. -->
+<aside class="side" id="side" aria-label="분류별 글 목록">
+  <div class="side-head">
+    <span class="side-title">분류</span>
+    <button class="icon-btn side-pin" id="sidePin" type="button"
+            aria-label="사이드바 고정" aria-pressed="false"></button>
+    <button class="icon-btn side-close" id="sideClose" type="button" aria-label="닫기"></button>
+  </div>
+  <nav class="side-tree" id="sideTree"></nav>
+</aside>
+<!-- 오버레이 모드에서만 보인다(고정 도킹이면 스크림 없음). hidden 토글은 ui.js 몫. -->
+<div class="side-scrim" id="sideScrim" hidden></div>
+
+<!-- tabindex="-1"은 스킵 링크의 착지점이다. 없으면 스크롤만 되고 포커스는 헤더에 남는다(계약서 §3-1).
+     읽는 화면이라 폭은 --w-prose(720px) — list-page / editor-page를 붙이지 않는다(§3-4). -->
+<main class="site-main" id="main" tabindex="-1">
+
+  <!-- post.html의 부품을 그대로 쓴다 — 새 클래스 0개. is-loading 없음: 정적 내용이라 로딩 상태가 없다.
+       .post-summary / .post-dates / .post-meta / .back-link / .post-foot / .post-related / .post-nav는
+       글의 부품이라 여기엔 두지 않는다(§3-4). -->
+  <article class="post">
+    <header class="post-head">
+      <h1 class="post-title">소개</h1>
+    </header>
+    <!-- 내용은 사용자가 직접 쓴다. 마크다운이 아니라 HTML 그대로 — .prose 안 태그 셀렉터가 스타일을 입힌다(§5-7). -->
+    <div class="prose">
+      <p>여기에 소개를 씁니다.</p>
+    </div>
+  </article>
+
+</main>
+
+<footer class="site-footer">
+  <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
+  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+</footer>
+
+<div class="toast-area" id="toastArea" aria-live="polite"></div>
+</body>
+</html>

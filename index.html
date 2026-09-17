@@ -42,15 +42,19 @@
 <a class="sr-only" href="#main">본문 바로가기</a>
 
 <!-- 헤더는 static이다. sticky도, 밑선도, 로고 마크도 없다(계약서 §3).
-     햄버거는 첫 자식이다 — 사이드바가 왼쪽에서 나오므로 여는 버튼도 왼쪽 끝에 있어야 한다.
-     아이콘은 CSS ::before가 그린다(테마 버튼과 같은 방식). 세 페이지 마크업이 같아야 한다. -->
+     햄버거는 첫 자식이다 — CSS가 흐름에서 빼 화면 왼쪽 끝(absolute)에 앉힌다. DOM 순서는 그대로라
+     Tab 순서(햄버거 → 브랜드 → 내비 → 테마)는 변하지 않는다.
+     아이콘은 CSS ::before가 그린다(테마 버튼과 같은 방식). 네 페이지 마크업이 같아야 한다. -->
 <header class="site-header">
   <button class="icon-btn side-toggle" id="sideToggle" type="button"
           aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
-  <!-- 항목은 세 페이지가 동일하다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
+  <!-- 항목·순서는 네 페이지가 동일하다(계약서 §3-3). 현재 페이지 표시는 클래스가 아니라 aria-current="page" —
+       이 페이지는 "글". "태그"는 문서가 아니라 문서 안의 위치(#tags)라 어디서도 page를 받지 않는다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
-    <a class="nav-link is-active" href="index.html">글</a>
+    <a class="nav-link" href="index.html" aria-current="page">글</a>
+    <a class="nav-link" href="index.html#tags">태그</a>
+    <a class="nav-link" href="about.html">소개</a>
     <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
@@ -76,24 +80,12 @@
      list-page: 목록만 폭을 넓힌다(--w-page). 카드 그리드가 2~3열이 되려면 720px로는 모자란다. -->
 <main class="site-main list-page" id="main" tabindex="-1">
 
-  <!-- DOM 순서 = 시선 순서 = Tab 순서: 정체 → 좁히기(분류) → 찾기(검색) → 태그 → 목록 (계약서 §4).
-       v3.2에서 분류가 검색보다 앞으로 왔다 — 툴 행에서 분류가 왼쪽, 검색이 오른쪽에 놓이므로
-       읽는 순서와 Tab 순서를 화면 배치에 맞춘 것이다. -->
+  <!-- DOM 순서 = 시선 순서 = Tab 순서: 정체 → 찾기(검색) → 좁히기(분류) → 태그 → 목록 (계약서 §4).
+       v3.4 머리말은 제목 + 검색, 가운데 정렬. 부제(.page-sub)는 사용자 요청으로 폐기됐다 —
+       사이트를 설명하는 문장은 about.html이 맡는다(§3-4). -->
   <div class="page-head">
     <h1 class="page-title" data-site-title>메모 블로그</h1>
-    <p class="page-sub" data-site-sub>공부한 것을 기록하는 곳</p>
-  </div>
-
-  <!-- 툴 행 — 분류 인덱스(왼쪽) + 검색(오른쪽) 한 줄. 768px 이하에서는 CSS가 세로로 쌓는다(검색 위). -->
-  <div class="list-tools">
-    <!-- 분류 인덱스 — 항상 펼쳐져 있다. 항목은 app.js가 그린다.
-         분류가 하나도 없으면 행 전체가 hidden이 된다(계약서 §4-3):
-         "분류  전체 0" 한 줄은 정보가 아니라 고장으로 읽힌다. 그래서 시작 상태도 hidden이다. -->
-    <div class="index-row" id="catRow" hidden>
-      <span class="index-label" id="catIndexLabel">분류</span>
-      <nav class="index-list" id="catIndex" aria-labelledby="catIndexLabel"></nav>
-    </div>
-
+    <!-- 검색은 <h1>의 다음 자식. "고정"은 sticky가 아니라 자리 고정이다(§4-2) — 어디서든 "/"가 여기로 데려온다. -->
     <div class="search">
       <label class="sr-only" for="searchInput">글 검색</label>
       <input class="search-input" id="searchInput" type="search"
@@ -103,9 +95,18 @@
     </div>
   </div>
 
+  <!-- 분류 인덱스 — <main> 직계(.list-tools 래퍼는 v3.4에서 폐기). 항상 펼쳐져 있다. 항목은 app.js가 그린다.
+       분류가 하나도 없으면 행 전체가 hidden이 된다(계약서 §4-3):
+       "분류  전체 0" 한 줄은 정보가 아니라 고장으로 읽힌다. 그래서 시작 상태도 hidden이다. -->
+  <div class="index-row" id="catRow" hidden>
+    <span class="index-label" id="catIndexLabel">분류</span>
+    <nav class="index-list" id="catIndex" aria-labelledby="catIndexLabel"></nav>
+  </div>
+
   <!-- 태그 인덱스 — 접혀 있다. 여닫는 일은 <details>가 한다(JS 0줄).
-       태그가 하나도 없으면 손잡이째 사라진다(hidden). ?tags= 가 있으면 app.js가 open을 붙인다. -->
-  <details class="index-fold" id="tagFold" hidden>
+       태그가 하나도 없으면 손잡이째 사라진다(hidden). ?tags= 가 있거나 주소 해시가 #tags면 app.js가 open을 붙인다.
+       id="tags"는 헤더 "태그" 링크(index.html#tags)의 앵커 대상이다(계약서 §3-3). -->
+  <details class="index-fold" id="tags" hidden>
     <summary class="index-fold-summary">태그 <span class="index-count">0</span></summary>
     <div class="index-row">
       <nav class="index-list" id="tagIndex" aria-label="태그 필터"></nav>

@@ -58,14 +58,17 @@
 <!-- 계약서 §3-1: 세 페이지 모두 #main으로 간다. #postBody는 렌더 전에는 빈 컨테이너다. -->
 <a class="sr-only" href="#main">본문 바로가기</a>
 
-<!-- 햄버거는 첫 자식이다 — 사이드바가 왼쪽에서 나오므로 여는 버튼도 왼쪽 끝에 있어야 한다.
-     아이콘은 CSS ::before가 그린다. 헤더·사이드바 마크업은 index.html과 바이트 단위로 같다. -->
+<!-- 햄버거는 첫 자식이다 — CSS가 흐름에서 빼 화면 왼쪽 끝(absolute)에 앉힌다. DOM 순서는 그대로다.
+     아이콘은 CSS ::before가 그린다. 헤더·사이드바 마크업은 index.html과 같다(내비 aria-current만 다르다). -->
 <header class="site-header">
   <button class="icon-btn side-toggle" id="sideToggle" type="button"
           aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
+  <!-- 이 페이지에는 aria-current="page"가 없다 — 글 한 편은 목록이 아니다. 돌아가는 길은 ← 목록이 맡는다(계약서 §3-3). -->
   <nav class="site-nav" aria-label="주요 메뉴">
     <a class="nav-link" href="index.html">글</a>
+    <a class="nav-link" href="index.html#tags">태그</a>
+    <a class="nav-link" href="about.html">소개</a>
     <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>

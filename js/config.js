@@ -7,7 +7,7 @@
 
   Blog.config = {
     /* index.json의 site 값이 있으면 로드 시 이 값을 덮어쓴다(파일이 진실).
-       subtitle은 .page-sub 한 줄이다(계약서 §4-2). 두 줄이 되면 문장을 줄인다. */
+       subtitle은 화면에 그리지 않는다(v3.4, 계약서 §4-2 — .page-sub 폐기). 데이터로만 남는다. */
     site: {
       title: '메모 블로그',
       subtitle: '공부한 것을 기록하는 곳'

@@ -296,6 +296,15 @@
     /* 주소에 태그 필터가 걸려 있는데 그 필터가 접혀 있으면 사용자는 왜 글이 3편뿐인지 알 수 없다.
        그래서 열기만 하고 닫지는 않는다 — 닫는 것은 사용자의 몫이다(계약서 §4-3). */
     if (state.tags.length) dom.tagFold.setAttribute('open', '');
+    openTagsFromHash();
+  }
+
+  /* 헤더의 "태그"(index.html#tags)로 왔으면 접힌 손잡이를 열어 준다(계약서 §3-3).
+     스크롤은 브라우저 앵커 이동에 맡긴다. 태그가 0개라 hidden이면 열어도 보이지 않으니 그대로 둔다.
+     여기도 열기만 한다 — 해시가 사라졌다고 닫으면 사용자가 손으로 연 상태까지 같이 닫힌다. */
+  function openTagsFromHash() {
+    if (!dom.tagFold) return;
+    if (window.location.hash === '#tags') dom.tagFold.open = true;
   }
 
   /* ---------- 사이드바 (사양 B) ----------
@@ -421,6 +430,9 @@
       renderList();
     });
 
+    /* 이미 index.html에 있는 채로 헤더의 "태그"를 누르면 페이지가 다시 열리지 않고 해시만 바뀐다. */
+    U.on(window, 'hashchange', openTagsFromHash);
+
     /* "/" 로 검색창 포커스 */
     U.on(document, 'keydown', function (e) {
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -436,7 +448,6 @@
 
   function fillSite(site) {
     U.qsa('[data-site-title]').forEach(function (n) { n.textContent = site.title; });
-    U.qsa('[data-site-sub]').forEach(function (n) { n.textContent = site.subtitle; });
     document.title = site.title;
   }
 
@@ -490,7 +501,7 @@
     dom.searchClear = U.qs('.search-clear');
     dom.catRow = document.getElementById('catRow');
     dom.catIndex = document.getElementById('catIndex');
-    dom.tagFold = document.getElementById('tagFold');
+    dom.tagFold = document.getElementById('tags');
     dom.tagIndex = document.getElementById('tagIndex');
     /* 손잡이의 개수 칸. #tagIndex 안에도 .index-count가 생기므로 summary로 범위를 좁힌다. */
     dom.tagTotal = U.qs('.index-fold-summary .index-count', dom.tagFold);
@@ -501,6 +512,7 @@
     /* 첫 로드에서만 주소를 정리한다(뒤로가기로 돌아온 항목까지 고쳐 쓰면 히스토리가 흔들린다). */
     if (readUrl()) writeUrl(false);
     syncControls();
+    openTagsFromHash();
     bind();
 
     /* "불러오는 중"은 마크업에서 hidden으로 시작한다. CSP가 <noscript> 안의 인라인 <style>을 막아
