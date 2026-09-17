@@ -1,8 +1,12 @@
-# 마크업 계약서 v3.4
+# 마크업 계약서 v3.5
 
 디자이너(CSS)와 개발자(HTML/JS)가 동시에 작업하기 위한 **단일 진실 공급원**.
 여기 없는 클래스를 임의로 만들지 않는다. 필요하면 이 문서를 먼저 갱신한다.
 
+> **v3.5 (2026-09-18) — 로컬 에디터 서버(`docs/api.md`) 연동: write.html에 "저장" 버튼 + 서버 연결 표시.**
+> 바뀐 절만 읽으려면: **§6(`.editor-actions` 마크업 — `#btnSave` · `.editor-server`, 상태 규칙)** · §7 ·
+> **§12-11(개발자 작업 #66-69, frontend-dev-2)** · §13. CSS는 교체됐다. 다른 화면은 v3.4 그대로다.
+>
 > **v3.4 (2026-09-18) — 사용자 요청 7건: 햄버거 왼쪽 끝 · 제목·검색 가운데 · 부제 삭제 · 내비 2항목 ·
 > 테마 전환 1.2초 · 은은한 모션.**
 > 바뀐 절만 읽으려면: §1-1(`about.html`) · §1-2(원칙 4) · §2(`--dur-theme` 1200ms · `--ease-fade` ·
@@ -1111,11 +1115,16 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
       <label class="switch"><input type="checkbox" id="fPinned"><span class="switch-ui"></span>고정</label>
     </div>
 
+    <!-- v3.5: 저장(서버 모드에서만) → 내보내기 → 서버 표시. DOM 순서 고정(§6-1) -->
     <div class="editor-actions">
-      <button class="btn" id="btnPreviewToggle">미리보기</button>
-      <button class="btn btn-primary" id="btnExport">파일로 내보내기</button>
+      <button class="btn" type="button" id="btnPreviewToggle">미리보기</button>
+      <button class="btn btn-primary" type="button" id="btnSave" hidden
+              title="저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장</button>
+      <button class="btn btn-primary" type="button" id="btnExport"
+              title="파일로 내보내기 (Ctrl+S)" aria-keyshortcuts="Control+S">파일로 내보내기</button>
+      <span class="editor-server" id="editorServer" hidden>로컬 서버 연결됨</span>
     </div>
-    <p class="editor-status" id="editorStatus">저장됨</p>
+    <p class="editor-status" id="editorStatus" role="status" aria-live="polite">저장됨</p>
   </div>
 
   <div class="editor-split" id="editorSplit" data-mode="split">
@@ -1156,6 +1165,27 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
   `.code-wrap`/`.table-wrap`/`img`의 위아래 `--sp-5`.
   **글자 크기·행간·색은 절대 다르게 두지 않는다** — 미리보기는 "결과와 같은 것"이어야 한다.
 
+### 6-1. 저장 버튼과 서버 연결 표시 (v3.5 — `docs/api.md` §4)
+
+> PM이 만든 로컬 에디터 서버(Docker, 5500)가 켜져 있으면 에디터가 `.md`와 `index.json`을 **직접 쓴다**.
+> 없으면(`start.bat`) 지금처럼 내보내기뿐이다. 두 모드는 `editor.js`가 `GET /api/health`로 가른다.
+
+**상태는 `hidden` 속성 둘이 전부다.** `#btnSave`와 `#editorServer`는 마크업에서 `hidden`으로 시작하고,
+서버 모드가 확인되면 `editor.js`가 둘의 `hidden`을 뗀다. body 클래스·`data-` 상태·새 `is-*`는 없다.
+
+| 요소 | 규칙 | 왜 |
+|---|---|---|
+| `#btnSave` (`.btn.btn-primary`) | `.editor-actions`의 **둘째**(미리보기 다음, 내보내기 앞). 서버 모드에서만 보인다. 문구 `저장`. `title="저장 (Ctrl+S)"` `aria-keyshortcuts="Control+S"` | 서버가 있으면 디스크 저장이 **주 동작**이라 primary. 내보내기보다 앞에 두는 이유 — "주 동작, 그다음 폴백"의 순서이고, 그 DOM 순서 덕에 아래 격하 규칙이 형제 결합자 하나로 된다 |
+| `#btnExport` | 마크업은 그대로 `.btn.btn-primary`. **CSS가 `#btnSave:not([hidden]) ~ #btnExport`를 보조 버튼 모양(테두리·면·본문색)으로 내린다** | 주 동작이 둘이면 어느 것을 누를지 고민한다. JS가 클래스를 바꾸지 않는다 — 상태(`hidden`)가 곧 모양이다. 서버 모드에서도 내보내기는 폴백으로 유효하다(api.md §4-2) |
+| `.editor-server` (`#editorServer`) | `.editor-actions`의 **마지막** 항목, `<span>`. 문구 `로컬 서버 연결됨`. `margin-inline-start: auto`로 버튼 줄 오른쪽 끝. 작은 글자 + 초록 점(`--c-ok`) — `.editor-status`와 같은 어휘 | 저장 버튼이 "왜 생겼는지"를 같은 줄에서 말한다. `.editor-status` 안에 넣지 않는 이유: `setStatus()`가 `textContent`를 통째로 갈아 끼우므로 자식이 지워진다. 버튼 줄이 좁아 감기면(360px) 줄 끝으로 내려간다 — `flex-wrap`이 이미 있다 |
+| 저장 피드백 | **새 부품 없음.** 성공: 상태줄 `저장됨 · posts/<slug>/<id>.md`(`setStatus`, dirty 해제). 실패: 토스트(`is-err`)에 `error.message` 그대로, 상태줄은 `.is-dirty` 유지. 네트워크 실패: 토스트 `서버가 꺼졌습니다 — 내보내기로 저장하세요` + **`#btnSave` `#editorServer`에 `hidden`을 되돌린다**(모드가 내보내기로 돌아간 것이 화면에서 보여야 한다) | 상태줄·토스트가 이미 "결과를 말하는 자리"다(§8-1) |
+| Ctrl+S | 서버 모드면 저장, 아니면 내보내기. 두 버튼 모두 `aria-keyshortcuts="Control+S"`를 정적으로 갖되, **서버 모드가 확인되면 `editor.js`가 `#btnExport`의 `aria-keyshortcuts`·`title`의 "(Ctrl+S)"를 뗀다** | 보이는 버튼 둘이 같은 단축키를 주장하면 스크린리더가 둘 다 읽는다 |
+| `.editor-head` 자식 순서 | 변함 없음(`.editor-actions` → `.editor-status`) | |
+
+**하지 않는 것** — 서버 버전·브랜치·dirty(`/api/health`의 `git`)를 화면에 그리지 않는다. 그 정보는 `/ship`의
+몫이고, 에디터 화면에 "main · dirty" 같은 글자가 놓이면 글쓰기와 무관한 상태를 계속 읽게 된다.
+"연결됨" 한 마디로 충분하다 — 연결이 끊기면 저장이 실패할 때 알게 되고 그때 표시가 사라진다.
+
 ---
 
 ## 7. 공용 컴포넌트
@@ -1185,6 +1215,7 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
 .toc .toc-title .toc-list .toc-item
 .cat-picker .cat-new .cat-new-hint
 .field .switch .switch-ui .md-toolbar .md-btn .editor-status .editor-mode .editor-visitor
+.editor-server                                          (v3.5 — 로컬 서버 연결 표시, §6-1. #btnSave는 .btn.btn-primary)
 .footer-note .footer-meta
 .code-wrap .code-lang .code-copy    (markdown.js가 주입)
 .table-wrap                          (markdown.js가 주입)
@@ -1757,9 +1788,32 @@ CSS는 web-designer가 v3.4로 교체했다. **CSS 쪽에서 JS 협조가 필요
 **바꾸지 않는 것**: `theme-init.js`(첫 페인트 테마 확정 방식 그대로) · `ui.js` `applyTheme()`(`data-theme`만 바꾸면
 크로스페이드가 돈다) · `renderSide()` API · `entryCard()`(카드 마크업 그대로 — `arrive`는 클래스 없이 `.entry`에 붙는다).
 
+### 12-11. v3.5 이행 — 저장 버튼·서버 표시 (frontend-dev-2)
+
+CSS는 교체됐다(`components.css` §11 — `.editor-server`, `#btnSave:not([hidden]) ~ #btnExport` 격하).
+서버 API·요청·응답 처리 규칙은 **`docs/api.md` §4가 진실**이고, 여기는 마크업·상태·화면 피드백만 적는다.
+
+| # | 파일 | 할 일 |
+|---|---|---|
+| 66 | `write.html` | `.editor-actions`를 §6 마크업으로: `#btnPreviewToggle` → **`#btnSave`(`.btn.btn-primary`, `hidden`, `저장`, `title="저장 (Ctrl+S)"`, `aria-keyshortcuts="Control+S"`)** → `#btnExport`(그대로) → **`<span class="editor-server" id="editorServer" hidden>로컬 서버 연결됨</span>`**. 순서를 바꾸지 않는다(격하 규칙이 형제 순서에 걸려 있다) |
+| 67 | `editor.js` 감지 | 로드 시 `fetch('/api/health', {cache:'no-store'})` + 2초 `AbortController`(api.md §4-1). `ok`면 `#btnSave` `#editorServer`의 `hidden` 제거, `#btnExport`의 `aria-keyshortcuts` 제거·`title`을 `파일로 내보내기`로. 실패는 조용히(내보내기 모드 그대로) |
+| 68 | `editor.js` 저장 | `#btnSave` 클릭·서버 모드의 Ctrl+S → api.md §4-3의 순서(검증 → 새 분류 PUT → 글 PUT). 성공: §4-4의 상태 갱신 + `setStatus('저장됨 · ' + json.path)`. 4xx/5xx: `U.toast(json.error.message, 'err')`(409면 정리 안내 덧붙임), 상태줄 `.is-dirty` 유지. 네트워크 실패: 토스트 `서버가 꺼졌습니다 — 내보내기로 저장하세요` + **`#btnSave` `#editorServer`에 `hidden` 복원**, `#btnExport`의 단축키 표기 복원 |
+| 69 | `editor.js` | `dom.saveBtn = getElementById('btnSave')`, `dom.server = getElementById('editorServer')`. 클래스를 붙였다 떼지 않는다 — 상태는 `hidden` 둘뿐(§6-1) |
+
 ---
 
 ## 13. 변경 이력
+
+### v3.5 — 로컬 에디터 서버 연동(write.html)
+
+| 절 | v3.4 | v3.5 |
+|---|---|---|
+| §6 | `.editor-actions` = 미리보기 · 내보내기 | + **`#btnSave`(hidden, primary)** 둘째 · **`.editor-server`**(hidden) 마지막. **§6-1 신설** — 상태 = `hidden` 둘, 내보내기 격하는 CSS 형제 결합자, 피드백은 상태줄·토스트 재사용, Ctrl+S 이전, 서버 git 정보는 그리지 않음 |
+| §7 | — | `.editor-server` 등록 |
+| §12 | §12-10까지 | **§12-11 신설** — #66-69 |
+
+CSS: `components.css` §11에 `.editor-server`(작은 글자 + `--c-ok` 점, auto 마진, `--h-control` 높이로 버튼 줄 중심)와
+`#btnSave:not([hidden]) ~ #btnExport`(보조 버튼 모양 + hover) 추가. 토큰·레이아웃 변경 없음.
 
 ### v3.4 (라운드 9) — 햄버거 왼쪽 끝, 머리말 가운데, 내비 4항목, 테마 1.2초, 콘텐츠 도착
 
