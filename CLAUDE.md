@@ -29,7 +29,7 @@
 
 개발 투입은 `/round-start`, 회의는 `/blog-meeting`. 회의록은 `docs/meeting-NN.md`에 남긴다.
 
-## 스킬 (22개)
+## 스킬 (24개)
 
 반복 작업은 스킬로 고정해 프롬프트 토큰을 아낀다. 에이전트 투입 시 공통 머리말(읽을 파일·소유권·픽스처·포트·보고 형식)은 **에이전트 정의의 "작업 규칙"에 있으므로 프롬프트에 다시 쓰지 않는다.**
 
@@ -65,6 +65,10 @@
 - `/theme-tune` — 색·테마 조정 (토큰만)
 - `/dep-request` — 새 의존성 승인 절차
 
+**로컬 에디터 서버 (파이썬·Docker, pm-integrator 소유)**
+- `/serve` — `docker compose up -d` / `logs -f` / `down`, 헬스 확인, 5500 포트 충돌 처리(start.ps1과 둘 중 하나만)
+- `/api-check` — 헬스 → 픽스처 글 PUT → GET → DELETE → `git status posts/` 비었는지. `/fixture` 규칙 준수
+
 ## 구조
 
 ```
@@ -73,10 +77,14 @@ css/  tokens base layout components prose animations   (이 순서로 로드)
 js/   config util store markdown ui admin app post editor
 posts/       index.json + *.md
 docs/        contract.md(계약서), meeting-NN.md(회의록)
-start.bat    로컬 미리보기
+start.bat    로컬 미리보기 (Docker 없는 PC용 폴백 — 저장 API 없음)
+server/      FastAPI 로컬 에디터 서버 (app.py 엔트리, posts.py 파일 규칙) — Dockerfile·docker-compose.yml로 실행. 규약은 docs/api.md
 ```
 
 ## 글 추가 흐름 (하이브리드)
+
+**Docker가 있으면** `docker compose up` → `write.html`의 "저장"이 `posts/`에 바로 쓴다(`docs/api.md`). 커밋·푸시는 사용자가 `/ship`.
+**없으면** 아래 내보내기 흐름.
 
 `write.html`에서 작성 → "파일로 내보내기" → `.md`와 `index.json` 다운로드 → `posts/`에 넣고 커밋.
 작성 중 초안은 localStorage에 자동 임시저장되지만, **내보내기 전까지는 영구 저장이 아니다.**

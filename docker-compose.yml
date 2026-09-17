@@ -1,0 +1,17 @@
+# docker compose up  → http://localhost:5500  (Ctrl+C 로 종료)
+# start.bat 과 같은 5500 포트를 쓴다. 둘 중 하나만 켠다.
+# name: 폴더명("기술 블로그")이 한글이라 compose가 프로젝트 이름을 만들지 못한다(빈 이름 오류). 고정한다.
+name: blog-editor
+services:
+  editor:
+    build: .
+    image: blog-editor-server:local
+    container_name: blog-editor
+    init: true                        # Ctrl+C(SIGTERM)가 uvicorn까지 전달되도록
+    ports:
+      - "127.0.0.1:5500:5500"         # 호스트의 localhost 에서만 접근
+    volumes:
+      - .:/app                        # 저장이 호스트 파일에 바로 반영
+    environment:
+      BLOG_BIND: "0.0.0.0"            # 컨테이너 안 바인딩. 밖으로는 위 포트 매핑 하나뿐
+      BLOG_PORT: "5500"
