@@ -5,35 +5,35 @@
    재사용 부품(버튼·태그·인덱스 항목 등)의 생김새는 components.css가 담당한다.
    의존: tokens.css, base.css
 
-   ── 기본 골격 (v3.2) ──────────────────────────────────────────────────────
-   읽는 화면(post.html)의 세로 기준선은 --w-prose(720px) 하나다.
+   ── 기본 골격 (v3.4) ──────────────────────────────────────────────────────
+   읽는 화면(post.html / about.html)의 세로 기준선은 --w-prose(720px) 하나다.
    목록 화면(index.html)은 <main class="list-page">로 --w-page(1152px)까지 넓힌다 —
-   사용자 판정 "전체적으로 구조가 비어보여"(계약서 §2). 헤더·푸터도 같은 페이지에서는
-   같은 폭으로 따라간다(아래 :has 규칙). 그래야 브랜드의 왼쪽 선 = 제목의 왼쪽 선이 유지된다.
+   사용자 판정 "전체적으로 구조가 비어보여"(계약서 §2). 페이지의 칼럼 폭은 --col-w 하나로 정하고
+   메인·푸터가 그 값을 읽는다. 헤더는 v3.4부터 화면 폭 전체를 쓰되 좌우 패딩으로 칼럼 자리를 재현한다
+   (§1) — 햄버거만 그 바깥, 화면 왼쪽 끝에 앉히기 위해서다. 브랜드의 왼쪽 선 = 제목의 왼쪽 선은 그대로다.
    왼쪽에는 고정 가능한 사이드바(.side)가 있고, 도킹되면 페이지 전체가 --w-side만큼 오른쪽으로 민다.
    ========================================================================= */
 
-/* 세 영역이 공유하는 칼럼. 값이 세 번 복사되지 않게 한 번만 쓴다. */
-.site-header,
+/* 페이지의 칼럼 폭 --col-w (v3.4). 페이지마다 하나이고 헤더·메인·푸터가 같은 값을 읽는다.
+   기본은 읽기 칼럼(--w-prose). 넓은 페이지 둘 — 목록(.list-page, 72rem)과 에디터(.editor-page,
+   76rem) — 는 body:has()로 값을 바꾼다. <main>만 넓히면 헤더가 본문보다 216px 안쪽에서 시작해
+   왼쪽 선이 둘이 되기 때문이다. :has()를 모르는 브라우저는 헤더·푸터가 720px에 남을 뿐 깨지지
+   않는다(<main>은 자기 클래스로 직접 넓힌다). */
+body { --col-w: var(--w-prose); }
+body:has(> .list-page)   { --col-w: var(--w-page); }
+body:has(> .editor-page) { --col-w: 76rem; }
+
+/* 메인·푸터가 공유하는 칼럼. 값이 복사되지 않게 한 번만 쓴다. */
 .site-main,
 .site-footer {
   inline-size: 100%;
-  max-inline-size: var(--w-prose);
+  max-inline-size: var(--col-w);
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
 
-/* 넓은 페이지 둘 — 목록(.list-page, 72rem)과 에디터(.editor-page, 76rem).
-   <main>만 넓히면 헤더가 본문보다 216px 안쪽에서 시작해 왼쪽 선이 둘이 된다.
-   같은 페이지의 헤더·푸터를 main 폭에 맞춘다. :has()를 모르는 브라우저는 헤더가 720px에
-   남을 뿐 깨지지 않는다(v3.1의 write.html이 실제로 그 상태였다). */
 .list-page   { max-inline-size: var(--w-page); }
 .editor-page { max-inline-size: 76rem; }
-
-body:has(> .list-page) .site-header,
-body:has(> .list-page) .site-footer   { max-inline-size: var(--w-page); }
-body:has(> .editor-page) .site-header,
-body:has(> .editor-page) .site-footer { max-inline-size: 76rem; }
 
 /* ============================================================================
    0. 사이드바 (계약서 §3-2, v3.2) — 사용자 요청 "왼쪽 위 햄버거 → 분류로 정리된 글 목록,
@@ -69,12 +69,11 @@ body:has(> .editor-page) .site-footer { max-inline-size: 76rem; }
      visibility는 슬라이드가 끝난 "뒤"에 꺼진다(delay = --dur). 열 때는 즉시 켠다(아래). */
   translate: -100% 0;
   visibility: hidden;
+  /* 면·경계선 색은 여기 적지 않는다 — 테마 크로스페이드는 토큰이 보간된다(v3.4, base.css). */
   transition:
     translate         var(--dur)       var(--ease),
     visibility        0s               linear  var(--dur),
-    box-shadow        var(--dur-fast)  var(--ease),
-    background-color  var(--dur-theme) var(--ease-fade),
-    border-color      var(--dur-theme) var(--ease-fade);
+    box-shadow        var(--dur-fast)  var(--ease);
 }
 
 body.side-open .side {
@@ -134,23 +133,36 @@ body.side-open { overflow: hidden; }
 :root:has(body.side-open) { overflow: hidden; }
 
 /* 도킹은 페이지를 "미는" 것이라 padding 전환이 곧 모션이다.
-   body에 transition을 쓰는 순간 base.css의 `*` 크로스페이드가 덮이므로 background-color를 같이 적는다. */
-body {
-  transition:
-    padding-inline-start var(--dur)       var(--ease),
-    background-color     var(--dur-theme) var(--ease-fade);
-}
+   (v3.4: background-color는 적지 않는다 — 바탕색 토큰 자체가 보간된다.) */
+body { transition: padding-inline-start var(--dur) var(--ease); }
 
 /* ============================================================================
    1. 헤더 — static이다. sticky도, 블러도, 밑선도 없다(계약서 §3).
    실측 7곳 중 sticky 헤더 0곳. 헤더가 따라다녀야 할 만큼 이 사이트의
    내비게이션이 크지 않고, 대신 스크롤 핸들러 하나가 통째로 사라졌다.
    ========================================================================= */
+/* v3.4 — 사용자 요청 "햄버거 메뉴를 상단 맨 끝 왼쪽에". v3.2의 햄버거는 헤더 첫 자식이었지만
+   헤더가 칼럼(720/1152px) 안에 있어 1440px 화면에서는 왼쪽 끝에서 144~380px 들어온 자리였다.
+   그래서 헤더를 화면 폭 전체로 펴고(inline-size 100%, max 없음), 브랜드·내비·테마 버튼은
+   좌우 패딩으로 칼럼 자리에 그대로 앉힌다 — 패딩 = 칼럼 바깥 여백((100% − 칼럼) / 2) + 거터.
+   100%는 body의 내용폭이라 사이드바가 도킹돼 body가 260px 밀려도 계산이 맞고, 스크롤바 폭도
+   끼지 않는다(100vw였다면 둘 다 어긋난다). 결과 기하는 v3.3과 같다 — 브랜드의 왼쪽 선 =
+   제목의 왼쪽 선. 바뀐 것은 햄버거가 그 바깥, 화면(또는 도킹된 사이드바) 왼쪽 끝에 놓인다는 것뿐.
+
+   칼럼이 화면보다 넓어 바깥 여백이 없는 폭(폰·태블릿·도킹된 1024px)에서는 왼쪽 패딩이
+   "거터 + 햄버거 + 4px"까지만 늘어난다 — 햄버거가 브랜드 위에 겹치지 않는 최소값이고,
+   그 상태는 v3.3의 배치(햄버거 → 브랜드)와 같다. 페이지별 미디어쿼리 없이 max()가 고른다. */
 .site-header {
+  position: relative;                 /* .side-toggle의 기준 상자 */
+  inline-size: 100%;
   display: flex;
   align-items: center;
   gap: var(--sp-5);
   padding-block: var(--sp-6) var(--sp-5);
+  padding-inline:
+    max(calc(max(0px, (100% - var(--col-w)) / 2) + var(--gutter)),
+        calc(var(--gutter) + var(--h-control) + var(--sp-1)))
+    calc(max(0px, (100% - var(--col-w)) / 2) + var(--gutter));
 }
 
 .brand {
@@ -179,13 +191,21 @@ body {
   min-inline-size: 0;
 }
 
-/* 헤더의 아이콘 버튼 둘: 햄버거(첫 자식)는 왼쪽 끝, 테마 버튼(마지막 자식)만 오른쪽 끝으로.
-   v3.1의 `.site-header > .icon-btn { margin-inline-start: auto }`는 햄버거까지 가운데로 밀었다.
-   햄버거를 브랜드보다 앞에 두는 이유 — 사이드바가 왼쪽에서 나오므로 여는 손잡이도 왼쪽 끝이어야 한다.
-   버튼과 브랜드 사이는 헤더 gap(20px)보다 좁혀(-8px) 아이콘의 투명 히트 영역이 여백처럼 보이지 않게 한다. */
+/* 헤더의 아이콘 버튼 둘. 테마 버튼(마지막 자식)만 auto 마진으로 오른쪽 끝에.
+   햄버거(첫 자식, v3.4)는 흐름에서 빼 헤더의 왼쪽 끝에 absolute로 앉힌다 — DOM은 여전히 첫 자식이라
+   Tab 순서(햄버거 → 브랜드 → 내비 → 테마 → 사이드바)는 v3.2 그대로다.
+   · 왼쪽: 거터 − 8px. 40px 버튼 안에서 20px 아이콘이 가운데 놓이므로 아이콘의 왼쪽 선이
+     거터 + 2px에 온다(투명 히트 영역이 여백처럼 보이지 않게 — v3.2의 −8px과 같은 뜻).
+   · 위: 헤더 위 패딩과 같다. 헤더 행 높이(40 = .icon-btn)와 버튼 높이가 같아 브랜드와 한 줄에 선다.
+   · 도킹되면 body가 --w-side만큼 밀리고 헤더도 따라가므로, 햄버거는 사이드바 오른쪽 끝에 붙는다.
+     사이드바 아래로 숨지 않는다 — 별도 규칙 없음. */
 .site-header > .icon-btn { flex: none; }
 .site-header > .icon-btn:last-child { margin-inline-start: auto; }
-.site-header > .side-toggle { margin-inline-start: calc(var(--sp-2) * -1); margin-inline-end: calc(var(--sp-2) * -1); }
+.site-header > .side-toggle {
+  position: absolute;
+  inset-block-start: var(--sp-6);
+  inset-inline-start: calc(var(--gutter) - var(--sp-2));
+}
 
 /* ============================================================================
    2. 메인 / 푸터
@@ -209,60 +229,58 @@ body {
 .site-footer a:hover { color: var(--c-accent); }
 
 /* ============================================================================
-   3. 페이지 머리말 (index.html) — 히어로의 후임
-   두 줄이 전부다. 액센트 바도, 통계도, 진입 애니메이션도 없다(계약서 §4-2).
+   3. 페이지 머리말 (index.html) — 제목 + 검색, 가운데 (계약서 §4-2, v3.4)
+   사용자 요청 "메모 블로그라는 큰 제목은 가운데 상단, 검색은 약간 거리 두고 살짝 아래" /
+   "검색어 창은 상단 가운데 고정, 가로로 살짝만 키워".
+   머리말은 이 페이지에서 유일하게 가운데 정렬되는 덩어리다 — 간판과 검색창은 "이 사이트가
+   무엇이고 어떻게 찾는가"라 화면 축에 놓이고, 그 아래 인덱스·목록은 왼쪽 선에 붙는
+   작업 영역이다(분류 인덱스가 40개로 세 줄 감기면 가운데 정렬은 들쭉날쭉한 계단이 된다).
+   v3.2의 툴 행(.list-tools — 인덱스 왼쪽 + 검색 오른쪽 한 줄)은 폐기됐다.
+   "고정"은 sticky가 아니라 자리 고정이다(§4-2에 근거) — 헤더가 static인 사이트에 sticky 띠를
+   새로 두지 않고, 어디서든 `/`가 검색창으로 데려간다.
    ========================================================================= */
 .page-head {
-  /* v3.2: --sp-7 → --sp-5. 머리말이 작아졌으니(아래) 아래 숨도 그만큼 줄인다. */
-  padding-block-end: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  /* 위: 헤더와 간판 사이 숨. 아래: 검색창과 분류 인덱스 사이 — 인덱스는 작은 글자라 --sp-6이면
+     "머리말 끝, 목록 도구 시작"이 읽힌다. */
+  padding-block: var(--sp-6) var(--sp-6);
 }
 
 /* v3.2: --fs-2xl(22→30) → --fs-xl(19→23). 목록이 3열 카드가 되면서 화면에 제목(--fs-lg)이
    수십 개 동시에 놓인다. 그 위에 30px 사이트명이 앉으면 "페이지 제목 아래 목록"이 아니라
-   "간판 아래 목록"이 된다. 23px이면 h1이 카드 제목보다 한 단계 크되 주인공을 뺏지 않는다. */
+   "간판 아래 목록"이 된다. 23px이면 h1이 카드 제목보다 한 단계 크되 주인공을 뺏지 않는다.
+   v3.4에서 가운데로 갔지만 크기는 그대로다 — 가운데 정렬 + 큰 글자는 히어로(v2.x)로 되돌아간다. */
 .page-title {
   font-size: var(--fs-xl);
   line-height: var(--lh-tight);
   font-weight: 700;
 }
 
-.page-sub {
-  margin-block-start: var(--sp-1);
-  font-size: var(--fs-sm);
-  color: var(--c-text-dim);
+/* (.page-sub는 v3.4에서 폐기 — 사용자 요청 "공부한 것을 기록하는 곳 문장 빼". 마크업에도 없다.) */
+
+/* 검색창 — 머리말 안, 제목 바로 아래.
+   · 제목과의 거리 --sp-5(20px): 제목 행간(≈28px)의 절반이 넘어 "붙어 있지 않다"가 읽히되,
+     --sp-7(32)처럼 다른 덩어리로 갈라지지는 않는다 — 요청의 "약간 거리 두고 살짝 아래".
+   · 폭 40rem(640px): v3.2의 20rem(320)은 툴 행 오른쪽 칸에 맞춘 값이었다. 한 줄에 홀로 놓이면
+     320은 좁아 보이고, 720(v3.1)은 "빈 인풋"이었다. 640 = 읽기 칼럼(720)에서 거터를 뺀 폭 —
+     post.html의 본문 줄길이와 같아 두 화면의 폭 어휘가 하나가 된다. min()이 좁은 폰에서
+     칼럼을 넘지 않게 한다. */
+.page-head > .search {
+  inline-size: min(40rem, 100%);
+  margin-block-start: var(--sp-5);
+  text-align: start;                  /* 입력 글자는 왼쪽부터 — 가운데 정렬은 상자에만 */
 }
+
+/* 머리말 밖에 홀로 남은 .search(post/write에는 없다 — 방어용). */
+.search { margin-block-end: 0; }
 
 /* ============================================================================
-   4. 툴 행 — 분류 인덱스(왼쪽) + 검색(오른쪽) 한 줄 (계약서 §4-3, v3.2)
-   v3.1은 검색 한 줄(720px 폭 전체) 아래 분류 한 줄을 쌓았다. 사용자 판정
-   "검색창이라던지 카테고리라던지 너무 커". 페이지가 1152px로 넓어졌으니 둘을 한 줄에 놓고,
-   검색은 20rem으로 묶는다 — 검색어는 한두 단어라 그 이상은 빈 인풋이다.
-   sticky가 아니다(v3.0 이후 동일).
+   4. (v3.4 폐기) 툴 행 .list-tools — 검색이 머리말(§3)로 올라가 행에 남는 것이 인덱스 하나뿐이다.
+   번호는 아래 절 참조(§7 등)를 흔들지 않기 위해 비워 둔다.
    ========================================================================= */
-.list-tools {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-3) var(--sp-6);
-  margin-block-end: var(--sp-3);
-}
-
-/* 인덱스가 여러 줄로 감겨도 검색이 밀리지 않게 — 검색은 폭이 고정, 인덱스가 남은 폭을 쓴다. */
-.list-tools > .index-row {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-  margin-block-end: 0;
-  /* 인덱스 항목 높이(--h-control-sm)와 인풋 높이(--h-control-sm)가 같아 첫 줄이 같은 선에 앉는다. */
-}
-
-.list-tools > .search {
-  flex: 0 1 20rem;
-  min-inline-size: 12rem;
-  margin-block-end: 0;
-}
-
-/* 툴 행 밖에 홀로 남은 .search(post/write에는 없다 — 방어용). */
-.search { margin-block-end: var(--sp-4); }
 
 /* ============================================================================
    5. 인덱스 행 — 분류 / 태그 (계약서 §4-3)
@@ -346,11 +364,9 @@ body {
   /* 바탕(--c-bg)보다 한 단계 밝은 면. 경계선만으로도 "종이가 얹혀 있다"가 읽혀
      그림자가 필요 없다(원칙 3). */
   background: var(--c-surface);
-  /* hover는 경계선만, 테마 토글 때는 면도 함께 건너간다(계약서 §11).
-     background-color를 빼면 이 박스만 테마 전환에서 즉시 튄다. */
-  transition:
-    border-color var(--dur-fast) var(--ease),
-    background-color var(--dur-theme) var(--ease-fade);
+  /* hover는 경계선만. (테마 토글의 면 색은 토큰이 보간된다 — v3.4, base.css.)
+     진입 모션(@keyframes arrive)은 components.css §4 — 카드는 JS가 만드는 요소라 §8-2에 걸리지 않는다. */
+  transition: border-color var(--dur-fast) var(--ease);
 }
 
 /* 박스의 hover 반응은 경계선 색 하나다. 이동·그림자·배경 변화는 없다 —
@@ -391,7 +407,14 @@ body {
    v3.0: 2열(본문+목차) 그리드가 사라져 단일 칼럼이다.
    .post-body 래퍼도 폐기됐다 — #toc와 .prose가 .post의 직계 자식이다.
    ========================================================================= */
-.post { display: block; }
+/* v3.4 콘텐츠 도착 ② — post.js가 .is-loading을 떼는 순간 opacity .38 → 1이 --dur(260ms)에 걸쳐
+   건너간다(.post.is-loading의 값은 components.css §7). 목록 카드의 arrive와 같은 시간·같은 커브라
+   "내용이 왔다"는 신호가 두 화면에서 하나다. 정적 요소라 opacity 0에서 시작하지 않는다(§8-2) —
+   JS가 실패해도 .38의 머리말과 "← 목록"이 그대로 보인다(v3.0과 같다). */
+.post {
+  display: block;
+  transition: opacity var(--dur) var(--ease);
+}
 
 .post-head {
   padding-block-end: var(--sp-6);
@@ -600,16 +623,21 @@ body {
 @media (max-width: 440px) {
   .entry { padding: var(--sp-4); }
   .site-header { gap: var(--sp-3); padding-block: var(--sp-5) var(--sp-4); }
+  /* 햄버거의 세로 위치는 헤더 위 패딩을 따라간다(위 §1). */
+  .site-header > .side-toggle { inset-block-start: var(--sp-5); }
+  /* v3.4 — 내비 항목이 넷(글·태그·소개·쓰기)이 되어 360px 검산이 넘친다:
+     햄버거 자리 68 + 브랜드 82 + 12 + 링크 4개(26×4 + 간격 16×3 = 152) + 12 + 테마 44 + 거터 20 = 390 > 360.
+     간격을 반으로(16 → 8) 줄이고 "태그"를 뺀다 — 이 링크는 index.html의 태그 손잡이(#tags)로 가는
+     지름길일 뿐이라 없어도 갈 수 없는 곳이 생기지 않는다(post.html의 태그도 링크다). 계약서 §3-3 소거 표.
+     검산: 방문자 68 + 82 + 12 + (26×2 + 8) + 12 + 44 + 20 = 298 / 관리자(쓰기 포함) 340 ≤ 360. */
+  .site-nav { gap: var(--sp-2); }
+  .site-nav > .nav-link[href$="#tags"] { display: none; }
   /* v3.3: 본문(.prose, prose.css §11)과 같은 이유 — 좁은 폰에서는 어절 보존을 풀어 줄을 채운다. */
   .post-summary { word-break: normal; }
 }
 
-/* 툴 행: 768px 이하에서는 세로로 쌓인다. DOM 순서 그대로(분류 → 검색) —
-   order/row-reverse로 시각 순서만 뒤집는 것은 계약서 §4가 금지한다(Tab 순서 ≠ 시선 순서). */
-@media (max-width: 768px) {
-  .list-tools { flex-direction: column; align-items: stretch; }
-  .list-tools > .search { flex: none; max-inline-size: 20rem; min-inline-size: 0; }
-}
+/* (v3.4: 768px 이하의 툴 행 세로 스택 규칙은 .list-tools와 함께 폐기됐다.
+   검색창은 min(40rem, 100%)라 분기 없이 좁은 폭에 맞는다.) */
 
 @media (min-width: 768px) {
   .post-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }

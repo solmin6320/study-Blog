@@ -4,7 +4,7 @@
 
 ## 절대 규칙
 
-1. **Node.js·npm·빌드 도구를 도입하지 않는다.** 정적 파일을 그대로 올리는 것이 배포의 전부다.
+1. **Node.js·npm·빌드 도구를 도입하지 않는다.** 공개 사이트(GitHub Pages)는 정적 파일을 그대로 올리는 것이 배포의 전부다. **파이썬은 로컬 에디터 서버(`server/`, Docker)에만** 쓴다 — 방문자 화면과는 무관하다.
 2. **새 외부 의존성은 사용자 승인 없이 추가하지 않는다.** 현재 승인된 것: jQuery, marked.js, highlight.js, DOMPurify (전부 CDN, 고정 버전).
 3. **마크다운 렌더 결과는 예외 없이 DOMPurify를 통과시킨 뒤 DOM에 넣는다.** `innerHTML` 직접 대입 금지.
 4. **`created`는 불변, `updated`는 저장할 때마다 갱신.** 날짜 표시는 사용자가 직접 요구한 기능이다.
@@ -15,7 +15,7 @@
 
 | 에이전트 | 역할 | 담당 파일 (소유권) |
 |---|---|---|
-| `pm-integrator` | **전체 총괄** — 검수·분배·우선순위·충돌 조정 | `docs/meeting-*.md`, `CLAUDE.md` |
+| `pm-integrator` | **전체 총괄** — 검수·분배·우선순위·충돌 조정 + **로컬 에디터 서버** | `docs/meeting-*.md`, `CLAUDE.md`, `server/*`, `Dockerfile`, `docker-compose.yml`, `docs/api.md` |
 | `web-designer` | **웹 구조 총괄** — 정보구조·화면설계·계약서 + 비주얼 | `docs/contract.md`, `css/*` |
 | `frontend-dev` | 코어 뷰·데이터 파이프라인 | `index.html` `post.html`, `js/{config,util,store,markdown,app,post}.js`, `posts/*` |
 | `frontend-dev-2` | 에디터·인터랙션·접근성 | `write.html`, `js/{editor,ui,admin}.js`, `start.bat` `start.ps1` |

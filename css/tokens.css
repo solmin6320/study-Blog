@@ -3,6 +3,7 @@
    이 파일 외의 CSS에는 리터럴 색상값(#hex / rgb())을 쓰지 않는다.
    다크모드는 :root[data-theme="dark"]에서 "값만" 재정의한다(규칙을 다시 쓰지 않는다).
    로드 순서: tokens → base → layout → components → prose   (animations.css는 v3.0에서 삭제됨)
+   v3.4: 파일 끝의 @property 블록이 색 토큰을 <color>로 등록한다 — 테마 크로스페이드가 토큰에 걸린다.
 
    v3.0 방향 — 계약서 §1-2
      1. 읽는 데 필요 없는 요소는 화면에 두지 않는다.
@@ -175,17 +176,24 @@
      (--ease-in/-out/-ambient는 keyframes와 함께 폐기됐다.) */
   --ease:     cubic-bezier(.16, 1, .3, 1);   /* 빠르게 시작해 부드럽게 정착 */
   --dur-fast: 160ms;          /* 색·테두리 — 손보다 빨라야 한다 */
-  --dur:      260ms;          /* 토스트 등퇴장 */
+  --dur:      260ms;          /* 토스트 등퇴장 · 콘텐츠 도착(v3.4 — 목록 카드·본문 페이드, 계약서 §11-4) */
   --dur-slow: 420ms;          /* 모달 열림 — 여유 있게(닫힘은 --dur-fast) */
 
-  /* 테마 크로스페이드 전용 (v3.1, 계약서 §11). base.css의 `*` 규칙 한 곳에서만 쓴다.
-     · 240ms: --dur-fast(160)는 "손보다 빨라야 하는" hover용이라 페이지 전체가 바뀌는 데
-       쓰면 깜빡임으로 보이고, 300ms를 넘으면 "느리다"고 느낀다.
-     · 이징이 --ease가 아닌 이유: --ease(expo-out)는 위치·크기가 "도착"하는 모션용이라
-       색에 쓰면 변화의 절반이 첫 40ms에 끝나 사실상 즉시 전환이다. 대칭 곡선이어야
-       두 색의 중간값이 화면에 머물러 "바뀐다"가 아니라 "건너간다"로 보인다. */
-  --dur-theme: 240ms;
-  --ease-fade: cubic-bezier(.4, 0, .2, 1);
+  /* 테마 크로스페이드 전용 (v3.4, 계약서 §11). base.css의 `:root { transition: --c-* }` 한 곳에서만 쓴다.
+     사용자 요청 "다크·라이트 전환할 때 약간의 텀을 둬서 자연스러운 애니메이션으로 (1~2초)" —
+     v3.1의 240ms는 사용자 판정 "전등 깜빡임"이었다.
+     · 1200ms: 요청 범위(1~2초)의 아래쪽. 두 테마는 글자와 바탕이 서로 뒤집히므로 건너가는
+       한가운데(진행 50%)에서는 글자색과 바탕색이 둘 다 중간 회색이 되어 대비가 1:1 근처까지
+       떨어진다 — 이 "글자가 사라지는 구간"은 크로스페이드의 본성이라 없앨 수 없고 짧게 만들
+       수만 있다. 2초면 그 구간이 눈에 띄는 길이(≈300ms)가 되고, 1.2초면 ≈150ms로 "잠깐 흐려짐"에
+       그친다. 그러면서도 240ms처럼 "깜빡"이 아니라 "서서히 바뀐다"로 읽히는 최소 길이다.
+     · 이징은 대칭 곡선이되 v3.1(.4,0,.2,1)보다 가운데가 가파른 (.65,0,.35,1)이다. 시작과 끝은
+       느려 "텀"이 느껴지고, 대비가 낮은 한가운데는 빨리 지나간다. --ease(expo-out)를 쓰지 않는
+       이유는 그대로다 — 변화의 절반이 첫 8%에 끝나 사실상 즉시 전환이 된다.
+     · 이 전환은 요소가 아니라 "토큰"에 걸린다(아래 @property 블록 + base.css). 그래서 hover용
+       --dur-fast를 가진 부품도 테마 토글 때는 나머지와 같은 1.2초에 건너간다. */
+  --dur-theme: 1200ms;
+  --ease-fade: cubic-bezier(.65, 0, .35, 1);
 
   /* ── 레이아웃 ──────────────────────────────────────────────────────────
      읽기 칼럼은 여전히 --w-prose 하나다(post.html의 본문·헤더·푸터).
@@ -292,3 +300,62 @@
     --h-nav:        44px;
   }
 }
+
+/* ============================================================================
+   색 토큰 등록 (v3.4, 계약서 §11) — 테마 크로스페이드가 "요소"가 아니라 "토큰"에 걸리게 한다.
+   @property로 <color>임을 알려 두면 :root의 값이 바뀔 때(테마 토글) 토큰 자체가 보간된다.
+   base.css의 `:root { transition: --c-bg … }`가 그 보간에 --dur-theme(1.2초)을 건다.
+
+   왜 이 방식인가 — v3.1은 `* { transition: background-color, border-color, color }`였다.
+   240ms일 때는 hover용 --dur-fast(160ms) 부품이 80ms 먼저 끝나도 티가 안 났지만, 1.2초에서는
+   링크·버튼·아이콘·인덱스 항목처럼 자기 transition을 가진 것들만 160ms 만에 튀고 바탕은 1초 넘게
+   건너가 "글자 먼저, 바탕 나중"이 된다. 토큰을 보간하면 그 값을 참조하는 모든 요소가 자기
+   transition과 무관하게 같은 프레임에 같은 중간색을 받는다. hover 전환은 그대로 빠르다 —
+   hover는 "어느 토큰을 쓰는가"가 바뀌는 것이고, 테마는 "토큰의 값"이 바뀌는 것이라 서로 겹치지 않는다.
+   · JS 0줄. 첫 페인트에는 걸리지 않는다(theme-init.js가 <link>보다 앞에서 data-theme을 정하므로
+     "이전 값"이 없다). 첫 토글부터 · 양방향 · 연타 중에도 현재 중간색에서 이어진다(transition의 본성).
+   · @property를 모르는 브라우저(Firefox 127 이하)는 즉시 전환된다 — 퇴행이 아니라 v3.0 상태다.
+   · initial-value는 쓰이지 않는다(:root가 두 테마 모두 값을 준다). 등록 문법상 필요해 transparent.
+   · --c-shadow-rgb(숫자 셋)와 --sh-pop(합성값)은 <color>가 아니라 등록하지 않는다 — 그림자는
+     떠 있는 것(모달·토스트·오버레이 사이드바)에만 있어 즉시 바뀌어도 보이지 않는다.
+   ========================================================================= */
+@property --c-bg          { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-bg-2        { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-surface     { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-surface-2   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-border      { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-border-soft { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-text        { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-text-dim    { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-text-mute   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-accent      { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-accent-soft { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-meta        { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-tag         { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-danger      { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-warn        { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-ok          { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-on-accent   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-focus       { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-scrim       { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-selection   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --code-bg       { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --code-border   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --code-text     { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-comment    { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-keyword    { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-string     { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-number     { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-literal    { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-function   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-title      { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-attr       { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-builtin    { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-type       { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-variable   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-tag        { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-name       { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-selector   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-meta       { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-addition   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --hl-deletion   { syntax: "<color>"; inherits: true; initial-value: transparent; }

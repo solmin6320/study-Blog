@@ -33,8 +33,10 @@
 .nav-link:hover { color: var(--c-text); }
 
 /* 현재 페이지. 색만으로는 약해서 굵기와 밑줄을 함께 준다 —
-   색각 이상에서도 "지금 여기"가 읽혀야 한다. */
-.nav-link.is-active {
+   색각 이상에서도 "지금 여기"가 읽혀야 한다.
+   v3.4: 상태는 클래스가 아니라 aria-current="page"다 — 사이드바(§15)와 같은 규칙
+   "ARIA 속성이 곧 상태"(계약서 §8). .is-active는 내비에서 폐기됐다. */
+.nav-link[aria-current="page"] {
   color: var(--c-accent);
   font-weight: 700;
   text-decoration: underline;
@@ -238,13 +240,10 @@
   background: var(--c-surface);
   font-size: var(--fs-sm);
   color: var(--c-text);
-  /* 면·글자색은 테마 시간으로 — 이 선언이 base.css의 `*` 크로스페이드를 통째로 덮으므로
-     빼면 테마 토글 때 검색창만 즉시 튄다(계약서 §11). */
+  /* 면·글자색은 적지 않는다 — 테마 크로스페이드는 토큰이 보간된다(v3.4, base.css). */
   transition:
     border-color var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease),
-    background-color var(--dur-theme) var(--ease-fade),
-    color var(--dur-theme) var(--ease-fade);
+    box-shadow var(--dur-fast) var(--ease);
 }
 
 .search-input:hover { border-color: color-mix(in oklab, var(--c-accent) 35%, var(--c-border)); }
@@ -388,6 +387,25 @@
 /* 검색·필터로 걸러진 행. display:none이라야 목록에서 실제로 빠진다. */
 .entry.is-hidden { display: none; }
 
+/* ── 콘텐츠 도착 ① — 카드 진입 (v3.4, 계약서 §11-4) ──────────────────────────
+   사용자 요청 "임팩트 크지 않고 너무 작지도 않게, 눈에 안 띄게 부드러운 애니메이션, 라이트·다크".
+   카드가 목록에 놓일 때 투명 → 불투명 + 3px 아래에서 제자리로. --dur(260ms) + --ease(expo-out):
+   첫 80ms에 대부분 움직여 "나타났다"가 아니라 "놓였다"로 읽히고, 꼬리는 길어 끊기지 않는다.
+   · 3px: 2px는 화면 배율 100%에서 모션이 아니라 흔들림으로 보이고, 4px 이상은 카드가 "떠오른다".
+   · stagger 없음 — 300장이면 마지막 카드가 수 초 뒤에 오고, JS로 순번을 붙여야 한다. 동시에 놓인다.
+   · 색은 건드리지 않는다(opacity·translate만) → 라이트·다크에서 같은 모션. 합성기가 처리한다.
+   · .entry는 app.js/post.js가 만드는 요소라 §8-2("opacity 0 시작은 JS가 만든 요소만")에 맞는다.
+     renderList()가 필터마다 목록을 다시 그리므로 검색·분류 전환 때도 같은 모션이 난다 —
+     "결과가 바뀌었다"는 상태 변화의 신호다(원칙 4). 연관 글 카드(post.html)도 같은 부품이라 같이 논다.
+   · backwards: 스타일 계산과 첫 프레임 사이에 원래 상태가 한 프레임 비치지 않게.
+   · prefers-reduced-motion은 base.css의 `*` 블록이 1ms·1회로 자른다 → 즉시 끝 상태. */
+@keyframes arrive {
+  from { opacity: 0; translate: 0 3px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+
+.entry { animation: arrive var(--dur) var(--ease) backwards; }
+
 /* 빈 상태 / 오류 상태의 내용물(상자는 layout.css). */
 .list-empty p,
 .post-error p { margin-block-start: var(--sp-2); }
@@ -524,17 +542,20 @@
   mask-image: radial-gradient(circle at 116% -6%, transparent 54%, currentColor 56%);
 }
 
-/* ── 햄버거 (사이드바 열기, v3.2) ───────────────────────────────────────────
+/* ── 햄버거 (사이드바 열기, v3.2 · 위치는 layout.css §1) ──────────────────────
    헤더의 첫 자식. 테마 버튼과 같은 방식 — 가운데 막대 하나를 그리고 box-shadow로 위아래 두 줄.
-   16×2px, 줄 간격 5px: 40px 버튼 안에서 테마 아이콘(15px)과 같은 시각 무게.
+   v3.4: 사용자 요청 "크기 3~5px 키워" → 줄 폭 16 → 20px(+4), 줄 간격 5 → 6px(세로 12 → 14px, +2).
+   화면 왼쪽 끝에 홀로 놓이니 브랜드 옆에 있던 때보다 한 단계 무거워야 "손잡이"로 보인다.
+   굵기 2px는 그대로 — 3px이면 40px 버튼 안에서 막대 셋이 덩어리로 뭉친다. 버튼(--h-control)은
+   그대로라 터치 타깃 44px(coarse)은 변하지 않는다. 치수는 이 부품 안에서만 뜻이 있어 토큰이 아니다(§11-2).
    열려 있을 때(aria-expanded="true")는 액센트색 — "지금 켜져 있는 것"의 색. */
 .side-toggle::before {
   content: "";
-  inline-size: 16px;
+  inline-size: 20px;
   block-size: 2px;
   border-radius: var(--r-full);
   background: currentColor;
-  box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
+  box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor;
 }
 
 .side-toggle[aria-expanded="true"] { color: var(--c-accent); }
@@ -946,13 +967,12 @@ select.field {
   background: var(--c-surface-2);
   font-size: var(--fs-sm);
   color: var(--c-text);
-  /* :focus에서 면이 surface-2 → surface로 바뀌는 것도 이 시간을 탄다(160ms면 눈에 안 띈다).
-     테마 토글 때 인풋만 튀지 않게 background-color·color를 함께 적는다(계약서 §11). */
+  /* :focus에서 면이 surface-2 → surface로 바뀌는 것은 --dur-fast(160ms면 눈에 안 띈다).
+     테마 토글의 면·글자색은 토큰이 보간된다(v3.4, base.css) — 여기 적지 않는다. */
   transition:
     border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease),
-    background-color var(--dur-theme) var(--ease-fade),
-    color var(--dur-theme) var(--ease-fade);
+    background-color var(--dur-fast) var(--ease);
 }
 
 /* 셀렉트: 네이티브 화살표를 지우고 그라디언트 두 장으로 caret을 그린다.
@@ -1302,9 +1322,7 @@ select.field {
   inset-inline-start: 50%;
   border-radius: var(--r-full);
   background: currentColor;
-  transition:
-    rotate            var(--dur-fast)  var(--ease),
-    background-color  var(--dur-theme) var(--ease-fade);
+  transition: rotate var(--dur-fast) var(--ease);
 }
 
 .side-pin::before {
