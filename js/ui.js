@@ -531,12 +531,14 @@
       node.textContent = String(new Date().getFullYear());
     });
 
-    /* 현재 페이지 내비게이션 표시 */
+    /* 현재 페이지 내비게이션 표시 — v3.4(계약서 §3-3): 상태는 aria-current="page" 하나다.
+       .is-active 클래스 토글은 폐기됐다(CSS가 더 이상 읽지 않는다 — 붙여 두면 계약서에 없는 클래스가 된다).
+       "태그"(index.html#tags)는 split('?')[0]가 'index.html#tags'로 남아 here와 달라 저절로 빠지고,
+       post.html에서 "글"이 page를 받지 않는 것도 here === 'post.html' 판정이 보장한다. */
     var here = window.location.pathname.split('/').pop() || 'index.html';
     U.qsa('.site-nav .nav-link').forEach(function (link) {
       var target = (link.getAttribute('href') || '').split('?')[0];
       var isHere = target === here;
-      link.classList.toggle('is-active', isHere);
       /* 붙이기만 하고 지우지 않으면, 정적 마크업에 aria-current가 적혀 있는 페이지에서
          "현재 페이지"가 둘이 된다. 상태는 언제나 양방향으로 쓴다. */
       if (isHere) link.setAttribute('aria-current', 'page');

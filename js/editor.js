@@ -1,5 +1,6 @@
 /* editor.js — write.html 전용. 마크다운 작성, 실시간 미리보기, 자동 임시저장,
-   .md + index.json (+ categories.json) 내보내기, ?id= 수정 모드.
+   .md + index.json (+ categories.json) 내보내기, ?id= 수정 모드,
+   v3.5: 로컬 에디터 서버(docs/api.md)가 있으면 PUT /api/posts/{id}로 직접 저장.
    이 화면이 "공부한 걸 블로그에 넣는" 유일한 통로다. 실수로 글을 잃는 경로가 없어야 한다.
 
    글은 posts/<분류slug>/<id>.md 에 들어간다(계약서 §9-3).
@@ -45,6 +46,8 @@
     modeTouched: false,   // 보기 모드를 손수 바꿨으면 화면 폭 변화가 덮어쓰지 않는다
     dirty: false,         // 내보내지 않은 변경
     exporting: false,     // 내려받기 진행 중. 같은 파일을 두 번 내보내지 못하게 막는다
+    server: false,        // 로컬 에디터 서버(docs/api.md)가 응답했는가. true면 Ctrl+S = 저장
+    saving: false,        // PUT 진행 중. 같은 글을 두 번 보내지 못하게 막는다
     indexData: null,
     indexError: null      // index.json을 왜 못 읽었는지. 내보내기 안전장치의 판단 근거가 된다.
   };
@@ -311,7 +314,9 @@
     fillCategoryOptions(cat.slug);
     closeNewCat(true);
     onEdit();
-    U.toast('분류를 만들었어요 · 내보낼 때 categories.json도 함께 내려받습니다', 'ok');
+    U.toast(state.server
+      ? '분류를 만들었어요 · 저장할 때 서버에 함께 등록합니다'
+      : '분류를 만들었어요 · 내보낼 때 categories.json도 함께 내려받습니다', 'ok');
     return true;
   }
 
@@ -1085,7 +1090,9 @@
     });
   }
 
-  function doExport(createdOverride) {
+  /* 내보내기와 서버 저장이 같은 메타를 쓴다. 두 경로가 frontmatter를 따로 조립하면
+     한쪽만 고쳤을 때 "내보낸 글"과 "저장한 글"이 다른 파일이 된다. 여기 한 곳에서만 만든다. */
+  function buildMeta(createdOverride) {
     var form = readForm();
     var now = U.nowIsoKst();
     /* 수정 모드에서는 원본 created만 쓴다. 비어 있을 때 쓸 값은
@@ -1113,6 +1120,13 @@
       /* color는 내보내지 않는다(§9-2 폐기). 기존 파일에 남아 있는 키는 그대로 둬도 무해하다. */
       pinned: form.pinned
     };
+    return { form: form, meta: meta };
+  }
+
+  function doExport(createdOverride) {
+    var built = buildMeta(createdOverride);
+    var form = built.form;
+    var meta = built.meta;
 
     var mdText = store.toMarkdownFile(meta, form.body);
     var needCats = cats.added.length > 0;
@@ -1315,6 +1329,188 @@
       bodyNodes: nodes,
       actions: actions
     });
+  }
+
+  /* ---------- 로컬 에디터 서버 (docs/api.md §4, 계약서 §6-1) ----------
+     PM이 만든 서버(Docker, 5500)가 켜져 있으면 에디터가 .md와 index.json을 직접 쓴다.
+     없으면(start.bat) 지금까지처럼 내보내기뿐이다. 두 모드를 가르는 건 GET /api/health 하나이고,
+     화면 상태는 #btnSave·#editorServer의 hidden 둘이 전부다(클래스·data-·body 상태 없음).
+     내보내기는 서버 모드에서도 폴백으로 살아 있다 — 서버가 도중에 죽어도 글을 잃는 길이 없어야 한다. */
+
+  var HEALTH_TIMEOUT_MS = 2000;
+
+  /* 서버 모드 ↔ 내보내기 모드. 켜고 끄는 곳이 여기 하나라 되돌릴 때 빠뜨리는 속성이 없다.
+     보이는 버튼 둘이 같은 단축키(Ctrl+S)를 주장하면 스크린리더가 둘 다 읽으므로
+     서버 모드에서는 내보내기 버튼의 단축키 표기를 뗀다(계약서 §6-1). 복귀하면 되돌린다. */
+  function setServerMode(on) {
+    state.server = Boolean(on);
+    if (dom.saveBtn) U.setHidden(dom.saveBtn, !state.server);
+    if (dom.server) U.setHidden(dom.server, !state.server);
+    if (dom.exportBtn) {
+      if (state.server) {
+        dom.exportBtn.removeAttribute('aria-keyshortcuts');
+        dom.exportBtn.setAttribute('title', '파일로 내보내기');
+      } else {
+        dom.exportBtn.setAttribute('aria-keyshortcuts', 'Control+S');
+        dom.exportBtn.setAttribute('title', '파일로 내보내기 (Ctrl+S)');
+      }
+    }
+    /* Ctrl+S가 무엇을 하는지 말하는 자리 셋(placeholder · 숨은 설명 · 상태줄 안내)도 따라간다.
+       placeholder·bodyHint의 다른 문장은 그대로 두고 "내보내기"라는 낱말만 바꾼다. */
+    var verb = state.server ? '저장' : '내보내기';
+    if (dom.body) {
+      dom.body.setAttribute('placeholder',
+        '여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S ' + verb + '.');
+    }
+    if (dom.bodyHint) {
+      dom.bodyHint.textContent = 'Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. '
+        + 'Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S ' + (state.server ? '저장' : '파일로 내보내기') + '.';
+    }
+  }
+
+  /* 실패는 전부 "조용히 내보내기 모드"다(api.md §4-1). start.ps1은 /api/health에 텍스트 404를 주고,
+     file://은 fetch 자체가 던진다 — 어느 쪽이든 사용자에게 알릴 오류가 아니라 평소 상태다. */
+  function detectServer() {
+    if (typeof window.fetch !== 'function') return Promise.resolve(false);
+    var ctrl = (typeof window.AbortController === 'function') ? new window.AbortController() : null;
+    var timer = window.setTimeout(function () { if (ctrl) ctrl.abort(); }, HEALTH_TIMEOUT_MS);
+    var opts = { cache: 'no-store' };
+    if (ctrl) opts.signal = ctrl.signal;
+
+    return promised(function () { return window.fetch('/api/health', opts); })
+      .then(function (res) {
+        if (!res || !res.ok) return false;
+        return res.json().then(function (json) { return Boolean(json && json.ok === true); }, function () { return false; });
+      })
+      .catch(function () { return false; })
+      .then(function (ok) {
+        window.clearTimeout(timer);
+        setServerMode(ok);
+        return ok;
+      });
+  }
+
+  /* 응답 본문을 JSON으로 읽는다. 서버가 아닌 것(프록시·다른 정적 서버)이 HTML을 돌려줘도
+     여기서 던지지 않고 null을 준다 — 호출부가 "서버 응답이 아니다"로 처리한다. */
+  function readJson(res) {
+    return res.json().then(function (json) { return json; }, function () { return null; });
+  }
+
+  function apiPut(path, payload) {
+    return window.fetch(path, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  /* 오류 본문은 항상 { error: { code, message } } 다(api.md §3). 형식이 어긋난 응답도 사람이 읽을 문장으로. */
+  function apiErrorMessage(res, json, what) {
+    var msg = json && json.error && json.error.message ? String(json.error.message) : '';
+    if (!msg) msg = what + ' 실패 (HTTP ' + res.status + ')';
+    if (res.status === 409) msg += ' · 파일을 손으로 정리한 뒤 다시 시도해 주세요';
+    return msg;
+  }
+
+  function setSaving(on) {
+    state.saving = on;
+    if (!dom.saveBtn) return;
+    dom.saveBtn.disabled = on;
+    /* disabled가 되는 순간 포커스는 body로 튕긴다(setExporting과 같은 이유). 끝나면 돌려준다. */
+    if (!on && document.activeElement === document.body && !dom.saveBtn.hasAttribute('hidden')) dom.saveBtn.focus();
+  }
+
+  function saveToServer() {
+    if (!state.server) { exportFiles(); return; }
+    if (state.saving || state.exporting) return;
+    /* 검증·분류·게시일 확인은 내보내기와 정확히 같은 순서다(api.md §4-3). */
+    if (!validate(readForm())) return;
+    ensureUsableCategory(function () { ensureCreated(doSave); });
+  }
+
+  function doSave(createdOverride) {
+    var built = buildMeta(createdOverride);
+    var form = built.form;
+    var meta = built.meta;
+
+    /* PUT 본문 = 메타 8개 + body. created는 서버가 디스크 값으로 판정한다 — 새 글이면 무시하고 now,
+       기존 글이면 디스크 값 유지. 클라이언트가 보낸 created가 진실이 되는 유일한 경우는
+       디스크의 글에 created가 전혀 없을 때뿐이고, 그 값은 ensureCreated()가 사용자에게 확인받은 것이다. */
+    var payload = Object.assign({}, meta, { body: form.body });
+    if (state.mode === 'edit' && state.originalId && state.originalId !== meta.id) {
+      payload.previousId = state.originalId;
+    }
+
+    /* 새 분류가 있으면 글보다 먼저 등록한다. 순서가 바뀌면 글이 미등록 분류로 저장된다(api.md §4-3). */
+    var needCats = cats.added.length > 0;
+
+    setSaving(true);
+    setStatus('서버에 저장하는 중…');
+
+    var job = Promise.resolve();
+    if (needCats) {
+      job = job.then(function () {
+        return apiPut('/api/categories', JSON.parse(buildCategoriesJson()));
+      }).then(function (res) {
+        return readJson(res).then(function (json) {
+          if (!res.ok) throw mkErr('api', apiErrorMessage(res, json, '분류 저장'));
+        });
+      });
+    }
+
+    job.then(function () {
+      return apiPut('/api/posts/' + encodeURIComponent(meta.id), payload);
+    }).then(function (res) {
+      return readJson(res).then(function (json) {
+        if (!res.ok) throw mkErr('api', apiErrorMessage(res, json, '저장'));
+        if (!json || !json.ok || !json.meta) throw mkErr('api', '서버 응답을 읽을 수 없습니다 · 내보내기로 저장하세요');
+        onSaved(json, needCats);
+      });
+    }).catch(function (err) {
+      setSaving(false);
+      if (err && err.code === 'api') {
+        /* 서버가 거절했다. 초안·dirty는 그대로 — 사용자가 고쳐서 다시 누른다. */
+        U.toast(err.message, 'err');
+        setStatus('저장하지 못했어요 · 임시저장본은 그대로 있습니다', true);
+        return;
+      }
+      /* 네트워크 실패 = 서버가 사라졌다. 모드가 내보내기로 돌아간 것이 화면에서 보여야 한다(계약서 §6-1). */
+      setServerMode(false);
+      U.toast('서버가 꺼졌습니다 — 내보내기로 저장하세요', 'err');
+      setStatus('서버 연결이 끊겼어요 · 파일로 내보내기를 눌러 저장하세요', true);
+    });
+  }
+
+  /* 200 — 디스크 저장이 확인됐다. 내보내기(M7)와 달리 초안을 지워도 된다.
+     응답의 meta가 실제로 쓴 값이므로 화면 상태는 응답으로 덮는다(created를 클라이언트가 계산하지 않는다). */
+  function onSaved(json, savedCats) {
+    var saved = json.meta;
+    state.created = saved.created || state.created;
+    state.originalId = saved.id;
+    state.originalCategory = saved.category || '';
+    state.originalPath = json.path || postPathOf(saved.id, saved.category);
+
+    /* 이제 이 글은 디스크에 있다. 새 글이었어도 "수정 모드"가 맞다 — 제목을 고쳐도 id가
+       따라 바뀌지 않고(refreshAutoId), 다시 저장하면 같은 파일을 덮어쓴다. 초안 slot은 세션 내내
+       바뀌지 않는다(흩어지면 안 된다). id 칸에 서버가 확정한 값을 되비친다. */
+    state.mode = 'edit';
+    state.idTouched = true;
+    if (dom.id.value !== saved.id) dom.id.value = saved.id;
+    showEditBadge(saved, state.originalPath);
+
+    if (savedCats) cats.added = [];
+    cats.loaded = true;
+
+    store.draft.clear(state.slot);
+    setSaving(false);
+    setStatus('저장됨 · ' + state.originalPath, false);
+    U.toast(json.isNew ? '새 글을 저장했습니다' : '저장했습니다', 'ok');
+
+    /* 내보내기 폴백이 쓰는 목록 사본을 서버가 쓴 최신으로 맞춘다. 실패해도 저장은 이미 끝났다. */
+    promised(function () { return store.loadIndex(true); }).then(function (data) {
+      state.indexData = data;
+      state.indexError = null;
+    }).catch(function () { /* 다음 내보내기 때 기존 사본으로 판단한다 */ });
   }
 
   /* ---------- 불러오기 ---------- */
@@ -1699,16 +1895,19 @@
     });
 
     U.on(dom.exportBtn, 'click', exportFiles);
+    /* 저장 버튼은 서버 모드에서만 보인다(hidden). saveToServer()는 서버 모드가 아니면 내보내기로 넘긴다. */
+    U.on(dom.saveBtn, 'click', saveToServer);
 
-    /* Ctrl+S는 브라우저 "페이지 저장"을 가로채 내보내기로 쓴다.
-       단, 모달이 떠 있는 동안에는 내보내지 않는다 — 내보내기 안내 모달 위에서 또 누르면
+    /* Ctrl+S는 브라우저 "페이지 저장"을 가로챈다 — 서버 모드면 저장, 아니면 내보내기(계약서 §6-1).
+       단, 모달이 떠 있는 동안에는 아무것도 하지 않는다 — 내보내기 안내 모달 위에서 또 누르면
        같은 파일이 두 벌 내려가고, 확인창의 질문(덮어쓸까요?)을 건너뛴 셈이 된다.
        브라우저의 "페이지 저장"만은 그대로 막는다(눌린 사실을 없던 일로 만드는 편이 헷갈리지 않는다). */
     U.on(document, 'keydown', function (e) {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return;
       e.preventDefault();
       if (document.body.classList.contains('modal-open')) return;
-      exportFiles();
+      if (state.server) saveToServer();
+      else exportFiles();
     });
 
     /* 내보내지 않은 변경이 있으면 떠나기 전에 물어본다.
@@ -1824,6 +2023,10 @@
     dom.status = document.getElementById('editorStatus');
     dom.previewToggle = document.getElementById('btnPreviewToggle');
     dom.exportBtn = document.getElementById('btnExport');
+    /* v3.5(계약서 §12-11 #69): 서버 모드의 저장 버튼과 연결 표시. 둘 다 hidden으로 시작한다. */
+    dom.saveBtn = document.getElementById('btnSave');
+    dom.server = document.getElementById('editorServer');
+    dom.bodyHint = document.getElementById('bodyHint');
     dom.modeBadge = document.getElementById('editorMode');
     dom.visitorNote = document.getElementById('editorVisitor');
 
@@ -1846,6 +2049,10 @@
     initToolbarRoving();
     setViewMode(autoViewMode());
     watchWidth();
+
+    /* 로컬 에디터 서버 감지(docs/api.md §4-1). 글 로드와 독립이라 기다리지 않는다 —
+       2초 안에 답이 없으면 내보내기 모드 그대로이고, 답이 오면 그때 저장 버튼이 나타난다. */
+    detectServer();
 
     /* index.json은 내보내기에서 다시 쓰므로 미리 받아 둔다. 실패해도 작성은 가능해야 한다.
        다만 "왜 실패했는지"는 기억해 둔다 — 내보낼 때 목록을 덮어쓸지 판단해야 하기 때문.

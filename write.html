@@ -74,10 +74,13 @@
   <button class="icon-btn side-toggle" id="sideToggle" type="button"
           aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
-  <!-- index.html / post.html과 항목을 맞춘다. 페이지마다 메뉴가 달라 보이면 안 된다. -->
+  <!-- index.html / post.html / about.html과 항목을 맞춘다(계약서 §3-3, 4항목). 페이지마다 메뉴가 달라 보이면 안 된다.
+       현재 페이지 표시는 aria-current="page" 하나다 — .is-active는 v3.4에서 폐기됐다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
     <a class="nav-link" href="index.html">글</a>
-    <a class="nav-link is-active" href="write.html" data-admin-only>쓰기</a>
+    <a class="nav-link" href="index.html#tags">태그</a>
+    <a class="nav-link" href="about.html">소개</a>
+    <a class="nav-link" href="write.html" aria-current="page" data-admin-only>쓰기</a>
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
@@ -207,10 +210,19 @@
         </label>
       </div>
 
+      <!-- 계약서 §6-1(v3.5): 미리보기 → 저장 → 내보내기 → 서버 표시. DOM 순서 고정 —
+           CSS의 `#btnSave:not([hidden]) ~ #btnExport` 격하 규칙이 형제 순서에 걸려 있다.
+           #btnSave·#editorServer는 hidden으로 시작하고, editor.js가 GET /api/health(docs/api.md)로
+           로컬 에디터 서버를 확인했을 때만 hidden을 뗀다. 상태는 hidden 둘이 전부다(클래스·data- 없음).
+           서버 모드가 되면 editor.js가 #btnExport의 aria-keyshortcuts·title의 "(Ctrl+S)"를 뗀다 —
+           보이는 버튼 둘이 같은 단축키를 주장하면 스크린리더가 둘 다 읽는다. -->
       <div class="editor-actions">
         <button class="btn" type="button" id="btnPreviewToggle" title="나란히 · 작성만 · 미리보기만 전환">미리보기</button>
+        <button class="btn btn-primary" type="button" id="btnSave" hidden
+                title="저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장</button>
         <button class="btn btn-primary" type="button" id="btnExport"
                 title="파일로 내보내기 (Ctrl+S)" aria-keyshortcuts="Control+S">파일로 내보내기</button>
+        <span class="editor-server" id="editorServer" hidden>로컬 서버 연결됨</span>
       </div>
 
       <!-- 내보내지 않은 변경이 있으면 editor.js가 .is-dirty를 붙인다. -->
