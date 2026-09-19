@@ -1,6 +1,6 @@
 /* theme-init.js — 첫 페인트 전에 테마를 확정한다(FOUC 방지).
 
-   세 HTML(index / post / write)이 <head>에서 defer 없이 동기로 싣는다.
+   네 HTML(index / post / about / write)이 <head>에서 defer 없이 동기로 싣는다.
    CSP(script-src 'self')가 인라인 <script>를 막기 때문에 파일로 뺐다 — 내용은
    예전 인라인 스크립트와 같다. defer를 붙이면 첫 페인트 뒤에 돌아 목적을 잃는다.
 
@@ -39,5 +39,20 @@
     if (pinned && wide) document.documentElement.setAttribute('data-side', 'pinned');
   } catch (err) {
     /* 저장소가 막혀 있거나 JSON이 깨졌으면 고정 아님(기본값)으로 그린다. */
+  }
+})();
+
+/* 인트로 전등(계약서 §3-5)을 이 세션에서 이미 봤으면 첫 페인트 전에 data-intro="done"을 붙인다.
+   CSS가 .intro를 display:none으로 만들고 본문 진입 애니메이션도 선택자에서 빠진다.
+   DOMContentLoaded 뒤 ui.js에 맡기면 막이 한 프레임 보였다 사라진다.
+   첫 방문에서는 ui.js initIntro()가 sessionStorage에 쓰기만 하고 이 속성은 붙이지 않는다 —
+   다음 로드에서 여기가 붙인다. .intro가 없는 페이지(post/about/write)에서는 속성만 붙고 아무 일도 없다.
+
+   'blogIntro' 문자열은 config.js의 storageKeys.intro와 반드시 같아야 한다(위 두 키와 같은 이유). */
+(function () {
+  try {
+    if (sessionStorage.getItem('blogIntro')) document.documentElement.setAttribute('data-intro', 'done');
+  } catch (err) {
+    /* 저장소가 막혀 있으면 첫 방문으로 본다 — 인트로가 매번 나오지만 깨지지는 않는다. */
   }
 })();

@@ -39,6 +39,9 @@
 </head>
 
 <body>
+<!-- 인트로 전등 — index.html 전용, 세션당 1회(계약서 §3-5). <body> 첫 자식이어야 첫 페인트부터 본문을 덮는다.
+     그림·시간표는 전부 CSS(components.css §16 / layout.css §10), 종료(hidden + sessionStorage)는 ui.js initIntro(). -->
+<div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>
 <a class="sr-only" href="#main">본문 바로가기</a>
 
 <!-- 헤더는 static이다. sticky도, 밑선도, 로고 마크도 없다(계약서 §3).

@@ -1,8 +1,18 @@
-# 마크업 계약서 v3.5
+# 마크업 계약서 v3.6
 
 디자이너(CSS)와 개발자(HTML/JS)가 동시에 작업하기 위한 **단일 진실 공급원**.
 여기 없는 클래스를 임의로 만들지 않는다. 필요하면 이 문서를 먼저 갱신한다.
 
+> **v3.6 (2026-09-19) — 인트로 전등: index.html 첫 방문 때 꺼진 전구 → 2초 뒤 켜짐 → 블로그가 드러남.**
+> 사용자 요청 원문: *"이 사이트 접속할 때 전등 그림이 먼저 나오면서(디자인 담당 에이전트가 직접 그림) 전등이
+> 2초 뒤 켜지고 그 다음으로 자연스럽게 메모 블로그가 렌더링 되게. 다크·라이트 바꾸는데 이상한 전등 깜빡이는
+> 애니 넣지 말고."* 이 라운드는 이것 하나다 — 다른 화면·부품은 v3.5 그대로.
+> 바뀐 절만 읽으려면: §1-2(원칙 2·3·4의 예외 한 줄씩) · §2(`--z-intro` · 인트로 시간 토큰 셋 · 파생 변수) ·
+> §3(index.html의 첫 자식) · §3-1 · **§3-5(신설 — 인트로: 마크업·시간표·상태·JS 규칙)** · §7 · §8 · §8-1 · §8-2 ·
+> §11(transition 표 3행 · 11-1 분담) · **§12-12(개발자 작업 #70-75 — frontend-dev #70·#72, frontend-dev-2 #71·#73-75)** · §13.
+> CSS는 web-designer가 이미 v3.6으로 교체했다. **HTML에 `.intro`가 없는 동안**은 아무것도 달라지지 않는다
+> (막도 진입 모션도 `body:has(> .intro)`에 걸려 있다). 테마 토글 아이콘의 scale·box-shadow transition은 뗐다.
+>
 > **v3.5 (2026-09-18) — 로컬 에디터 서버(`docs/api.md`) 연동: write.html에 "저장" 버튼 + 서버 연결 표시.**
 > 바뀐 절만 읽으려면: **§6(`.editor-actions` 마크업 — `#btnSave` · `.editor-server`, 상태 규칙)** · §7 ·
 > **§12-11(개발자 작업 #66-69, frontend-dev-2)** · §13. CSS는 교체됐다. 다른 화면은 v3.4 그대로다.
@@ -129,15 +139,24 @@
    300행에서도 눈이 좌우로 튀지 않는다 — v2.x의 "글마다 6색"과 다른 점이 그것이다.
    v2.x의 `--c-accent-2`(테라코타)는 되살리지 않는다. 그 이름은 "두 번째 액센트"라는
    뜻뿐이라 어디에 써야 하는지 말해 주지 않았다. 새 토큰은 이름이 곧 사용처다.
+   **예외 하나(v3.6)** — 인트로 전구의 "켜진 면"은 `--c-meta`다(§3-5). 시간·수량이 아니라 **빛**이다.
+   네 번째 색을 만들지 않은 이유 — 3초짜리 한 화면을 위해 토큰(과 `@property`·transition 목록)을 늘리면
+   그 색은 어디에도 다시 쓰이지 않는다. 황토는 이 팔레트에서 유일하게 "따뜻한 빛"으로 읽히는 색이다.
 3. **그림자를 쓰지 않는다.** 구분이 필요하면 1px 경계선이나 여백으로 해결한다.
    예외는 **화면 위에 떠 있는 것**(모달 패널·토스트·**오버레이 상태의 사이드바**)뿐이고
    토큰도 `--sh-pop` 하나다. 사이드바가 **도킹되면 그림자를 뗀다** — 페이지의 일부이지 떠 있는 것이 아니다(§3-2).
    목록 카드(§4-4)는 **그림자 없이** 1px 경계선 + 한 단계 밝은 면으로만 선다.
+   **예외 둘(v3.6)** — 인트로 전구가 켜졌을 때의 글로우(`drop-shadow`, §3-5). 이것은 층위가 아니라 **빛**이고,
+   빛 없는 "켜짐"은 색이 바뀐 원판일 뿐이다. 켜진 상태(`.intro-bulb::after`)에만 있고 다른 곳에 번지지 않는다.
 4. **모션은 상태 변화에만.** stagger·무한 루프는 없다.
    남은 것은 hover/focus 색 전환, 모달·토스트의 등퇴장, 사이드바 슬라이드, 그리고 v3.4의 둘 —
    **테마 크로스페이드 1.2초**(사용자 요청 "약간의 텀을 둬서 자연스럽게")와 **콘텐츠 도착**
    (카드·본문이 놓일 때 260ms 페이드 + 3px, 사용자 요청 "눈에 안 띄게 부드러운 애니메이션")이다.
    "도착"은 진입 장식이 아니라 "결과가 바뀌었다 / 내용이 왔다"는 상태 변화의 신호로 정의한다(§11-4).
+   **v3.6: 인트로 전등**(§3-5)이 셋째다 — 세션당 한 번, index.html에서만, 사용자가 직접 요구한 진입 연출.
+   "전등이 켜진다 → 방(블로그)이 보인다"는 상태 변화 하나를 3.2초에 걸쳐 보여 주는 것이고, 끝나면 DOM에서
+   사실상 사라진다(`hidden`). **테마 토글에는 어떤 애니메이션도 없다** — 아이콘의 scale·box-shadow transition도
+   v3.6에서 뗐다. 1.2초 크로스페이드 한가운데서 아이콘만 160ms에 오그라드는 것이 "깜빡"으로 읽혔다.
 5. **~~단색 배경 금지~~ (폐기)** — 사용자 판정으로 배경은 `--c-bg` 단색이다.
    질감은 배경 레이어가 아니라 **따뜻한 종이색 자체**가 낸다.
 6. 본문 타이포는 양보하지 않는다: **17px 이상 / 행간 1.75 / 줄길이 `--w-prose`.**
@@ -162,10 +181,28 @@
        --ring-w (3px, 포커스 글로우 두께) --sh-focus (인풋 :focus 글로우)
 모션: --ease(cubic-bezier(.16,1,.3,1))  --dur-fast(160ms) --dur(260ms) --dur-slow(420ms)
       --ease-fade(cubic-bezier(.65,0,.35,1)) --dur-theme(1200ms)   ← 테마 크로스페이드 전용(§11, v3.4 값)
+      --delay-intro(2000ms) --dur-intro-on(400ms) --dur-intro-out(600ms)   ← 인트로 전용(§3-5, v3.6)
 치수: --h-control --h-control-sm --h-control-xs --h-nav --w-modal --w-toast
 레이아웃: --w-prose(45rem) --w-page(72rem, v3.2 부활) --w-side(260px, v3.2) --gutter
-z-index: --z-scrim(40) --z-side(50) --z-modal(60) --z-toast(80)
+z-index: --z-scrim(40) --z-side(50) --z-modal(60) --z-toast(80) --z-intro(90, v3.6)
 ```
+
+**v3.6 신설 4개 — 인트로 전등(§3-5). 다른 곳에서 쓰면 결함이다.**
+
+| 토큰 | 값 | 왜 이 값인가 |
+|---|---|---|
+| `--z-intro` | `90` | 토스트(80) 위. 3초 동안 페이지 전체를 가리는 막이라 도킹된 사이드바·로드 실패 토스트까지 막 뒤에서 기다린다 |
+| `--delay-intro` | `2000ms` | 사용자가 말한 숫자 그대로("2초 뒤 켜지고"). 꺼진 전구를 "보는" 시간 — 짧으면 왜 있었는지 모른다 |
+| `--dur-intro-on` | `400ms` | 백열등이 정격 밝기에 이르는 시간(수백 ms). 160이면 스위치 "딸깍", 600이면 조광기 |
+| `--dur-intro-out` | `600ms` | 막이 걷히고 본문이 8px 올라오는 시간. `--dur-slow`(420)보다 긴 이유 — 화면 전체가 바뀌는 유일한 모션이라 부품 하나(모달)보다 한 단계 느려야 "밀려난다"가 아니라 "드러난다"로 읽힌다. 800부터는 대기 |
+
+**v3.6 — 파생 변수 둘(토큰 아님, `--col-w`와 같은 지위).**
+`--intro-out-at`(layout.css가 `body`에 둔다) = `--delay-intro + --dur-intro-on + --dur-fast` — 막이 걷히기 시작하는
+시각(2560ms). 막 퇴장과 본문 진입이 같은 값을 읽어야 해서 한 번만 합산한다. 160ms(`--dur-fast`)는 켜진 전구를
+"확인하는" 한 박자 — 0이면 켜지자마자 사라지고, `--dur`(260)부터는 멈춘 것처럼 보인다.
+`--bulb-line` `--bulb-fill` `--bulb-wire` `--bulb-cap-line` `--bulb-cap-fill`(components.css §16, `.intro-bulb`에 둔다) —
+전구 그림 한 장을 `::before`(꺼짐)·`::after`(켜짐)가 같은 그라디언트로 두 번 그리기 위한 색 자리. 값은 전부 토큰 또는
+토큰의 `color-mix()`다. `@property` 등록 없음 — 두 그림을 opacity로 크로스페이드하므로 색을 보간하지 않는다.
 
 **v3.4 — 색 토큰은 `@property`로 등록된다.** `tokens.css` 끝에서 `--c-*`(20) · `--code-*`(3) · `--hl-*`(17)을
 `syntax: "<color>"`로 등록한다. 목적은 하나 — 테마 토글 때 **토큰 값 자체가 보간**되게 하는 것(§11).
@@ -229,6 +266,9 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
 ## 3. 공통 셸 (네 페이지 모두 동일 — v3.4부터 about.html 포함)
 
 ```html
+<!-- v3.6: index.html에만, <body>의 첫 자식. 다른 세 페이지에는 없다(§3-5) -->
+<div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>
+
 <a class="sr-only" href="#main">본문 바로가기</a>
 
 <header class="site-header">
@@ -302,7 +342,7 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
 
 | 규칙 | 이유 |
 |---|---|
-| **`body`의 첫 자식** | 첫 Tab에서 나와야 "건너뛰기"다 |
+| **`body`의 첫 자식** — v3.6: index.html에서는 **`.intro` 다음, 즉 둘째** | 첫 Tab에서 나와야 "건너뛰기"다. 규칙의 뜻은 "포커스 가능한 것 중 첫째"이고, `.intro`는 포커스 가능한 것이 없는 `aria-hidden` 막이라 Tab 순서·접근성 트리 어디에도 없다. 막이 스킵 링크보다 앞에 오는 이유는 §3-5(첫 페인트) |
 | **대상은 세 페이지 모두 `#main`** | 렌더 전 빈 컨테이너로 뛰어내리지 않게 |
 | **`<main>`에 `tabindex="-1"` 필수** | 없으면 스크롤만 되고 포커스는 헤더에 남는다 |
 | 전용 클래스 없이 `.sr-only` | `:focus`와 `:focus-visible` **둘 다**에서 드러나도록 CSS가 잡혀 있다 |
@@ -466,6 +506,84 @@ post.html의 부품을 그대로 쓴다 — 새 클래스 0개.
 `store.loadIndex()`·`store.loadCategories()`를 받아 `Blog.ui.renderSide({ posts, cats, activeId: null, activeCat: null })`
 (사이드바가 빈 채로 남지 않게 — 실패하면 빈 데이터로 부른다, `app.js` `showLoadError()`와 같다) →
 `[data-site-title]`에 `site.title`. 그 밖의 일은 없다(`post.js`의 `renderSide()` 래퍼와 같은 방어 — `Blog.ui.renderSide`가 없으면 건너뛴다).
+
+### 3-5. 인트로 전등 `.intro` (v3.6 신설 — index.html만)
+
+> **사용자 요청(원문): "이 사이트 접속할 때 전등 그림이 먼저 나오면서(디자인 담당 에이전트가 직접 그림) 전등이
+> 2초 뒤 켜지고 그 다음으로 자연스럽게 메모 블로그가 렌더링 되게. 다크·라이트 바꾸는데 이상한 전등 깜빡이는
+> 애니 넣지 말고."**
+
+한 문장으로: **막(`--c-bg`)이 화면을 덮고 꺼진 전구가 정중앙에 선다 → 2초 뒤 전구가 켜진다 → 막이 걷히며
+블로그가 8px 올라오며 드러난다.** 세션당 한 번, index.html에서만. 전등은 "켜진다"는 상태 변화 하나를 보여 주고
+사라진다 — 무한 루프·깜빡임·재생 버튼 없음. 테마 토글과는 **아무 관계가 없다**(테마에는 전등도 애니메이션도 없다).
+
+**마크업 — `<body>`의 첫 자식. 스킵 링크보다 앞이다(§3-1).**
+
+```html
+<div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>
+```
+
+| 규칙 | 내용 |
+|---|---|
+| 어디에 | **index.html만.** post.html·about.html·write.html에는 넣지 않는다 — "사이트에 접속할 때"이지 "페이지를 열 때"가 아니다. 글 링크를 타고 들어온 방문자(검색 유입)는 본문이 목적이라 막을 세우지 않는다 |
+| 왜 첫 자식인가 | 막은 **첫 페인트부터** 있어야 한다. CSS는 `<head>`에서 이미 로드됐고, 파서가 body를 위에서 아래로 그리므로 막이 첫 자식이면 본문이 한 프레임도 먼저 보이지 않는다. 맨 뒤에 두면 느린 연결에서 헤더가 먼저 찍힌 뒤 막이 덮는다(그게 곧 "깜빡임"이다). `position: fixed` + `--z-intro`라 DOM 위치는 그리기 순서와 무관하다 |
+| `aria-hidden="true"` | 장식이다. 스크린리더는 막을 모른 채 곧바로 본문을 읽는다 — 3초를 기다리게 하지 않는다. 안에 포커스 가능한 것이 없어 Tab 순서도 그대로다(스킵 링크가 여전히 첫 Tab) |
+| 안에 글자 없음 | "메모 블로그" 같은 워드마크를 넣지 않는다. 사용자가 요구한 것은 전등 하나다. 글자가 있으면 로딩 스플래시가 된다 |
+| 전구 그림 | **CSS 그라디언트로 직접 그린다**(`components.css` §16). 96×140, 유리(원 r42)·목·꼭지(나사산 2줄 + 접점)·필라멘트(고리 + 지지선 둘). SVG 파일도 data-URI도 없다 — 색이 박힌 SVG는 규칙 5 위반이고, mask로 색을 빼도 두 테마의 선·면·글로우를 따로 줄 수 없다. 꺼짐 = 선 `color-mix(--c-border 50%, --c-text-mute)` + 면 `--c-surface-2` / 켜짐 = 면·선 `--c-meta` + 필라멘트 `--c-bg` + `drop-shadow` 글로우 두 겹(§1-2 원칙 2·3의 예외). 다크에서는 같은 규칙으로 금색 전구가 된다 |
+| 켜짐의 구현 | 그림 한 장을 `::before`(꺼짐)·`::after`(켜짐)가 같은 좌표로 두 번 그리고 `::after`의 **opacity를 0→1**로. `background-image`는 보간되지 않아 색을 애니메이션하면 50%에서 튄다 — 그래서 크로스페이드다 |
+
+**시간표 — JS 0줄. 전부 CSS `animation-delay`다(`layout.css` §10).**
+
+| 시각 | 무엇 | 토큰 |
+|---|---|---|
+| 0 | 막(`--c-bg`) + 꺼진 전구 | — |
+| 2000ms | 전구가 켜진다(`.intro-bulb::after` opacity 0→1, 400ms, `--ease-fade`) | `--delay-intro` `--dur-intro-on` |
+| 2560ms | 막이 걷히기 시작(`.intro` opacity 1→0, 600ms, `--ease-fade`) **+ 같은 시각에** `.site-header` `.site-main` `.site-footer`가 opacity 0→1·`translate` 8px→0(600ms, `--ease`) | `--intro-out-at` = 2000 + 400 + `--dur-fast` / `--dur-intro-out` |
+| 3160ms | 막은 `visibility: hidden` + `pointer-events: none`으로 남는다(`animation-fill-mode: forwards`). **`.intro` 자신의 `animationend`가 이 시각에 한 번 난다** — ui.js가 받는 신호 | — |
+
+- 막과 본문의 바탕이 같은 `--c-bg`라 눈에는 "내용만" 떠오르는 크로스페이드가 된다. 8px은 콘텐츠 도착(§11-4)의
+  3px과 구분되는 크기 — 화면 전체가 한 번 오는 자리다. 12px부터는 페이지가 "밀려 들어온다".
+- `.side`는 진입 대상이 아니다 — 슬라이드가 같은 `translate`를 쓰고, 막이 걷히는 것만으로 이미 드러난다.
+  (도킹된 사이드바는 막 아래에서 기다렸다가 막과 함께 나타난다.)
+- 막이 걷히는 600ms 동안 본문은 이미 렌더돼 있다(`app.js`는 막 뒤에서 평소대로 일한다). 데이터가 3초 안에
+  못 오면 `.list-loading` 한 줄이 드러난다 — 막이 로딩 스피너 역할을 겸하지 않는다.
+
+**§8-2와의 관계 — 정적 요소가 opacity 0에서 시작하지만 예외가 아니라 준수다.** 0→1로 가는 것이 JS가 아니라
+CSS animation이고, `html:not([data-intro="done"]) body:has(> .intro) > …`에만 걸린다. JS가 통째로 실패해도 3.16초 뒤
+막은 걷히고 본문은 1이 된다. `:has()`를 모르는 브라우저는 본문 진입만 빠지고 막의 크로스페이드는 그대로다.
+
+**상태 — 셋. 전부 §8에 등록.**
+
+| 상태 | 누가 | 언제 | CSS가 하는 일 |
+|---|---|---|---|
+| `html[data-intro="done"]` | `theme-init.js` | 첫 페인트 전, `sessionStorage['blogIntro']`가 있으면 | `.intro { display: none }` + 본문 진입 애니메이션 없음(선택자에서 빠진다). **첫 방문에서 ui.js가 붙이지 않는다** — 붙이면 진입 애니메이션이 선택자에서 빠져 그 프레임에 끊긴다. 다음 로드에서 theme-init이 붙인다 |
+| `#intro[hidden]` | `ui.js` | `.intro`의 `animationend`(`e.target === intro`) 뒤 | `[hidden] { display: none !important }`(base.css). fixed 막이 접근성 트리·히트 테스트에서 완전히 빠진다 |
+| `sessionStorage['blogIntro'] = '1'` | `ui.js` | 위와 같은 시각 | 같은 탭 세션에서 index.html로 돌아와도 다시 보지 않는다. **localStorage가 아닌 이유** — "사이트에 접속할 때"는 방문마다이지 평생 한 번이 아니다. 탭을 닫고 내일 오면 다시 켜진다 |
+
+- **`prefers-reduced-motion: reduce`면 인트로는 통째로 없다**(`.intro { display: none }`, 본문 진입 `animation: none`).
+  2초 대기 자체가 모션이다. 이때는 `animationend`가 나지 않으므로 ui.js가 `getComputedStyle(intro).display === 'none'`
+  이면 즉시 `hidden` + sessionStorage를 쓰고 끝낸다(아래 JS 규칙).
+- 막이 떠 있는 3초 동안 키보드 포커스는 본문으로 갈 수 있다(막이 잡지 않는다). 막으면 스크린리더·키보드
+  사용자를 3초 기다리게 한다. 마우스만 `pointer-events`로 막힌다 — 보이지 않는 것을 누르지 않게.
+- bfcache로 돌아오면 막은 `hidden` 상태 그대로 복원된다. 별도 처리 없음.
+
+**JS 규칙 (`ui.js` `initIntro()`, frontend-dev-2 — §12-12)**
+
+```
+intro = #intro. 없으면 return (index.html이 아니다)
+html[data-intro="done"]이거나 getComputedStyle(intro).display === 'none'(reduced-motion)이면
+  → intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch); return
+intro.addEventListener('animationend', e => { if (e.target !== intro) return; finish() })
+finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 번만(플래그)
+안전망: setTimeout(finish, --intro-out-at + --dur-intro-out + 500) — 백그라운드 탭 등에서 이벤트가 새도 막이 남지 않게.
+       숫자는 getComputedStyle(intro).animationDelay/Duration을 읽어 더한다(ms 문자열 파싱). 못 읽으면 4000
+```
+
+- `initShell()`이 `initTheme()` 다음에 부른다. `applyTheme()`·테마 토글은 인트로를 모른다 — 접점 0.
+- `config.js` `storageKeys.intro = 'blogIntro'`. `theme-init.js`는 config.js보다 먼저 실행되므로 문자열을 직접 쓴다
+  (`blogTheme`·`blogSide`와 같은 관행). **`created`·글 데이터·localStorage에는 손대지 않는다.**
+- `animationend`는 버블링한다 — `.intro-bulb::after`의 `intro-bulb-on`이 2.4초에 먼저 올라온다. `e.target === intro`
+  판정이 없으면 막이 켜지자마자 `hidden`이 되어 **전구가 켜지는 순간 화면이 튄다.** 이것이 이 절의 유일한 함정이다.
 
 ---
 
@@ -1216,6 +1334,7 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
 .cat-picker .cat-new .cat-new-hint
 .field .switch .switch-ui .md-toolbar .md-btn .editor-status .editor-mode .editor-visitor
 .editor-server                                          (v3.5 — 로컬 서버 연결 표시, §6-1. #btnSave는 .btn.btn-primary)
+.intro .intro-bulb                                      (v3.6 — 인트로 전등, index.html <body> 첫 자식, §3-5)
 .footer-note .footer-meta
 .code-wrap .code-lang .code-copy    (markdown.js가 주입)
 .table-wrap                          (markdown.js가 주입)
@@ -1292,6 +1411,11 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
 `html[data-side="pinned"]`는 `theme-init.js`가 첫 페인트 전에 붙이는 힌트로, `ui.js` `initSide()`가 body를
 동기화한 직후 제거한다. 그 외 상태 클래스가 필요하면 계약서를 먼저 갱신한다.
 
+**v3.6 — 인트로(§3-5)의 상태는 클래스가 아니다.** `html[data-intro="done"]`(`theme-init.js`가 첫 페인트 전에,
+`sessionStorage['blogIntro']`가 있을 때 — `data-side`와 달리 **ui.js가 제거하지 않는다**, 페이지가 사는 동안 유지) ·
+`#intro[hidden]`(`ui.js`가 `.intro`의 `animationend` 뒤에). `.intro`에 `is-*` 클래스를 붙이지 않는다 —
+시간표는 CSS animation이 갖고 있고 JS는 끝났다는 사실만 적는다.
+
 사이드바 버튼의 상태는 클래스가 아니라 **ARIA 속성**이 곧 상태다 — **`.nav-link[aria-current="page"]`(v3.4)**, `.side-toggle[aria-expanded]`,
 `.side-pin[aria-pressed]`, `.side-cat-toggle[aria-expanded]`, `.side-post[aria-current="page"]`,
 `.side-cat-name[aria-current="true"]`, **`.side-toc-item[aria-current="location"]`(v3.3 — 현재 절, 스크롤
@@ -1306,8 +1430,10 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
 | 토스트 퇴장 | `is-visible` 제거 후 **400ms** 뒤 DOM 제거 | 260ms (`--dur`) |
 | 모달 닫힘 | `is-open` 제거 후 **220ms** 뒤 DOM 제거 | 160ms (`--dur-fast`) |
 | 모달 열림 | append → **다음 rAF**에 `is-open` | 420ms (`--dur-slow`) |
+| **인트로 종료 (v3.6)** | `.intro`의 `animationend`(`e.target === intro`) → `hidden` + `sessionStorage`. 안전망 타이머는 `--intro-out-at + --dur-intro-out + 500ms`(computed style에서 읽는다) | 막 퇴장 시작 2560ms(`--intro-out-at`) + 600ms(`--dur-intro-out`) = 3160ms |
 
 이 숫자를 JS에서 줄이면 요소가 사라지는 중간에 잘린다. 늘릴 때는 상관없다.
+인트로는 JS가 시간을 세지 않는다 — CSS가 끝났다고 알려 줄 때 받아 적는다(§3-5). 안전망 타이머만 CSS보다 길다.
 
 **`.modal`은 `.is-open`이 없는 동안 `pointer-events: none`이다.** 닫히는 220ms 동안
 딤이 화면을 덮은 채 첫 클릭을 삼키기 때문이다("버튼이 한 번 안 먹는 사이트"로 보인다).
@@ -1321,6 +1447,10 @@ v3.0에는 해당 요소가 `.toast`와 `.modal` 둘뿐이고 **둘 다 JS가 �
 (v2.2가 `[data-reveal]`을, v3.0이 `.memo` 진입 모션을 같은 이유로 걷어냈다.)
 **v3.4: `.entry`(`@keyframes arrive`, opacity 0에서 시작)가 셋째다 — `app.js`·`post.js`가 만드는 요소다.**
 `.post`는 정적이라 opacity **.38**에서 시작한다(0이 아니다, §5-6). 정적 마크업에 `arrive`를 거는 것은 금지다.
+**v3.6: index.html의 `.site-header` `.site-main` `.site-footer`가 인트로 동안 0에서 시작한다(§3-5) — 규칙 위반이 아니다.**
+이 규칙이 막는 것은 "JS가 성공해야 1이 되는 정적 요소"다. 인트로의 0→1은 CSS `@keyframes intro-arrive`가
+`animation-delay` 뒤 스스로 끝내고, JS 실패·`:has()` 미지원·reduced-motion 어느 경우에도 영구 불가시가 생기지 않는다
+(각각 CSS가 끝냄 / 선택자 불일치로 애니메이션 자체가 없음 / `animation: none`). 판별 기준은 "누가 1로 만드는가"다.
 
 ---
 
@@ -1439,6 +1569,10 @@ tokens → base → layout → components → prose
 | **도킹 시 본문 밀기 `body` (v3.2)** | `padding-inline-start` | `--dur` + `--ease`. 첫 페인트(`html[data-side]`)에는 이전 값이 없어 걸리지 않는다 |
 | 사이드바 안의 핀·쉐브론 | `rotate` / `translate` | `--dur-fast` |
 | **`.side-toc-item` (v3.3)** | `color` / `background-color` — `.side-post`와 같다. 현재 절이 옮겨 갈 때 색이 건너간다(위치·크기 모션 없음) | `--dur-fast` |
+| **`.intro-bulb::after` — 전구 켜짐 (v3.6, `@keyframes intro-bulb-on`)** | `opacity` 0→1 (켜진 그림이 꺼진 그림 위에 물든다) | `--dur-intro-on`(400) + `--ease-fade`, delay `--delay-intro`(2000), both |
+| **`.intro` — 막 퇴장 (v3.6, `@keyframes intro-out`)** | `opacity` 1→0, 끝 프레임에 `visibility: hidden` `pointer-events: none` | `--dur-intro-out`(600) + `--ease-fade`, delay `--intro-out-at`(2560), forwards |
+| **`.site-header` `.site-main` `.site-footer` — 본문 진입 (v3.6, `@keyframes intro-arrive`, index.html·첫 방문만)** | `opacity` 0→1 + `translate` 8px→0 | `--dur-intro-out`(600) + `--ease`, delay `--intro-out-at`, both |
+| ~~`#themeToggle::before`~~ (v3.6 삭제) | ~~`box-shadow` / `scale`(해↔달)~~ — 사용자 요청 "테마 바꾸는데 깜빡이는 애니 넣지 말고". 아이콘은 즉시 바뀌고 색만 토큰 보간을 따른다 | — |
 
 **테마 크로스페이드의 작동 방식 (v3.4, JS 0줄)** — 사용자 요청 *"다크·라이트 전환할 때 약간의 텀을
 둬서 자연스러운 애니메이션으로 (1~2초)"*, *"언제나 가능하게 (순서·횟수 상관없이)"*. v3.1의 240ms는
@@ -1513,6 +1647,8 @@ tokens → base → layout → components → prose
 | **`.post-related-title` + `.post-related .entry-title` 크기 보정** (v3.3) | `components.css` §7 |
 | **`.side-toc` `.side-toc-item`** (v3.3) | `components.css` §15 (사이드바 부품 옆) |
 | **`.field-group` `.field-label`** (v3.3) | `components.css` §11 (`.editor-fields`의 `align-items`만 `layout.css`) |
+| **`.intro`(막·`--z-intro`·`@keyframes intro-out`) · `body { --intro-out-at }` · 본문 진입 `@keyframes intro-arrive` · `html[data-intro="done"]`·reduced-motion 블록** (v3.6) | `layout.css` §10 — 화면 전체를 덮고 골격 셋을 움직이는 것은 골격의 일이다 |
+| **`.intro-bulb` + `::before`/`::after`(그림·`--bulb-*`·글로우) · `@keyframes intro-bulb-on`** (v3.6) | `components.css` §16 — 전구는 부품이고 켜짐은 그 부품의 모션이다 |
 
 ### 11-2. 리터럴 금지의 범위
 
@@ -1800,9 +1936,62 @@ CSS는 교체됐다(`components.css` §11 — `.editor-server`, `#btnSave:not([h
 | 68 | `editor.js` 저장 | `#btnSave` 클릭·서버 모드의 Ctrl+S → api.md §4-3의 순서(검증 → 새 분류 PUT → 글 PUT). 성공: §4-4의 상태 갱신 + `setStatus('저장됨 · ' + json.path)`. 4xx/5xx: `U.toast(json.error.message, 'err')`(409면 정리 안내 덧붙임), 상태줄 `.is-dirty` 유지. 네트워크 실패: 토스트 `서버가 꺼졌습니다 — 내보내기로 저장하세요` + **`#btnSave` `#editorServer`에 `hidden` 복원**, `#btnExport`의 단축키 표기 복원 |
 | 69 | `editor.js` | `dom.saveBtn = getElementById('btnSave')`, `dom.server = getElementById('editorServer')`. 클래스를 붙였다 떼지 않는다 — 상태는 `hidden` 둘뿐(§6-1) |
 
+### 12-12. v3.6 이행 — 인트로 전등 (frontend-dev #70·#72 · frontend-dev-2 #71·#73-75)
+
+CSS는 교체됐다(`tokens.css` 토큰 4개 · `layout.css` §10 · `components.css` §16, `#themeToggle::before` transition 삭제).
+규칙 전문은 §3-5. 여기는 파일별 할 일만.
+
+| # | 파일 | 할 일 |
+|---|---|---|
+| 70 | `index.html` | `<body>` **첫 자식**(스킵 링크 앞)에 `<div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>`. 다른 세 HTML에는 넣지 않는다. CSP·`<link>`·`<script>` 변경 없음 |
+| 71 | `theme-init.js` | 세 번째 IIFE: `try { if (sessionStorage.getItem('blogIntro')) document.documentElement.setAttribute('data-intro', 'done'); } catch (err) {}`. 문자열 `'blogIntro'`는 config.js `storageKeys.intro`와 같아야 한다(`blogTheme`·`blogSide`와 같은 관행). **네 HTML이 같은 파일을 싣지만 `.intro`가 없는 페이지에서는 속성만 붙고 아무 일도 없다** |
+| 72 | `config.js` | `storageKeys.intro: 'blogIntro'` (frontend-dev 소유 파일이지만 한 줄 — frontend-dev가 넣는다) |
+| 73 | `ui.js` `initIntro()` | §3-5 "JS 규칙" 그대로: `#intro` 없으면 return → `data-intro="done"`이거나 `getComputedStyle(intro).display === 'none'`이면 `finish()` 후 return → `animationend`에서 **`e.target !== intro`면 무시** → `finish()` = `intro.hidden = true` + `sessionStorage.setItem(storageKeys.intro, '1')`(try/catch), 한 번만 → 안전망 `setTimeout(finish, delay + duration + 500)`(computed `animationDelay`·`animationDuration` 파싱, 실패 시 4000). `data-intro`를 **붙이지 않는다** |
+| 74 | `ui.js` `initShell()` | `initTheme()` 다음 줄에 `initIntro()`. `Blog.ui`에 `initIntro` export 추가(셸을 따로 초기화하는 페이지용 — `initSide`와 같은 이유) |
+| 75 | `ui.js` `applyTheme()` | 변경 없음을 확인만 한다 — 인트로와 접점이 없어야 한다. 테마 토글에 클래스·타이머·전구를 붙이지 않는다 |
+
+**검증 목록(개발자 셀프체크)** — ① 첫 로드: 막 → 2.0초 켜짐 → 2.56초부터 걷힘 → 3.16초 `#intro[hidden]`, DevTools
+Application의 sessionStorage에 `blogIntro`. ② 새로고침: 막 없음, `html[data-intro="done"]`. ③ 새 탭에서 열기: 다시 막.
+④ post.html 직접 열기: 막 없음. ⑤ OS "동작 줄이기" 켜고 새 세션: 막 없음, sessionStorage는 적힘. ⑥ 전구가 켜지는
+2.0~2.4초 사이에 막이 사라지면 `e.target` 판정 누락이다.
+
 ---
 
 ## 13. 변경 이력
+
+### v3.6 — 인트로 전등(index.html 첫 방문), 테마 아이콘 transition 삭제
+
+사용자 요청 원문: *"이 사이트 접속할 때 전등 그림이 먼저 나오면서(디자인 담당 에이전트가 직접 그림) 전등이 2초 뒤
+켜지고 그 다음으로 자연스럽게 메모 블로그가 렌더링 되게. 다크·라이트 바꾸는데 이상한 전등 깜빡이는 애니 넣지 말고."*
+
+| 절 | v3.5 | v3.6 |
+|---|---|---|
+| §1-2 | 역할색 셋 / 그림자는 떠 있는 것 / 모션 = 테마 크로스페이드 + 콘텐츠 도착 | 원칙 2·3에 **인트로 전구 예외**(켜진 면 `--c-meta` / 글로우 `drop-shadow`). 원칙 4에 **인트로 전등**(셋째 모션) + **테마 토글 애니메이션 0** 명문화 |
+| §2 | z-index 넷, 모션 토큰 여섯 | + **`--z-intro`(90) `--delay-intro`(2000) `--dur-intro-on`(400) `--dur-intro-out`(600)**. 파생 변수 **`--intro-out-at`**(body) · **`--bulb-*`**(`.intro-bulb`) |
+| §3 | 셸 첫 줄 = 스킵 링크 | index.html만 **`.intro`가 `<body>` 첫 자식** |
+| §3-1 | 스킵 링크 = body 첫 자식 | index.html에서는 둘째 — 규칙의 뜻은 "포커스 가능한 것 중 첫째" |
+| §3-5 | 없음 | **신설 — 인트로 전등**: 마크업 1덩이, 어디에·왜 첫 자식·`aria-hidden`·글자 없음, 그림(그라디언트·96×140·두 상태·크로스페이드), 시간표(0 / 2000 / 2560 / 3160), §8-2 관계, 상태 셋(`data-intro` `hidden` `sessionStorage`), reduced-motion, JS 규칙(`initIntro`, `e.target` 함정) |
+| §7 | — | `.intro` `.intro-bulb` 등록 |
+| §8 | 상태 = 클래스 + ARIA + `data-side` | + **`html[data-intro="done"]`**(theme-init, 제거 안 함) · **`#intro[hidden]`**(ui.js) · `sessionStorage['blogIntro']`. `.intro`에 `is-*` 없음 |
+| §8-1 | 표 3행 | + 인트로 종료 행(3160ms, 안전망 +500) |
+| §8-2 | 예외 셋(`.toast` `.modal` `.entry`) | 골격 셋의 0 시작은 **위반이 아닌 이유**(CSS가 1로 만든다) |
+| §11 | transition 표 | + `intro-bulb-on` · `intro-out` · `intro-arrive` 3행. **`#themeToggle::before`의 scale·box-shadow transition 삭제** |
+| §11-1 | — | `.intro`·`--intro-out-at`·`intro-arrive`·done·reduced = `layout.css` §10 / `.intro-bulb`·`intro-bulb-on` = `components.css` §16 |
+| §12 | §12-11까지 | **§12-12 신설** — #70-75 + 검증 목록 6 |
+
+**같은 라운드에 web-designer가 수행한 CSS 변경**
+
+- `tokens.css` — 모션 블록에 `--delay-intro` `--dur-intro-on` `--dur-intro-out`(값의 근거 주석), z-index 블록에 `--z-intro: 90`
+- `layout.css` — §10 신설: `body { --intro-out-at }`, `.intro`(fixed·`--z-intro`·`--c-bg`·grid 가운데·`intro-out` forwards),
+  `@keyframes intro-out`, `html:not([data-intro="done"]) body:has(> .intro) > :is(.site-header, .site-main, .site-footer)`의
+  `intro-arrive` both, `@keyframes intro-arrive`(0→1, 8px→0), `html[data-intro="done"] .intro { display: none }`,
+  reduced-motion 블록(`.intro` display none + 진입 `animation: none`). 파일 머리 주석에 `.intro` 추가
+- `components.css` — §16 신설: `.intro-bulb`(96×140, `--bulb-*` 다섯), `::before`/`::after` 공용 그라디언트 11겹
+  (필라멘트 고리·지지선 둘·목·꼭지 선 넷·꼭지 몸통·유리·접점), `::after`(황토·`--c-bg` 필라멘트·꼭지 transparent·
+  `drop-shadow` 두 겹·`intro-bulb-on` both), `@keyframes intro-bulb-on`. **§5 `#themeToggle::before`의 `transition` 삭제**
+- `base.css` `prose.css` — 변경 없음(reduced-motion `*` 블록은 그대로 유효 — 인트로는 layout.css §10이 display로 따로 끊는다)
+
+**같은 라운드에 손대지 않은 것(회의록의 다른 결함 전부)** — 사용자 지시가 "인트로 하나"다. 다음 라운드로.
 
 ### v3.5 — 로컬 에디터 서버 연동(write.html)
 

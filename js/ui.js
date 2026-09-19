@@ -71,6 +71,62 @@
     }
   }
 
+  /* ---------- 인트로 전등 (v3.6, 계약서 §3-5) ----------
+     시간표는 전부 CSS animation-delay다(layout.css §10). JS는 시간을 세지 않는다 —
+     .intro 자신의 animationend(3160ms)를 받아 hidden을 붙이고 sessionStorage에 "봤다"고 적는다.
+     다음 로드에서는 theme-init.js가 첫 페인트 전에 html[data-intro="done"]을 붙여 막을 없앤다.
+
+     여기서 data-intro를 붙이지 않는다 — 첫 방문에서 붙이면 본문 진입 애니메이션(intro-arrive)이
+     선택자 html:not([data-intro="done"])에서 빠져 그 프레임에 끊긴다.
+     테마 토글(applyTheme)과 접점 0 — 테마에는 전등도 애니메이션도 없다(사용자 요청). */
+
+  var INTRO_KEY = (CFG.storageKeys && CFG.storageKeys.intro) || 'blogIntro';
+  var INTRO_FALLBACK_MS = 4000;
+
+  /* "2s" / "2000ms" / "2s, 400ms"(여러 애니메이션이면 첫 값) → ms 숫자. 못 읽으면 NaN. */
+  function parseCssTime(value) {
+    var first = String(value || '').split(',')[0].trim();
+    var m = /^(-?[\d.]+)(ms|s)$/.exec(first);
+    if (!m) return NaN;
+    var n = parseFloat(m[1]);
+    return m[2] === 's' ? n * 1000 : n;
+  }
+
+  function initIntro() {
+    var intro = document.getElementById('intro');
+    if (!intro) return; /* index.html이 아니다 */
+
+    var done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      intro.hidden = true;
+      try { window.sessionStorage.setItem(INTRO_KEY, '1'); } catch (err) { /* 저장 실패는 무시 — 다음 방문에 한 번 더 볼 뿐 */ }
+    }
+
+    /* 같은 세션에서 이미 봤거나(theme-init이 data-intro="done"), reduced-motion으로 CSS가 막을
+       display:none으로 두었으면 animationend가 나지 않는다 — 즉시 마감. */
+    var style = window.getComputedStyle(intro);
+    if (document.documentElement.getAttribute('data-intro') === 'done' || style.display === 'none') {
+      finish();
+      return;
+    }
+
+    /* animationend는 버블링한다 — .intro-bulb::after의 intro-bulb-on이 2.4초에 먼저 올라온다.
+       그걸 받아 hidden을 붙이면 전구가 켜지는 순간 막이 사라져 화면이 튄다. 막 자신의 것만 받는다. */
+    intro.addEventListener('animationend', function (e) {
+      if (e.target !== intro) return;
+      finish();
+    });
+
+    /* 안전망: 백그라운드 탭 등에서 이벤트가 새도 막이 남지 않게. CSS보다 500ms 길게.
+       --intro-out-at + --dur-intro-out = computed animationDelay + animationDuration. */
+    var delay = parseCssTime(style.animationDelay);
+    var duration = parseCssTime(style.animationDuration);
+    var total = (isNaN(delay) || isNaN(duration)) ? INTRO_FALLBACK_MS : delay + duration + 500;
+    window.setTimeout(finish, total);
+  }
+
   /* ---------- 모달 ----------
      계약서 7절: .modal > .modal-panel > (.modal-head / .modal-body / .modal-foot)
      열림 상태: body.modal-open + .modal.is-open */
@@ -524,6 +580,7 @@
 
   function initShell() {
     initTheme();
+    initIntro();
     initSide();
 
     /* 푸터 연도 자동 갱신 */
@@ -551,6 +608,8 @@
   Blog.ui = {
     initShell: initShell,
     initTheme: initTheme,
+    /* v3.6 인트로 전등(§3-5). initShell이 부르지만 셸을 따로 초기화하는 페이지를 위해 함께 내놓는다(initSide와 같은 이유). */
+    initIntro: initIntro,
     applyTheme: applyTheme,
     currentTheme: currentTheme,
     prefersReducedMotion: prefersReducedMotion,

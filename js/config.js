@@ -46,7 +46,10 @@
       draft: 'blogDraft',
       /* 사이드바 상태 {"pinned":bool,"closed":[slug…]}. theme처럼 theme-init.js에도 문자열이 박혀 있다 —
          고정 도킹은 첫 페인트 전에 알아야 레이아웃이 튀지 않기 때문이다. 바꾸면 그 파일도 같이 바꾼다. */
-      side: 'blogSide'
+      side: 'blogSide',
+      /* 인트로 전등을 이 세션에서 이미 봤다는 표시(sessionStorage, 계약서 §3-5).
+         theme-init.js에도 같은 문자열이 박혀 있다 — 첫 페인트 전에 막을 아예 안 그리려면 거기서 알아야 한다. */
+      intro: 'blogIntro'
     },
 
     /* CDN 고정 버전. HTML의 <script src>와 반드시 일치시킨다(표시·점검용). */
