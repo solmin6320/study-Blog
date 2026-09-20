@@ -446,7 +446,9 @@
   display: inline-flex;
   align-items: center;
   border-block-end: 1px solid var(--code-border);
-  background: color-mix(in oklab, var(--c-surface-2) 55%, var(--code-bg));
+  /* v3.7: 머리띠는 종이색(--c-surface-2)이 아니라 편집기 창의 테두리색을 옅게 섞은 면 — IDE의 탭 줄처럼
+     코드 배경과 같은 계열(라이트 중성 회백, 다크 #303132 근처)이어야 "종이 위의 에디터 창"이 한 덩어리로 읽힌다. */
+  background: color-mix(in oklab, var(--code-border) 30%, var(--code-bg));
   font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: var(--ls-wide);
@@ -460,7 +462,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   /* 언어 라벨은 "이 블록이 무엇인지"를 말하는 메타 — 역할색 --c-meta(계약서 §1-2).
-     머리띠 배경(surface-2 55% + code-bg) 대비 4.8:1로 AA를 지킨다. */
+     머리띠 배경(code-border 30% + code-bg) 대비 라이트 5.2:1 / 다크 6.4:1 — AA. 복사 버튼(--c-text-dim) 7.2 / 6.0. */
   color: var(--c-meta);
   font-family: var(--ff-mono);
 }
@@ -539,15 +541,25 @@
 }
 
 /* ============================================================================
-   8. highlight.js 테마 — 외부 테마 CSS를 로드하지 않는다.
-   색은 전부 tokens.css의 --hl-* 에서 오고, 다크 테마는 값만 바뀐다.
-   주석까지 코드 배경 대비 4.5:1을 넘긴다("주석은 읽지 말라"는 테마를 쓰지 않는다).
+   8. highlight.js 테마 = IntelliJ IDEA (v3.7, 계약서 §5-7-1) — 외부 테마 CSS를 로드하지 않는다.
+   색은 전부 tokens.css의 --hl-* 에서 오고(라이트 = IntelliJ Light, 다크 = Darcula), 다크 테마는 값만 바뀐다.
+   사용자 요청 "실제 IDE처럼 색깔 바뀌게(인텔리제이 - 자바 기준)". 대응은 자바 기준으로 잡고 다른 언어는 따라간다.
+
+   IntelliJ가 색을 주는 것: 키워드(원시형·true/false/null 포함) · 문자열 · 숫자 · 주석 · 함수 "선언" · 어노테이션 ·
+   HTML/XML 태그·속성. 색을 주지 "않는" 것: 클래스명 · 지역 변수 · 매개변수 · 호출되는 메서드 · 내장 객체 —
+   전부 본문색이다. hljs는 선언과 호출을 가르지 않으므로(둘 다 .hljs-title.function_) 함수는 전부 선언색이다.
+   굵기·기울임도 IDE를 따른다 — IDE 편집기는 한 굵기다. v3.6까지 키워드·함수·타입에 걸었던 600은 뗐다
+   (키워드가 굵으면 자바 코드의 절반이 굵다). 주석 기울임은 IntelliJ Light의 설정(FONT_TYPE 2)이다.
+   주석까지 코드 배경 대비 4.5:1을 넘긴다 — IDE 원본이 못 미치는 값은 tokens.css에서 "AA 보정"했다.
    ========================================================================= */
 .hljs { background: transparent; color: var(--code-text); }
 
+/* 키워드 계열 — public · class · static · return / int · boolean(원시형) / true · false · null */
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-doctag      { color: var(--hl-keyword); font-weight: 600; }
+.hljs-doctag      { color: var(--hl-keyword); }
+.hljs-literal     { color: var(--hl-literal); }
+.hljs-type        { color: var(--hl-type); }
 
 .hljs-string,
 .hljs-quote,
@@ -556,39 +568,41 @@
 .hljs-comment     { color: var(--hl-comment); font-style: italic; }
 
 .hljs-number      { color: var(--hl-number); }
-.hljs-literal     { color: var(--hl-literal); }
 
+/* 함수 — 선언색. 클래스·인터페이스 이름은 IntelliJ에서 본문색이라 되돌린다(hljs는 둘 다 .hljs-title 아래에 둔다). */
 .hljs-function,
-.hljs-title       { color: var(--hl-function); font-weight: 600; }
-.hljs-title.class_,
+.hljs-title       { color: var(--hl-function); }
 .hljs-title.function_ { color: var(--hl-title); }
+.hljs-title.class_,
+.hljs-title.class_.inherited__ { color: var(--code-text); }
 
+/* HTML/XML — 태그 이름과 속성 이름. 태그의 괄호(.hljs-tag 자체)는 본문색이 아니라 태그색 — IDE와 같다. */
+.hljs-tag         { color: var(--hl-tag); }
+.hljs-name        { color: var(--hl-name); }
 .hljs-attr,
 .hljs-attribute   { color: var(--hl-attr); }
 
-.hljs-built_in    { color: var(--hl-builtin); }
-.hljs-type        { color: var(--hl-type); font-weight: 600; }
+/* 어노테이션(@Override) — hljs java는 .hljs-meta로 낸다. 안의 키워드도 같은 색. */
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-meta .hljs-string { color: var(--hl-meta); }
 
+/* 본문색으로 두는 것 — IntelliJ는 식별자를 색칠하지 않는다(정적 필드 자주색은 hljs가 구분하지 못해 쓰지 않는다). */
+.hljs-built_in    { color: var(--hl-builtin); }
 .hljs-variable,
 .hljs-template-variable { color: var(--hl-variable); }
-
 .hljs-params      { color: var(--code-text); }
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link        { color: var(--hl-variable); }
 
-.hljs-tag         { color: var(--hl-tag); }
-.hljs-name        { color: var(--hl-name); font-weight: 600; }
-
+/* CSS 선택자 — IDE에 개별값이 없어 키워드/태그 계열(tokens.css 주석 "근사") */
 .hljs-selector-class,
 .hljs-selector-id,
 .hljs-selector-attr,
 .hljs-selector-pseudo { color: var(--hl-selector); }
 
-.hljs-meta,
-.hljs-meta .hljs-keyword { color: var(--hl-meta); }
-
-.hljs-symbol,
-.hljs-bullet,
-.hljs-link        { color: var(--hl-variable); }
-
+/* 마크다운 안의 마크다운 — 제목은 굵게(코드가 아니라 문서 구조라 굵기가 정보다) */
 .hljs-section     { color: var(--hl-title); font-weight: 700; }
 .hljs-strong      { font-weight: 700; }
 .hljs-emphasis    { font-style: italic; }

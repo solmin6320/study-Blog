@@ -317,6 +317,14 @@
   text-overflow: ellipsis;
 }
 
+/* v3.7 Why 감사 ⑤ (계약서 §0-3) — 카드의 분류 라벨은 "한 행에 다른 분류의 글이 섞일 때" 값을 한다(§4-4).
+   그 전제가 깨지는 두 경우엔 모든 카드가 같은 글자를 반복한다: ⓐ 분류 인덱스에서 하나를 골라 걸러 낸 뒤
+   (선택된 항목이 "전체"가 아닐 때 — aria-current="true"가 곧 상태, §4-3) ⓑ 분류가 하나뿐일 때(인덱스 항목이
+   "전체" + 하나 = 둘). 목록 화면(#catIndex가 있는 곳)에서만 걸린다 — 연관 글 카드(post.html)는 인덱스가 없어 그대로.
+   사이드바가 열려 있을 때는 감추지 않는다 — 트리는 "어느 분류가 있는가"를 말하지 "이 카드가 어느 분류인가"는 못 말한다. */
+body:has(#catIndex > .index-item:not([data-cat="*"])[aria-current="true"]) .post-list .entry-cat,
+body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat { display: none; }
+
 /* 이 화면에서 가장 눈에 띄는 글자여야 한다 — h1(.page-title)보다도.
    목록의 주인공은 사이트 이름이 아니라 글 제목이다. */
 .entry-title {
@@ -765,6 +773,37 @@
    v3.3: 글자 크기는 h2 항목과 같다(--fs-sm). 12px(--fs-xs)로 내려 두었더니 "실행 컨텍스트와 환경
    레코드"가 목차에서 가장 읽기 힘든 글자가 됐다 — 등급은 들여쓰기와 색(mute)이 이미 말한다. */
 .toc-item.is-h3 { padding-inline-start: var(--sp-5); color: var(--c-text-mute); }
+
+/* v3.7 Why 감사 ③ (계약서 §0-3·§5-4) — 1440px에서 720px 칼럼 좌우 360px씩이 빈 채로, 목차 상자(항목 5개 = 180px)가
+   본문 위에 인라인으로 앉아 첫 문단이 첫 화면의 65% 아래에서 시작했다. 목차는 "글"이 아니라 "도구"인데 글의 칼럼을
+   같이 쓰는 것이 원인이다. 칼럼 오른쪽에 15rem이 비는 폭부터는 목차를 그 여백으로 내보낸다 — 2열 그리드·sticky·
+   JS 없이 absolute 하나(기준 상자는 .post). top을 주지 않으므로 "흐름에 있었을 자리"(머리말 바로 아래)에 그대로
+   놓이고, 가로만 칼럼 밖으로 나간다. 좁은 화면·도킹 상태의 조건은 그대로 인라인이다.
+   검산 — 1280: 칼럼 바깥 여백 280, 목차 왼쪽 = 칼럼 내용 끝 + 32, 폭 240 → 오른쪽 끝 1240 < 1280.
+   도킹(사이드바 260)이면 같은 여백이 1540부터 생긴다 — 두 번째 분기의 근거. 1024~1279에서는 여백이 152~279라 못 나간다. */
+@media (min-width: 1280px) {
+  .post > .toc {
+    position: absolute;
+    inset-inline-start: calc(100% + var(--sp-7));
+    inline-size: 15rem;
+    margin: 0;
+  }
+  body.side-open.side-pinned .post > .toc,
+  html[data-side="pinned"] .post > .toc {
+    position: static;
+    inline-size: auto;
+    margin-block-end: var(--sp-8);
+  }
+}
+
+@media (min-width: 1540px) {
+  body.side-open.side-pinned .post > .toc,
+  html[data-side="pinned"] .post > .toc {
+    position: absolute;
+    inline-size: 15rem;
+    margin: 0;
+  }
+}
 
 /* ============================================================================
    9. 토스트 — 화면 위에 떠 있는 것 ①
@@ -1618,18 +1657,39 @@ select.field {
 .side-tree :focus-visible { outline-offset: -2px; }
 
 /* ============================================================================
-   16. 인트로 전구 (계약서 §3-5, v3.6) — 그라디언트로 직접 그린 그림. 막과 시간표는 layout.css §10.
-   사용자 요청 "전등 그림이 먼저 나오면서(디자인 담당이 직접 그림) 2초 뒤 켜지고".
+   16. 인트로 전구 (계약서 §3-5, v3.7) — 그라디언트로 직접 그린 그림 + 올라옴·켜짐·퇴장. 막과 시간표는 layout.css §10.
+   사용자 요청(v3.6) "전등 그림이 먼저 나오면서(디자인 담당이 직접 그림) 켜지고" →
+   판정(v3.7) "너무 밋밋하다. 아래에서 울렁거리며 올라오고 가운데에 딱 와서 띵 켜진 다음 0.3초 기다리고
+   위로 울렁거리며 올라가자."
    SVG 파일도, data-URI도 쓰지 않는다 — 색이 박힌 SVG는 tokens.css 밖의 리터럴 색(규칙 5)이고,
    mask로 색을 빼도 두 테마의 선·면·글로우를 따로 줄 수 없다. 그라디언트는 전부 토큰을 읽는다.
 
    구조 — 그림 한 장을 같은 좌표로 두 번 그린다.
      ::before = 꺼진 전구(선 + 오목한 면). 항상 보인다.
-     ::after  = 켜진 전구(황토 면 + 글로우). opacity 0에서 --delay-intro 뒤 400ms에 1로 — 두 그림의
+     ::after  = 켜진 전구(황토 면 + 글로우). opacity 0에서 --delay-intro 뒤 150ms에 1로 — 두 그림의
                 기하가 같아 눈에는 "면이 물드는" 크로스페이드다. 그라디언트 색을 보간하지 않는 이유 —
                 background-image는 transition·animation으로 보간되지 않는다(색이 50%에서 튄다).
      꼭지(나사산)는 ::before만 그린다. ::after의 꼭지 색은 transparent라 아래 것이 그대로 보이고,
      drop-shadow가 꼭지까지 두르지 않아 빛은 유리에서만 난다.
+
+   움직임 — .intro-bulb 하나에 animation 셋(올라옴 · 띵 · 퇴장), ::after에 하나(켜짐). 전부 개별 변환 속성
+   (translate · rotate · scale)이라 서로 덮어쓰지 않고, 시간이 겹치지 않는다(0~700 / 850~1000 / 1150~1750).
+     올라옴  intro-bulb-rise   화면 아래 밖(--bulb-from = 50vh + 90px — 어떤 높이의 화면에서도 완전히 밖)에서
+             가운데로. 세로는 back-out 곡선(오버슈트 1.2)을 키프레임 9개로 찍었다 — 가운데를 3% 지나쳤다 되돌아오는
+             "튕김"이 곡선에 들어 있다. 가로는 ±5px 사인파 1.5주기가 감쇠하며 좌우로 "울렁"이고, 기울기 ±2°와
+             squash/stretch(빠를 때 세로로 늘고, 되돌아올 때 가로로 눌림 3~5%)가 같은 박자로 따라간다.
+             이징은 linear다 — 곡선이 키프레임에 이미 있어서 구간마다 이징을 걸면 아홉 번 멈칫한다.
+     띵      intro-bulb-ting   켜지는 순간 scale 1 → 1.08 → 1 한 번(150ms). 빛이 켜질 때 유리가 "부푸는" 착시 —
+             크기 변화 없는 켜짐은 색이 바뀐 원판일 뿐이다(v3.6이 그랬다).
+     켜짐    intro-bulb-on     ::after opacity 0→1은 첫 35%(≈50ms)에 끝나고, 글로우는 작고 진한 상태에서 크고
+             옅은 상태로 "퍼진다"(drop-shadow 두 겹의 반경 4/10 → 18/56px). 이것이 "띵"의 정체다 —
+             밝기는 순간에, 빛의 번짐은 그 뒤 100ms에.
+     퇴장    intro-bulb-exit   0.3초 뒤 위로. 첫 15%는 1.5vh 아래로 눌렸다(예비 동작 — 뛰어오르기 전 웅크림)
+             떠나고, 구간마다 이동량이 커져 가속한다(등속이면 "밀려 올라간다"). 가로 울렁·기울기는 올라올 때와
+             같은 진폭이라 같은 물체로 읽힌다. 끝은 --bulb-from의 반대(화면 위 밖).
+   fill-mode — rise·exit는 forwards(끝 자세 유지), ting은 none(150ms 밖에서는 아무것도 덮어쓰지 않아야
+   rise의 끝 자세·exit의 시작 자세가 그대로다). 셋 다 delay 동안은 적용되지 않는다(backwards 없음) —
+   rise가 0ms부터 시작하므로 첫 프레임의 자세는 rise의 0%가 맡는다.
 
    좌표 — 96×140 상자, (0,0)이 왼쪽 위. 전부 이 부품 안에서만 뜻이 있는 도형 치수라 토큰이 아니다(§11-2).
      유리   중심 (48,48) 반지름 42 → y 6~90.  선 2px, 바깥 0.75px·안 0.5px 소프트 스톱 = 안티앨리어싱
@@ -1639,7 +1699,7 @@ select.field {
      필라멘트  윗호(∩) 반지름 10.5(선 2) 중심 (48,46) + 지지선 x 37.5·58.5에서 목까지(y 46~86)
    색
      꺼짐  선 = 경계선과 뮤트 글자의 중간(color-mix). --c-border만으로는 라이트 바탕에서 1.4:1이라
-           2초 동안 "거의 안 보이는 도형"이 되고, --c-text-mute면 아이콘처럼 검다. 면 = --c-surface-2.
+           올라오는 동안 "거의 안 보이는 도형"이 되고, --c-text-mute면 아이콘처럼 검다. 면 = --c-surface-2.
      켜짐  선 = --c-meta(황토 — 이 자리에서만 "빛"이다. 시간·수량 역할이 아니라 예외를 §1-2에 적었다).
            면 = 라이트에선 --c-meta를 --c-surface 쪽으로 35% 밝힌 값(::after 주석), 다크에선 --c-meta 그대로.
            필라멘트 = --c-bg(라이트에선 밝은 선, 다크에선 실루엣). 글로우 = drop-shadow 두 겹,
@@ -1655,6 +1715,46 @@ select.field {
   --bulb-wire: var(--bulb-line);
   --bulb-cap-line: var(--bulb-line);
   --bulb-cap-fill: var(--c-surface-2);
+  /* 출발점(아래) = 도착점의 반대(위). 50vh는 가운데에서 화면 가장자리까지, 90px은 전구 절반(70) + 여유 —
+     600px 높이 화면에서도 첫 프레임에 전구가 보이지 않는다(60vh 고정값이면 700px 미만 화면에서 머리가 보인다). */
+  --bulb-from: calc(50vh + 90px);
+  /* 회전·확대의 축은 목(전구가 매달린 자리)이 아니라 유리 중심 — 매달린 것이 아니라 "떠오르는" 것이다. */
+  transform-origin: 50% 34%;
+  animation:
+    intro-bulb-rise var(--dur-intro-in)   linear                            forwards,
+    intro-bulb-ting var(--dur-intro-on)   var(--ease)      var(--delay-intro),
+    intro-bulb-exit var(--dur-intro-exit) linear           var(--intro-exit-at) forwards;
+}
+
+/* 올라옴 — 세로: back-out(오버슈트 1.2)을 12.5% 간격으로 찍은 값 × --bulb-from: 100/55/25/7/−2.5/−5.3/−4/−1.5/0 (%).
+   가로: 5px·sin(1.5주기)·감쇠. 기울기는 가로 방향을 따라간다(오른쪽으로 갈 때 오른쪽으로 기운다). */
+@keyframes intro-bulb-rise {
+  0%    { translate: 0      var(--bulb-from);                rotate: 0deg;    scale: 1 1; }
+  12.5% { translate: 4px    calc(var(--bulb-from) * .555);   rotate: 2deg;    scale: .96 1.05; }
+  25%   { translate: 3px    calc(var(--bulb-from) * .253);   rotate: 1.5deg;  scale: .97 1.04; }
+  37.5% { translate: -1.5px calc(var(--bulb-from) * .068);   rotate: -1deg;   scale: 1 1; }
+  50%   { translate: -4px   calc(var(--bulb-from) * -.025);  rotate: -2deg;   scale: 1.02 .98; }
+  62.5% { translate: -1px   calc(var(--bulb-from) * -.053);  rotate: -.5deg;  scale: 1.03 .97; }
+  75%   { translate: 2px    calc(var(--bulb-from) * -.04);   rotate: 1deg;    scale: 1 1; }
+  87.5% { translate: 2.5px  calc(var(--bulb-from) * -.015);  rotate: 1deg;    scale: 1 1; }
+  100%  { translate: 0 0;                                    rotate: 0deg;    scale: 1 1; }
+}
+
+/* 띵 — 켜지는 순간 한 번 부푼다. 정점 45%(≈70ms)는 ::after의 밝기가 1에 이르는 시각(35%) 직후. */
+@keyframes intro-bulb-ting {
+  0%   { scale: 1; }
+  45%  { scale: 1.08; }
+  100% { scale: 1; }
+}
+
+/* 퇴장 — 15%까지 아래로 웅크렸다(예비 동작) 떠난다. 구간 이동량 15 → 28 → 28 → 32 (%): 가속. */
+@keyframes intro-bulb-exit {
+  0%   { translate: 0 0;                                     rotate: 0deg;    scale: 1 1; }
+  15%  { translate: 2px  calc(var(--bulb-from) * .03);       rotate: 1deg;    scale: 1.04 .96; }
+  35%  { translate: -3px calc(var(--bulb-from) * -.12);      rotate: -1.5deg; scale: .97 1.05; }
+  60%  { translate: 4px  calc(var(--bulb-from) * -.4);       rotate: 2deg;    scale: .96 1.06; }
+  80%  { translate: -3px calc(var(--bulb-from) * -.68);      rotate: -1.5deg; scale: .97 1.05; }
+  100% { translate: 0    calc(var(--bulb-from) * -1);        rotate: 0deg;    scale: .97 1.05; }
 }
 
 .intro-bulb::before,
@@ -1702,18 +1802,21 @@ select.field {
   --bulb-wire: var(--c-bg);
   --bulb-cap-line: transparent;
   --bulb-cap-fill: transparent;
+  /* 글로우의 두 겹 — 안쪽은 유리 가장자리의 번짐, 바깥은 바탕에 퍼지는 온기. 알파는 color-mix로 토큰에서 만든다.
+     반경은 keyframes가 움직인다(아래). 여기 값은 켜진 뒤의 정지 상태 = keyframes의 100%. */
+  --bulb-glow-in:  color-mix(in oklab, var(--c-meta) 55%, transparent);
+  --bulb-glow-out: color-mix(in oklab, var(--c-meta) 30%, transparent);
   opacity: 0;
-  /* 유리의 빛. 안쪽 16px은 유리 가장자리의 번짐, 바깥 48px은 바탕에 퍼지는 온기 — 두 겹이어야
-     "밝다"가 아니라 "빛난다". 알파는 color-mix로 토큰에서 만든다. */
-  filter:
-    drop-shadow(0 0 16px color-mix(in oklab, var(--c-meta) 55%, transparent))
-    drop-shadow(0 0 48px color-mix(in oklab, var(--c-meta) 30%, transparent));
-  animation: intro-bulb-on var(--dur-intro-on) var(--ease-fade) var(--delay-intro) both;
+  filter: drop-shadow(0 0 18px var(--bulb-glow-in)) drop-shadow(0 0 56px var(--bulb-glow-out));
+  animation: intro-bulb-on var(--dur-intro-on) var(--ease) var(--delay-intro) both;
 }
 
 :root[data-theme="dark"] .intro-bulb::after { --bulb-fill: var(--c-meta); }
 
+/* 켜짐 — 밝기는 첫 35%에 다 오르고(--ease가 앞을 가파르게 한다), 글로우는 작고 진한 점(4/10px)에서
+   정지 상태(18/56px)까지 퍼진다. 두 겹의 함수 수가 같아야 filter가 보간된다. */
 @keyframes intro-bulb-on {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  0%   { opacity: 0; filter: drop-shadow(0 0 4px var(--bulb-glow-in)) drop-shadow(0 0 10px var(--bulb-glow-in)); }
+  35%  { opacity: 1; filter: drop-shadow(0 0 8px var(--bulb-glow-in)) drop-shadow(0 0 24px var(--bulb-glow-in)); }
+  100% { opacity: 1; filter: drop-shadow(0 0 18px var(--bulb-glow-in)) drop-shadow(0 0 56px var(--bulb-glow-out)); }
 }

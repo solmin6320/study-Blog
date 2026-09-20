@@ -1,8 +1,21 @@
-# 마크업 계약서 v3.6
+# 마크업 계약서 v3.7
 
 디자이너(CSS)와 개발자(HTML/JS)가 동시에 작업하기 위한 **단일 진실 공급원**.
 여기 없는 클래스를 임의로 만들지 않는다. 필요하면 이 문서를 먼저 갱신한다.
 
+> **v3.7 (2026-09-20) — 인트로 v2(전구가 올라와 띵 켜지고 떠난다) · 코드 = IntelliJ(Light/Darcula) · Why 감사 5건.**
+> 사용자 요청 원문: *"전등이 너무 밋밋하다. 전등 켜지는 속도 더 빨리 하고, 사이트 들어오면 전등이 아래에서 울렁거리며
+> 올라오고 가운데에 딱 와서 띵 켜진 다음 0.3초 기다리고 위로 울렁거리며 올라가자. 그리고 자연스럽게 메모 블로그로
+> 옮겨줘. Why? 기법으로 지금 화면의 문제점과 개편성을 정리해서 고쳐. 코드를 정리할 때는 실제 IDE처럼 색깔 바뀌게
+> (인텔리제이 - 자바 기준)."*
+> 바뀐 절만 읽으려면: **§0-3(신설 — Why 감사: 후보 5건의 왜×3·근본 원인·조치)** · §1-2(원칙 4의 인트로 길이) ·
+> §2(인트로 토큰 6개로 재편 · 코드 토큰 값 = IntelliJ) · **§3-5(전면 개정 — 인트로 v2 시간표·전구 모션·JS 규칙은 그대로)** ·
+> §3(index.html의 `.brand`는 시각적으로 숨는다) · §4-4(`.entry-cat`이 사라지는 두 경우) · §5-2/§5(요약 크기) ·
+> §5-4(1280px부터 목차가 오른쪽 여백으로) · **§5-7-1(신설 — 코드 하이라이팅 대응표·AA 보정)** · §8-1 · §11(transition 표) ·
+> §11-1 · §11-3(1280·1540 분기) · **§12-13(개발자 작업 #76-78)** · §13.
+> CSS는 web-designer가 이미 v3.7로 교체했다. **HTML·JS 변경 없이 전부 동작한다** — `ui.js` `initIntro()`는 그대로
+> `.intro`의 `animationend`와 computed delay+duration을 읽는다(§3-5). #76-78은 Why 감사가 남긴 마크업 몫이다.
+>
 > **v3.6 (2026-09-19) — 인트로 전등: index.html 첫 방문 때 꺼진 전구 → 2초 뒤 켜짐 → 블로그가 드러남.**
 > 사용자 요청 원문: *"이 사이트 접속할 때 전등 그림이 먼저 나오면서(디자인 담당 에이전트가 직접 그림) 전등이
 > 2초 뒤 켜지고 그 다음으로 자연스럽게 메모 블로그가 렌더링 되게. 다크·라이트 바꾸는데 이상한 전등 깜빡이는
@@ -106,6 +119,28 @@
 | 헤더의 "새 메모" 버튼 | `.site-nav`의 "쓰기"와 **같은 목적지**다. 같은 곳으로 가는 문이 헤더에 둘 있을 이유가 없다 |
 | `.site-nav`의 440px 소거 규칙 | 헤더가 3덩이(브랜드·내비·테마)로 줄어 좁은 화면에서도 경쟁하지 않는다. 링크를 숨기는 규칙 자체가 사라지는 편이 낫다. (v3.4: 내비가 4항목이 되어 **"태그" 하나만** 440px 이하에서 뺀다 — §3-3 소거 표. 지름길이라 갈 수 없는 곳이 생기지 않는다) |
 
+### 0-3. v3.7 Why 감사 — 화면의 문제를 "왜"로 세 번 파고든 기록
+
+> **사용자 요청: "Why? 기법으로 지금 화면의 문제점과 개편성을 정리해서 고쳐."**
+> 픽스처 4편(`posts/_tmp`, 자바 2·CSS 1·git 1, 연도 2개, h2 5개짜리 1편)을 넣고 index·post·about·write를
+> 1440/768/360 × 라이트/다크로 헤드리스 촬영해 봤다(360은 Chrome 헤드리스의 최소 창 500px 때문에 같은 출처의
+> iframe 안에서 찍었다). PM이 먼저 본 후보 5건을 검증했다 — 4건 인정, 1건은 반은 기각·반은 다른 문제로 인정.
+> 사용자가 확정한 것(제목 가운데·검색 아래·햄버거 좌상단·카드 그리드·색 셋·사이드바)은 건드리지 않았다.
+> **CSS로 되는 것은 이번에 고쳤고, 마크업이 필요한 것은 §12-13에 파일·줄·클래스명으로 적었다.**
+
+| # | 문제(실측) | 왜 1 | 왜 2 | 왜 3 | 근본 원인 | 조치 |
+|---|---|---|---|---|---|---|
+| ① | index.html 첫 화면에 "메모 블로그"가 헤더 `.brand`(y≈44)와 `h1.page-title`(y≈142)로 **두 번**. 360px에서는 이름·이름·검색이 첫 화면의 1/3 | 왜 두 번인가 — 헤더의 브랜드는 v3.0("static 헤더 3덩이")의 것이고 가운데 큰 제목은 v3.4(사용자 요청)의 것이다 | 왜 v3.4가 브랜드를 안 뺐나 — 헤더는 "네 페이지 동일"(§3)이라 한 페이지 때문에 못 건드린다고 봤다 | 왜 그게 문제인가 — 다른 세 페이지의 h1은 글 제목·"소개"·에디터라 헤더의 이름이 유일한 사이트 표식이지만, index.html에서는 h1이 곧 사이트 이름이다. 즉 **역할 중복은 index.html 한 페이지에서만 생긴다** | 같은 역할(사이트 정체)을 가진 요소 둘이 한 화면에 놓였는데, 규칙이 "헤더는 네 페이지 동일"뿐이라 페이지별 역할 충돌을 볼 자리가 없었다 | **CSS(완료).** `body:has(> .list-page) .brand`를 시각적으로만 감춘다(`.sr-only`와 같은 선언, `:focus-visible`이면 드러남). 마크업·Tab 순서·접근성 이름은 그대로 — 헤더 "네 페이지 동일"은 유지된다. `layout.css` §1 |
+| ② | 내비 "글"과 `.brand`가 **같은 곳**(`index.html`)으로 간다. index에서는 둘 다 "현재 페이지" | 왜 둘인가 — "글"은 v3.0이 내비의 첫 항목으로 두었고("메모"→"글"), 브랜드 링크는 관례다 | 왜 v3.4가 안 지웠나 — 사용자 원문이 *"메뉴 2개 더 추가 (메모 블로그, 글 옆에)"* 라 "글"을 있는 것으로 놓고 더했다. §3-3의 "분류" 기각 근거(*"같은 곳으로 가는 문이 둘"*)를 "글" 자신에게는 안 적용했다 | 왜 놔둘 수 없나 — 실측 7곳 중 브랜드 + "Home/글" 둘 다 가진 곳은 ansohxxn 하나. ①을 고치면 index에서는 "글"이 홈 표식을 맡아 문제가 옅어지지만 post/about/write에서는 여전히 문이 둘이다 | 내비의 첫 항목이 "무엇을 보여 주는가"가 아니라 "어디가 홈인가"를 말하고 있다 — 그 일은 브랜드가 이미 한다 | **인정. 마크업이라 §12-13 #77(frontend-dev·frontend-dev-2)로.** 사용자가 v3.4에서 "글"을 눈으로 본 항목이라 **PM이 사용자에게 한 번 확인한 뒤** 지운다. CSS는 "글"이 있든 없든 깨지지 않는다(§3-3 검산도 여유가 는다) |
+| ③ | post.html 1440: 720px 칼럼 좌우 360px씩이 빈 채로 목차 상자(항목 5개 = 180px)가 본문 위에 앉아 **첫 문단이 첫 화면의 65% 아래(y≈580)** 에서 시작. 360px에서는 목차가 첫 화면의 1/3 | 왜 본문이 밀리나 — 목차가 본문 칼럼의 흐름 안에 있다 | 왜 흐름 안인가 — v3.0 §5-4가 "사이드바형은 2열 그리드·sticky·rAF를 끌고 온다"며 인라인을 골랐다 | 왜 그 대안뿐이었나 — "여백에 둔다 = 2열 그리드"로 봤다. 하지만 `position: absolute` 하나면 흐름에서 빠지면서 세로 자리는 그대로(static position)다 — 그리드도 sticky도 필요 없다 | 목차는 "도구"인데 "글"의 칼럼을 함께 쓴다. 칼럼 폭(720)은 줄길이를 위한 것이지 도구까지 넣으라는 폭이 아니다 | **CSS(완료).** ≥1280px(도킹이면 ≥1540px)에서 `.post > .toc`를 칼럼 오른쪽 여백으로(absolute, 15rem, top 없음 = 머리말 바로 아래 그 자리). 근거·검산은 §5-4. 좁은 화면은 그대로 인라인 — 거기서 줄이려면 접는 `<details>`가 필요하다(§12-13 #76) |
+| ④ | post.html 머리말 4줄(제목 38 / 요약 19 / 날짜 13 / 분류·태그 13)에서 **요약이 본문(18.5px, 행간 1.75)과 거의 같은 글자**라 "첫 문단"으로 읽히고, 목차 상자 뒤에 진짜 첫 문단이 한 번 더 온다 — 글이 두 번 시작한다 | 왜 같은 크기인가 — `.post-summary`가 `--fs-lg`, `--fs-prose`도 같은 clamp다 | 왜 그랬나 — v3.0이 요약을 "상세 머리말"로 살리면서(§0-1) 크기를 "제목 다음"으로만 잡았지 "본문과 달라야 한다"는 기준이 없었다 | 왜 문제가 지금 보이나 — 목차(③)가 요약과 본문 사이에 끼면서 "요약 → 상자 → 본문"의 세 덩이가 됐고, 요약과 본문이 같은 글자면 상자가 글 한가운데 끼어든 것처럼 보인다 | 머리말의 요소들에 "본문과 구분되는 크기"라는 위계 기준이 없었다 | **CSS(완료).** `.post-summary` `--fs-lg`→`--fs-md`, 행간 1.7→1.6, 위 여백 `--sp-4`→`--sp-3`. 날짜·분류 줄은 이미 `--fs-sm`으로 충분히 작다 — 손대지 않았다. `layout.css` §7 |
+| ⑤ | 카드의 `.entry-cat`이 사이드바가 열려 있으면 정보 중복(PM 후보) | 왜 중복으로 보였나 — 트리에도 분류명이 있다 | 그런데 트리는 "어느 분류가 있는가"를 말하고 카드 라벨은 "**이** 카드가 어느 분류인가"를 말한다 — 섞인 목록에서는 둘이 다른 정보다 | 그러면 언제 진짜 중복인가 — **모든 카드가 같은 라벨**일 때: ⓐ 분류 인덱스에서 하나를 골라 걸러 낸 뒤(4장 전부 "CSS") ⓑ 분류가 하나뿐일 때(픽스처에서 4장 전부 "확인용") | 라벨의 전제("한 행에 다른 분류가 섞인다", §4-4)가 깨지는 상태를 규칙이 안 다뤘다 | **사이드바 조건은 기각, 필터·단일 분류 조건은 CSS(완료).** `#catIndex`의 선택 항목(`aria-current="true"`)이 "전체"가 아니거나 항목이 "전체 + 하나"뿐이면 `.post-list .entry-cat`을 감춘다(`:has()`, 상태 = ARIA 속성 그대로). 연관 글 카드는 인덱스가 없어 그대로. `components.css` §4 |
+
+**감사 중에 본 것 중 고치지 않은 것(근거)** — 고정 글 한 장이 3열 그리드의 첫 행에 홀로 놓여 두 칸이 빈다(1440): 고정은
+"연도보다 위"라는 순서 정보라 그리드를 깨면서까지 채우지 않는다(300편이면 고정도 여럿이다). 코드 블록이 360px에서
+가로 스크롤(`pre` 안에서만, 페이지는 안 넘친다): 코드는 줄바꿈하지 않는 것이 맞다. 다크 코드 블록(#2B2B2B)이 바탕
+(#17160f)보다 밝은 판으로 뜬다: 의도다 — "에디터 창"(§5-7-1).
+
 ---
 
 ## 1. 원칙과 소유권
@@ -154,8 +189,8 @@
    (카드·본문이 놓일 때 260ms 페이드 + 3px, 사용자 요청 "눈에 안 띄게 부드러운 애니메이션")이다.
    "도착"은 진입 장식이 아니라 "결과가 바뀌었다 / 내용이 왔다"는 상태 변화의 신호로 정의한다(§11-4).
    **v3.6: 인트로 전등**(§3-5)이 셋째다 — 세션당 한 번, index.html에서만, 사용자가 직접 요구한 진입 연출.
-   "전등이 켜진다 → 방(블로그)이 보인다"는 상태 변화 하나를 3.2초에 걸쳐 보여 주는 것이고, 끝나면 DOM에서
-   사실상 사라진다(`hidden`). **테마 토글에는 어떤 애니메이션도 없다** — 아이콘의 scale·box-shadow transition도
+   "전등이 켜진다 → 방(블로그)이 보인다"는 상태 변화 하나를 ~~3.2초~~ **2.05초(v3.7)** 에 걸쳐 보여 주는 것이고, 끝나면 DOM에서
+   사실상 사라진다(`hidden`). v3.7의 전구는 올라오고·부풀고·떠난다(§3-5) — 무한 루프가 아니라 한 번의 등장·퇴장이다. **테마 토글에는 어떤 애니메이션도 없다** — 아이콘의 scale·box-shadow transition도
    v3.6에서 뗐다. 1.2초 크로스페이드 한가운데서 아이콘만 160ms에 오그라드는 것이 "깜빡"으로 읽혔다.
 5. **~~단색 배경 금지~~ (폐기)** — 사용자 판정으로 배경은 `--c-bg` 단색이다.
    질감은 배경 레이어가 아니라 **따뜻한 종이색 자체**가 낸다.
@@ -181,28 +216,38 @@
        --ring-w (3px, 포커스 글로우 두께) --sh-focus (인풋 :focus 글로우)
 모션: --ease(cubic-bezier(.16,1,.3,1))  --dur-fast(160ms) --dur(260ms) --dur-slow(420ms)
       --ease-fade(cubic-bezier(.65,0,.35,1)) --dur-theme(1200ms)   ← 테마 크로스페이드 전용(§11, v3.4 값)
-      --delay-intro(2000ms) --dur-intro-on(400ms) --dur-intro-out(600ms)   ← 인트로 전용(§3-5, v3.6)
+      --dur-intro-in(700) --delay-intro(850) --dur-intro-on(150) --hold-intro(300)
+      --dur-intro-exit(600) --dur-intro-out(600)                          ← 인트로 전용(§3-5, v3.7 재편)
 치수: --h-control --h-control-sm --h-control-xs --h-nav --w-modal --w-toast
 레이아웃: --w-prose(45rem) --w-page(72rem, v3.2 부활) --w-side(260px, v3.2) --gutter
 z-index: --z-scrim(40) --z-side(50) --z-modal(60) --z-toast(80) --z-intro(90, v3.6)
 ```
 
-**v3.6 신설 4개 — 인트로 전등(§3-5). 다른 곳에서 쓰면 결함이다.**
+**v3.7 — 코드 토큰(`--code-*` 3 · `--hl-*` 17)의 값이 IntelliJ IDEA로 바뀌었다.** 이름·개수·`@property` 등록은 그대로다.
+라이트 = IntelliJ Light(`themes/Light.xml`), 다크 = Darcula(`DefaultColorSchemesManager.xml`) — 값·출처·AA 보정은 §5-7-1 표.
+`--code-bg`가 종이색 계열에서 벗어난 유일한 면 토큰이 됐다(흰색 / `#2B2B2B`) — "페이지 위에 열린 에디터 창"이 사용자 의도다.
+
+**v3.7 — 인트로 토큰 6개(§3-5). v3.6의 셋(`--delay-intro` 2000 · `--dur-intro-on` 400 · `--dur-intro-out` 600)을 재편했다.
+다른 곳에서 쓰면 결함이다.**
 
 | 토큰 | 값 | 왜 이 값인가 |
 |---|---|---|
-| `--z-intro` | `90` | 토스트(80) 위. 3초 동안 페이지 전체를 가리는 막이라 도킹된 사이드바·로드 실패 토스트까지 막 뒤에서 기다린다 |
-| `--delay-intro` | `2000ms` | 사용자가 말한 숫자 그대로("2초 뒤 켜지고"). 꺼진 전구를 "보는" 시간 — 짧으면 왜 있었는지 모른다 |
-| `--dur-intro-on` | `400ms` | 백열등이 정격 밝기에 이르는 시간(수백 ms). 160이면 스위치 "딸깍", 600이면 조광기 |
-| `--dur-intro-out` | `600ms` | 막이 걷히고 본문이 8px 올라오는 시간. `--dur-slow`(420)보다 긴 이유 — 화면 전체가 바뀌는 유일한 모션이라 부품 하나(모달)보다 한 단계 느려야 "밀려난다"가 아니라 "드러난다"로 읽힌다. 800부터는 대기 |
+| `--z-intro` | `90` | (v3.6 그대로) 토스트(80) 위. 막이 떠 있는 동안 페이지 전체를 가린다 |
+| `--dur-intro-in` | `700ms` | 전구가 화면 아래 밖에서 가운데로 올라오는 시간. 마지막 30%는 가운데를 살짝 지나쳤다 되돌아오는 튕김 — "던져 올린 것이 멈추는" 길이. 500이면 튕김이 안 보이고 900부터는 느리다 |
+| `--delay-intro` | `850ms` | 켜지는 시각 = 700 + 150. 150ms는 멈춘 전구를 "확인"하는 한 박자(`--dur-fast`와 같은 값이지만 합산이 아니라 독립 토큰 — JS가 computed delay를 읽는 자리라 값이 한 곳에 있어야 한다) |
+| `--dur-intro-on` | `150ms` | 켜짐. v3.6의 400은 백열등 흉내였는데 사용자 판정 "느리다". 150 = 스위치 "딸깍"보다 한 박자 긴 값 — 글로우가 퍼지는 것이 눈에 잡히는 최소 |
+| `--hold-intro` | `300ms` | 사용자 숫자 그대로("0.3초 기다리고"). 켜지는 순간부터 센다(850 + 300 = 1150에 퇴장 시작) |
+| `--dur-intro-exit` | `600ms` | 위로 떠나는 시간. 올라올 때(700)보다 짧은 이유 — 도착은 감속(튕김 포함), 출발은 가속이라 같은 거리를 더 빨리 간다. 그리고 막 퇴장이 그 절반 지점에서 겹친다(아래) |
+| `--dur-intro-out` | `600ms` | (값 그대로) 막이 걷히고 본문이 10px 올라오는 시간. 근거는 v3.6과 같다 |
 
-**v3.6 — 파생 변수 둘(토큰 아님, `--col-w`와 같은 지위).**
-`--intro-out-at`(layout.css가 `body`에 둔다) = `--delay-intro + --dur-intro-on + --dur-fast` — 막이 걷히기 시작하는
-시각(2560ms). 막 퇴장과 본문 진입이 같은 값을 읽어야 해서 한 번만 합산한다. 160ms(`--dur-fast`)는 켜진 전구를
-"확인하는" 한 박자 — 0이면 켜지자마자 사라지고, `--dur`(260)부터는 멈춘 것처럼 보인다.
-`--bulb-line` `--bulb-fill` `--bulb-wire` `--bulb-cap-line` `--bulb-cap-fill`(components.css §16, `.intro-bulb`에 둔다) —
-전구 그림 한 장을 `::before`(꺼짐)·`::after`(켜짐)가 같은 그라디언트로 두 번 그리기 위한 색 자리. 값은 전부 토큰 또는
-토큰의 `color-mix()`다. `@property` 등록 없음 — 두 그림을 opacity로 크로스페이드하므로 색을 보간하지 않는다.
+**v3.7 — 파생 변수(토큰 아님, `--col-w`와 같은 지위). `layout.css` §10이 `body`에 둔다.**
+`--intro-exit-at` = `--delay-intro + --hold-intro`(1150) — 전구가 떠나기 시작하는 시각.
+`--intro-out-at` = `--intro-exit-at + --dur-intro-exit / 2`(1450) — 막이 걷히기 시작하는 시각. 전구 퇴장의 **절반 지점**인
+이유 — 전구가 다 나간 뒤 막이 걷히면 그 사이 300ms가 "빈 화면"이고, 동시에 시작하면 전구가 본문 위를 가로지른다.
+절반이면 전구가 화면 위쪽 1/4을 지날 때 본문이 아래에서 올라오기 시작해 "전구를 따라 올라온다"로 읽힌다.
+`--bulb-from`(components.css §16, `.intro-bulb`) = `50vh + 90px` — 출발점(아래 밖)이자 도착점(위 밖)의 부호 반전값.
+`--bulb-line` `--bulb-fill` `--bulb-wire` `--bulb-cap-line` `--bulb-cap-fill` `--bulb-glow-in` `--bulb-glow-out`(§16, `.intro-bulb`) —
+전구 그림·글로우의 색 자리. 값은 전부 토큰 또는 토큰의 `color-mix()`다. `@property` 등록 없음.
 
 **v3.4 — 색 토큰은 `@property`로 등록된다.** `tokens.css` 끝에서 `--c-*`(20) · `--code-*`(3) · `--hl-*`(17)을
 `syntax: "<color>"`로 등록한다. 목적은 하나 — 테마 토글 때 **토큰 값 자체가 보간**되게 하는 것(§11).
@@ -324,6 +369,10 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
   않고, 좌우 패딩 `(100% − --col-w) / 2 + --gutter`로 브랜드·내비·테마 버튼을 칼럼 자리에 앉힌다.
   기하는 v3.3과 같다 — 다른 점은 햄버거가 그 패딩 바깥에 놓일 수 있다는 것뿐. (`100%`는 body 내용폭이라
   사이드바 도킹·스크롤바에 영향받지 않는다. 마크업 변화 없음.)
+- **v3.7 — index.html에서 `.brand`는 시각적으로 숨는다(§0-3 ①).** 마크업은 네 페이지 그대로다. `layout.css` §1이
+  `body:has(> .list-page) .brand`에 `.sr-only`와 같은 선언을 걸어 화면에서만 뺀다 — 링크·Tab 정지점·접근성 이름은
+  그대로이고 키보드 포커스가 오면 스킵 링크처럼 드러난다. 사이트 이름은 그 페이지의 `h1.page-title`(사용자 확정)이 맡는다.
+  결과: index.html의 헤더 흐름은 `내비 → 테마`이고 내비가 칼럼 왼쪽 선에서 시작한다. 다른 세 페이지는 변함없다.
 - **햄버거(`.side-toggle`)와 테마 버튼은 둘 다 `.icon-btn`이다.** 오른쪽 끝으로 미는 auto 마진은
   `.site-header > .icon-btn:last-child`(테마)에만 걸린다. 햄버거 아이콘(세 줄)은 CSS `::before`가
   그린다 — 테마 버튼과 같은 방식이라 HTML에 SVG를 복사하지 않는다.
@@ -507,17 +556,19 @@ post.html의 부품을 그대로 쓴다 — 새 클래스 0개.
 (사이드바가 빈 채로 남지 않게 — 실패하면 빈 데이터로 부른다, `app.js` `showLoadError()`와 같다) →
 `[data-site-title]`에 `site.title`. 그 밖의 일은 없다(`post.js`의 `renderSide()` 래퍼와 같은 방어 — `Blog.ui.renderSide`가 없으면 건너뛴다).
 
-### 3-5. 인트로 전등 `.intro` (v3.6 신설 — index.html만)
+### 3-5. 인트로 전등 `.intro` (v3.6 신설 · **v3.7 전면 개정** — index.html만)
 
-> **사용자 요청(원문): "이 사이트 접속할 때 전등 그림이 먼저 나오면서(디자인 담당 에이전트가 직접 그림) 전등이
+> **v3.6 요청(원문): "이 사이트 접속할 때 전등 그림이 먼저 나오면서(디자인 담당 에이전트가 직접 그림) 전등이
 > 2초 뒤 켜지고 그 다음으로 자연스럽게 메모 블로그가 렌더링 되게. 다크·라이트 바꾸는데 이상한 전등 깜빡이는
 > 애니 넣지 말고."**
+> **v3.7 판정(원문): "전등이 너무 밋밋하다. 전등 켜지는 속도 더 빨리 하고, 사이트 들어오면 전등이 아래에서 울렁거리며
+> 올라오고 가운데에 딱 와서 띵 켜진 다음 0.3초 기다리고 위로 울렁거리며 올라가자. 그리고 자연스럽게 메모 블로그로 옮겨줘."**
 
-한 문장으로: **막(`--c-bg`)이 화면을 덮고 꺼진 전구가 정중앙에 선다 → 2초 뒤 전구가 켜진다 → 막이 걷히며
-블로그가 8px 올라오며 드러난다.** 세션당 한 번, index.html에서만. 전등은 "켜진다"는 상태 변화 하나를 보여 주고
-사라진다 — 무한 루프·깜빡임·재생 버튼 없음. 테마 토글과는 **아무 관계가 없다**(테마에는 전등도 애니메이션도 없다).
+한 문장으로: **막(`--c-bg`)이 화면을 덮고, 꺼진 전구가 아래에서 울렁이며 올라와 가운데에 튕기며 멈춘다 → 띵 켜진다 →
+0.3초 → 위로 울렁이며 떠난다 → 전구가 화면 절반을 지날 때 막이 걷히고 블로그가 10px 올라오며 드러난다.** 총 2.05초.
+세션당 한 번, index.html에서만. 무한 루프·깜빡임·재생 버튼 없음. 테마 토글과는 **아무 관계가 없다**.
 
-**마크업 — `<body>`의 첫 자식. 스킵 링크보다 앞이다(§3-1).**
+**마크업 — v3.6 그대로. `<body>`의 첫 자식. 스킵 링크보다 앞이다(§3-1).**
 
 ```html
 <div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>
@@ -525,49 +576,59 @@ post.html의 부품을 그대로 쓴다 — 새 클래스 0개.
 
 | 규칙 | 내용 |
 |---|---|
-| 어디에 | **index.html만.** post.html·about.html·write.html에는 넣지 않는다 — "사이트에 접속할 때"이지 "페이지를 열 때"가 아니다. 글 링크를 타고 들어온 방문자(검색 유입)는 본문이 목적이라 막을 세우지 않는다 |
-| 왜 첫 자식인가 | 막은 **첫 페인트부터** 있어야 한다. CSS는 `<head>`에서 이미 로드됐고, 파서가 body를 위에서 아래로 그리므로 막이 첫 자식이면 본문이 한 프레임도 먼저 보이지 않는다. 맨 뒤에 두면 느린 연결에서 헤더가 먼저 찍힌 뒤 막이 덮는다(그게 곧 "깜빡임"이다). `position: fixed` + `--z-intro`라 DOM 위치는 그리기 순서와 무관하다 |
-| `aria-hidden="true"` | 장식이다. 스크린리더는 막을 모른 채 곧바로 본문을 읽는다 — 3초를 기다리게 하지 않는다. 안에 포커스 가능한 것이 없어 Tab 순서도 그대로다(스킵 링크가 여전히 첫 Tab) |
-| 안에 글자 없음 | "메모 블로그" 같은 워드마크를 넣지 않는다. 사용자가 요구한 것은 전등 하나다. 글자가 있으면 로딩 스플래시가 된다 |
-| 전구 그림 | **CSS 그라디언트로 직접 그린다**(`components.css` §16). 96×140, 유리(원 r42)·목·꼭지(나사산 2줄 + 접점)·필라멘트(고리 + 지지선 둘). SVG 파일도 data-URI도 없다 — 색이 박힌 SVG는 규칙 5 위반이고, mask로 색을 빼도 두 테마의 선·면·글로우를 따로 줄 수 없다. 꺼짐 = 선 `color-mix(--c-border 50%, --c-text-mute)` + 면 `--c-surface-2` / 켜짐 = 면·선 `--c-meta` + 필라멘트 `--c-bg` + `drop-shadow` 글로우 두 겹(§1-2 원칙 2·3의 예외). 다크에서는 같은 규칙으로 금색 전구가 된다 |
-| 켜짐의 구현 | 그림 한 장을 `::before`(꺼짐)·`::after`(켜짐)가 같은 좌표로 두 번 그리고 `::after`의 **opacity를 0→1**로. `background-image`는 보간되지 않아 색을 애니메이션하면 50%에서 튄다 — 그래서 크로스페이드다 |
+| 어디에 | **index.html만.** post.html·about.html·write.html에는 넣지 않는다 — "사이트에 접속할 때"이지 "페이지를 열 때"가 아니다 |
+| 왜 첫 자식인가 | 막은 **첫 페인트부터** 있어야 한다(CSS는 `<head>`에서 로드됐고 파서는 위에서 아래로 그린다). 맨 뒤에 두면 느린 연결에서 헤더가 먼저 찍힌 뒤 막이 덮는다 |
+| `aria-hidden="true"` | 장식이다. 스크린리더는 막을 모른 채 곧바로 본문을 읽는다. 안에 포커스 가능한 것이 없어 Tab 순서도 그대로다 |
+| 안에 글자 없음 | 워드마크를 넣지 않는다. 글자가 있으면 로딩 스플래시가 된다 |
+| 전구 그림 | v3.6 그대로 **CSS 그라디언트**(`components.css` §16, 96×140). 꺼짐 = 선 `color-mix(--c-border 50%, --c-text-mute)` + 면 `--c-surface-2` / 켜짐 = 면·선 `--c-meta` + 필라멘트 `--c-bg` + `drop-shadow` 글로우 두 겹 |
+| 켜짐의 구현 | `::before`(꺼짐)·`::after`(켜짐) 크로스페이드 — v3.6 그대로. **v3.7: 글로우가 함께 움직인다** — `::after`의 `filter`가 작고 진한 점(4/10px)에서 정지 상태(18/56px)로 150ms에 퍼진다. 이것이 "띵"이다: 밝기는 첫 35%(≈50ms)에 다 오르고 빛의 번짐이 그 뒤를 따른다 |
+| **막의 `overflow: hidden`** (v3.7) | 전구가 화면 아래·위 밖에서 드나드므로 막 밖으로 나간 부분이 스크롤바를 만들지 않게 |
 
-**시간표 — JS 0줄. 전부 CSS `animation-delay`다(`layout.css` §10).**
+**시간표 — JS 0줄. 전부 CSS `animation-delay`(`layout.css` §10 · `components.css` §16). 값은 §2의 토큰 6개.**
 
-| 시각 | 무엇 | 토큰 |
-|---|---|---|
-| 0 | 막(`--c-bg`) + 꺼진 전구 | — |
-| 2000ms | 전구가 켜진다(`.intro-bulb::after` opacity 0→1, 400ms, `--ease-fade`) | `--delay-intro` `--dur-intro-on` |
-| 2560ms | 막이 걷히기 시작(`.intro` opacity 1→0, 600ms, `--ease-fade`) **+ 같은 시각에** `.site-header` `.site-main` `.site-footer`가 opacity 0→1·`translate` 8px→0(600ms, `--ease`) | `--intro-out-at` = 2000 + 400 + `--dur-fast` / `--dur-intro-out` |
-| 3160ms | 막은 `visibility: hidden` + `pointer-events: none`으로 남는다(`animation-fill-mode: forwards`). **`.intro` 자신의 `animationend`가 이 시각에 한 번 난다** — ui.js가 받는 신호 | — |
+| 시각 | 무엇 | 어디에 | 토큰·변수 |
+|---|---|---|---|
+| 0 | 막(`--c-bg`). 전구는 화면 아래 **밖**(`--bulb-from` = 50vh + 90px — 어떤 높이의 화면에서도 첫 프레임에 안 보인다) | `.intro` / `.intro-bulb` | — |
+| 0 ~ 700 | **올라옴** `intro-bulb-rise`. 세로: back-out(오버슈트 1.2)을 키프레임 9개로 찍어 가운데를 3% 지나쳤다 되돌아온다. 가로: ±5px 사인파 1.5주기 감쇠("울렁"). 기울기 ±2°, squash/stretch 3~5%(빠를 때 세로로 늘고 되돌아올 때 가로로 눌림). 이징 `linear` — 곡선이 키프레임에 있어 구간 이징을 걸면 아홉 번 멈칫한다 | `.intro-bulb` | `--dur-intro-in` |
+| 700 ~ 850 | 정지 — 멈춘 전구를 "확인"하는 한 박자 | — | (850 − 700) |
+| 850 ~ 1000 | **띵** — `::after` opacity 0→1 + 글로우 확산(`intro-bulb-on`, `--ease`) **+ `.intro-bulb` scale 1→1.08→1**(`intro-bulb-ting`, 정점 45%). 크기 변화 없는 켜짐은 색이 바뀐 원판일 뿐이다(v3.6이 그랬다) | `.intro-bulb::after` / `.intro-bulb` | `--delay-intro` `--dur-intro-on` |
+| 1000 ~ 1150 | 켜진 채 정지 | — | `--hold-intro`(켜지는 순간부터 300) |
+| 1150 ~ 1750 | **퇴장** `intro-bulb-exit`. 첫 15%는 아래로 1.5vh 웅크렸다(예비 동작) 위로. 구간 이동량 15→28→28→32%로 **가속**. 가로 울렁·기울기는 올라올 때와 같은 진폭 — 같은 물체로 읽힌다. 끝 = `--bulb-from`의 반대(위 밖) | `.intro-bulb` | `--intro-exit-at` `--dur-intro-exit` |
+| 1450 ~ 2050 | **막 퇴장** `intro-out`(opacity 1→0, `--ease-fade`) **+ 본문 진입** `intro-arrive`(`.site-header` `.site-main` `.site-footer` opacity 0→1·`translate` 10px→0, `--ease`). 전구 퇴장의 절반 지점에서 시작해 두 모션이 **겹친다** | `.intro` / 골격 셋 | `--intro-out-at` `--dur-intro-out` |
+| 2050 | 막은 `visibility: hidden` + `pointer-events: none`으로 남는다(forwards). **`.intro` 자신의 `animationend`가 이 시각에 한 번 난다** — ui.js가 받는 신호 | `.intro` | — |
 
-- 막과 본문의 바탕이 같은 `--c-bg`라 눈에는 "내용만" 떠오르는 크로스페이드가 된다. 8px은 콘텐츠 도착(§11-4)의
-  3px과 구분되는 크기 — 화면 전체가 한 번 오는 자리다. 12px부터는 페이지가 "밀려 들어온다".
-- `.side`는 진입 대상이 아니다 — 슬라이드가 같은 `translate`를 쓰고, 막이 걷히는 것만으로 이미 드러난다.
-  (도킹된 사이드바는 막 아래에서 기다렸다가 막과 함께 나타난다.)
-- 막이 걷히는 600ms 동안 본문은 이미 렌더돼 있다(`app.js`는 막 뒤에서 평소대로 일한다). 데이터가 3초 안에
-  못 오면 `.list-loading` 한 줄이 드러난다 — 막이 로딩 스피너 역할을 겸하지 않는다.
+- **왜 겹치나** — 전구가 다 나간 뒤(1750) 막이 걷히면 그 사이 300ms가 빈 화면이고, 전구 출발과 동시에 걷히면 전구가 본문
+  글자 위를 가로지른다. 절반(1450)이면 전구가 화면 위쪽 1/4을 지날 때 본문이 아래에서 올라오기 시작한다 — 화면의 흐름이
+  "아래 → 위" 하나라 **전구를 따라 본문이 올라온다**로 읽힌다. 사용자의 "자연스럽게 옮겨줘"를 이 겹침이 맡는다.
+- **본문 10px**(v3.6 8px) — 전구가 화면 절반을 가로지른 직후라 8px은 움직임으로 안 잡힌다. 12부터는 "밀려 들어온다".
+  콘텐츠 도착(§11-4)의 3px과는 여전히 구분된다.
+- **`.intro-bulb`에 animation이 셋** — 올라옴·띵·퇴장. 전부 개별 변환 속성(`translate` `rotate` `scale`)이고 시간이 겹치지
+  않는다. fill-mode: 올라옴·퇴장 `forwards`, 띵 `none`(150ms 밖에서 아무것도 덮어쓰지 않아야 올라옴의 끝 자세·퇴장의
+  시작 자세가 그대로다). 셋 다 `backwards` 없음 — 올라옴이 0ms부터라 첫 프레임의 자세는 그 0%가 맡는다.
+- **`.intro`(막)에는 animation이 하나뿐이어야 한다** — ui.js가 `getComputedStyle(intro).animationDelay/Duration`의 첫 값으로
+  안전망 타이머를 만든다(§8-1). 전구의 animation을 막에 옮기면 그 값이 어긋난다.
+- 막이 떠 있는 동안 본문은 이미 렌더돼 있다(`app.js`는 막 뒤에서 평소대로 일한다). 데이터가 2초 안에 못 오면 `.list-loading`
+  한 줄이 드러난다 — 막이 로딩 스피너 역할을 겸하지 않는다.
+- `.side`는 진입 대상이 아니다 — v3.6과 같다.
 
-**§8-2와의 관계 — 정적 요소가 opacity 0에서 시작하지만 예외가 아니라 준수다.** 0→1로 가는 것이 JS가 아니라
-CSS animation이고, `html:not([data-intro="done"]) body:has(> .intro) > …`에만 걸린다. JS가 통째로 실패해도 3.16초 뒤
-막은 걷히고 본문은 1이 된다. `:has()`를 모르는 브라우저는 본문 진입만 빠지고 막의 크로스페이드는 그대로다.
+**§8-2와의 관계 — v3.6 그대로.** 골격 셋의 opacity 0 시작은 CSS animation이 1로 만드는 것이라 위반이 아니다.
+`html:not([data-intro="done"]) body:has(> .intro) > …`에만 걸리고, JS가 통째로 실패해도 2.05초 뒤 막은 걷히고 본문은 1이 된다.
 
-**상태 — 셋. 전부 §8에 등록.**
+**상태 — v3.6 그대로 셋. 전부 §8에 등록.**
 
 | 상태 | 누가 | 언제 | CSS가 하는 일 |
 |---|---|---|---|
-| `html[data-intro="done"]` | `theme-init.js` | 첫 페인트 전, `sessionStorage['blogIntro']`가 있으면 | `.intro { display: none }` + 본문 진입 애니메이션 없음(선택자에서 빠진다). **첫 방문에서 ui.js가 붙이지 않는다** — 붙이면 진입 애니메이션이 선택자에서 빠져 그 프레임에 끊긴다. 다음 로드에서 theme-init이 붙인다 |
-| `#intro[hidden]` | `ui.js` | `.intro`의 `animationend`(`e.target === intro`) 뒤 | `[hidden] { display: none !important }`(base.css). fixed 막이 접근성 트리·히트 테스트에서 완전히 빠진다 |
-| `sessionStorage['blogIntro'] = '1'` | `ui.js` | 위와 같은 시각 | 같은 탭 세션에서 index.html로 돌아와도 다시 보지 않는다. **localStorage가 아닌 이유** — "사이트에 접속할 때"는 방문마다이지 평생 한 번이 아니다. 탭을 닫고 내일 오면 다시 켜진다 |
+| `html[data-intro="done"]` | `theme-init.js` | 첫 페인트 전, `sessionStorage['blogIntro']`가 있으면 | `.intro { display: none }` + 본문 진입 애니메이션 없음. **첫 방문에서 ui.js가 붙이지 않는다** |
+| `#intro[hidden]` | `ui.js` | `.intro`의 `animationend`(`e.target === intro`) 뒤 | `[hidden] { display: none !important }`. 막이 접근성 트리·히트 테스트에서 완전히 빠진다 |
+| `sessionStorage['blogIntro'] = '1'` | `ui.js` | 위와 같은 시각 | 같은 탭 세션에서는 다시 보지 않는다. localStorage가 아닌 이유 — "접속할 때"는 방문마다다 |
 
 - **`prefers-reduced-motion: reduce`면 인트로는 통째로 없다**(`.intro { display: none }`, 본문 진입 `animation: none`).
-  2초 대기 자체가 모션이다. 이때는 `animationend`가 나지 않으므로 ui.js가 `getComputedStyle(intro).display === 'none'`
-  이면 즉시 `hidden` + sessionStorage를 쓰고 끝낸다(아래 JS 규칙).
-- 막이 떠 있는 3초 동안 키보드 포커스는 본문으로 갈 수 있다(막이 잡지 않는다). 막으면 스크린리더·키보드
-  사용자를 3초 기다리게 한다. 마우스만 `pointer-events`로 막힌다 — 보이지 않는 것을 누르지 않게.
-- bfcache로 돌아오면 막은 `hidden` 상태 그대로 복원된다. 별도 처리 없음.
+  v3.7의 전구는 화면 높이를 두 번 가로지르는 큰 모션이라 v3.6("2초 대기도 모션")보다 더 분명한 이유다.
+  ui.js는 `getComputedStyle(intro).display === 'none'`이면 즉시 `hidden` + sessionStorage.
+- 막이 떠 있는 2초 동안 키보드 포커스는 본문으로 갈 수 있다(막이 잡지 않는다). 마우스만 `pointer-events`로 막힌다.
+- bfcache로 돌아오면 막은 `hidden` 상태 그대로 복원된다.
 
-**JS 규칙 (`ui.js` `initIntro()`, frontend-dev-2 — §12-12)**
+**JS 규칙 (`ui.js` `initIntro()`, frontend-dev-2) — v3.6 §12-12 #73 그대로. v3.7에서 바꿀 것 없음.**
 
 ```
 intro = #intro. 없으면 return (index.html이 아니다)
@@ -575,15 +636,13 @@ html[data-intro="done"]이거나 getComputedStyle(intro).display === 'none'(redu
   → intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch); return
 intro.addEventListener('animationend', e => { if (e.target !== intro) return; finish() })
 finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 번만(플래그)
-안전망: setTimeout(finish, --intro-out-at + --dur-intro-out + 500) — 백그라운드 탭 등에서 이벤트가 새도 막이 남지 않게.
-       숫자는 getComputedStyle(intro).animationDelay/Duration을 읽어 더한다(ms 문자열 파싱). 못 읽으면 4000
+안전망: setTimeout(finish, computed animationDelay + animationDuration + 500) — v3.7 값으로 1450 + 600 + 500 = 2550ms.
+       못 읽으면 4000(그대로 두어도 된다 — 새 총 길이 2050보다 길기만 하면 된다)
 ```
 
-- `initShell()`이 `initTheme()` 다음에 부른다. `applyTheme()`·테마 토글은 인트로를 모른다 — 접점 0.
-- `config.js` `storageKeys.intro = 'blogIntro'`. `theme-init.js`는 config.js보다 먼저 실행되므로 문자열을 직접 쓴다
-  (`blogTheme`·`blogSide`와 같은 관행). **`created`·글 데이터·localStorage에는 손대지 않는다.**
-- `animationend`는 버블링한다 — `.intro-bulb::after`의 `intro-bulb-on`이 2.4초에 먼저 올라온다. `e.target === intro`
-  판정이 없으면 막이 켜지자마자 `hidden`이 되어 **전구가 켜지는 순간 화면이 튄다.** 이것이 이 절의 유일한 함정이다.
+- `animationend`는 버블링한다 — v3.7에서는 `.intro-bulb`의 셋(700 · 1000 · 1750)과 `::after`의 하나(1000)가 **네 번** 먼저
+  올라온다. `e.target === intro` 판정이 없으면 0.7초에 막이 사라진다. 이것이 이 절의 유일한 함정이다(v3.6과 같다).
+- `config.js` `storageKeys.intro = 'blogIntro'`. `theme-init.js`는 문자열을 직접 쓴다. **`created`·글 데이터·localStorage에는 손대지 않는다.**
 
 ---
 
@@ -840,7 +899,7 @@ v3.4: `정체(제목) → 찾기(검색) → 축으로 좁히기(분류) → 태
 |---|---|---|
 | `.entry-list` | `display: grid; grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr)); gap: --sp-4` | **미디어쿼리 없이** auto-fill이 열 수를 정한다. 17rem(272px): 1440 도킹(본문 1088) **3열** / 1024 도킹(700) **2열** / 768(704) **2열** / 616 아래 **1열**. 15rem이면 1440에서 4열 — 제목이 두 줄씩 꺾이고 한 줄에 훑을 카드가 너무 많다 |
 | `.entry` | `position: relative` · 세로 flex · 1px `--c-border` · `--r-md` · 면 `--c-surface` · 패딩 `--sp-4 --sp-5`(440px 이하 `--sp-4`) · **그림자 없음** | 면이 바탕보다 한 단계 밝아 "종이가 얹혀 있다"가 경계선만으로 읽힌다. 원칙 3 유지 |
-| **`.entry-cat`** | `--fs-xs` / 700 / `--ls-wide` / **`--c-accent`** / 한 줄 말줄임 / **링크 아님** / `display: block` | 카드의 첫 줄, 작은 소문 라벨. 액센트색인 이유: 분류는 상세의 `.post-cat`과 같은 개념이고 그 색이 청록이다. 링크가 아닌 이유는 태그와 같다(카드 전체가 이미 링크) |
+| **`.entry-cat`** | `--fs-xs` / 700 / `--ls-wide` / **`--c-accent`** / 한 줄 말줄임 / **링크 아님** / `display: block` | 카드의 첫 줄, 작은 소문 라벨. 액센트색인 이유: 분류는 상세의 `.post-cat`과 같은 개념이고 그 색이 청록이다. 링크가 아닌 이유는 태그와 같다(카드 전체가 이미 링크). **v3.7(§0-3 ⑤): 모든 카드가 같은 라벨이 되는 두 경우엔 CSS가 감춘다** — `#catIndex`의 선택 항목(`aria-current="true"`)이 "전체"가 아닐 때 / 인덱스 항목이 "전체 + 하나"뿐일 때. `body:has()` + `.post-list .entry-cat { display: none }`. JS는 계속 그린다(마크업 불변) — 상태는 이미 있는 ARIA 속성이다. 연관 글 카드(§5-8)는 `.post-list` 밖이라 그대로 |
 | `.entry-title` | `--fs-lg` / 600 / `--c-text` / `display: block` / `flex: none` | 화면에서 **가장 눈에 띄는 글자**. 두 줄이 되어도 자르지 않는다(그리드 행 높이가 따라간다) |
 | `.entry-title::after` | `position: absolute; inset: 0` — **카드 전체를 링크 면적으로 늘린다** | `<li>`를 통째로 `<a>`로 감싸면 스크린리더가 카드 내용 전부를 링크 이름으로 읽는다. `::after` 방식은 Tab 정지점이 제목 하나이고 태그·분류는 링크가 아니다(300편 × 4 = Tab 1200번을 만들지 않는다) |
 | `.entry-meta` | `flex-wrap`, `--fs-sm`, `align-items: baseline`, **`margin-block-start: auto`**, 위 패딩 `--sp-2` | 마지막 줄. **카드 바닥에 붙는다** — 한 줄 제목 카드와 두 줄 제목 카드가 한 행에 있어도 날짜 줄이 같은 높이에 선다(그리드가 행 높이를 맞추고 auto 마진이 밀어 내린다) |
@@ -982,6 +1041,9 @@ v3.4: `정체(제목) → 찾기(검색) → 축으로 좁히기(분류) → 태
 </p>
 ```
 
+- **v3.7(§0-3 ④) — 요약 `.post-summary`는 본문보다 한 단계 작다.** `--fs-md`(15→17) · 행간 1.6 · `--c-text-dim` · 위 여백 `--sp-3`.
+  v3.6까지 `--fs-lg`(= `--fs-prose`)·1.7이라 본문 첫 문단과 같은 글자였고, 목차 상자가 그 사이에 끼면 글이 두 번 시작하는
+  것으로 읽혔다. 머리말 4줄의 위계: 제목(`--fs-3xl` 700) > 요약(`--fs-md` dim) > 날짜·분류·태그(`--fs-sm`, 역할색).
 - **제목 바로 아래 한 줄에 병기한다.** 실측 사례 7이 871편에서 검증한 형태다
   (`Date: 2020.05.26  Updated: 2020.05.30`).
   사례 1은 같은 정보를 글 맨 아래 두는데, 우리는 **사용자가 직접 요구한 기능**이라
@@ -1017,6 +1079,24 @@ v3.4: `정체(제목) → 찾기(검색) → 축으로 좁히기(분류) → 태
 > v2.3의 2열 그리드·sticky 트랙·rAF 핸들러가 아니다.
 
 **결정: 인라인 목차(`.toc`)는 그대로. 현재 절 표시는 사이드바(§3-2) 안의 `.side-toc`가 맡는다.**
+
+**v3.7(§0-3 ③) — 넓은 화면에서는 `.toc`가 칼럼 오른쪽 여백으로 나간다. 마크업·DOM 순서·조건(h2 3개 이상) 전부 그대로.**
+1440px에서 720px 칼럼 좌우 360px씩이 빈 채로 목차 상자(항목 5개 = 180px)가 본문 위에 앉아 첫 문단이 첫 화면의 65%
+아래에서 시작했다. 목차는 "도구"인데 "글"의 칼럼(줄길이를 위한 720)을 함께 쓰는 것이 원인이다.
+
+| 조건 | 배치 | 왜 |
+|---|---|---|
+| < 1280px | 인라인(v3.0 그대로) | 칼럼 바깥 여백이 280px 미만이라 15rem 상자 + 32px 간격이 안 들어간다 |
+| ≥ 1280px, 도킹 아님 | `.post > .toc { position: absolute; inset-inline-start: calc(100% + --sp-7); inline-size: 15rem; margin: 0 }`. 기준 상자는 `.post`(`position: relative`, layout.css §7). **`top`을 주지 않는다** — absolute의 static position = 흐름에 있었을 자리(머리말 바로 아래)라 세로 위치는 그대로이고 가로만 칼럼 밖으로 나간다 | 검산 1280: 여백 (1280 − 720) / 2 = 280. 목차 왼쪽 = 칼럼 내용 끝(280 + 32 + 656 = 968) + 32 = 1000, 폭 240 → 오른쪽 끝 1240 < 1280 |
+| ≥ 1280px, **도킹**(`body.side-open.side-pinned` / `html[data-side="pinned"]`) | 인라인으로 되돌린다(`position: static`, 폭 auto, 아래 여백 `--sp-8`) | 사이드바 260이 칼럼을 밀어 1280~1539에서는 여백이 150~279다 |
+| ≥ 1540px, 도킹 | 다시 여백으로 | 1540 − 260 = 1280 — 첫 행과 같은 기하 |
+
+- **sticky가 아니다.** 스크롤과 함께 올라간다. 스크롤 중 "지금 어디"는 v3.3의 `.side-toc`가 맡는다(위 결정 그대로). 여백의
+  목차가 sticky까지 하면 v3.0이 폐기한 "사이드바형"이 절반 돌아온다 — 이번 조치는 **가로 위치 하나**만 바꾼다.
+- 2열 그리드·`--w-toc`·JS 없음. v3.0 §5-4의 후보 A를 기각한 이유("2열 그리드를 다시 만든다 · 1280 규칙이 하나 더 필요")
+  중 앞은 absolute로 사라졌고, 뒤는 §11-3에 1280/1540을 등재하는 것으로 받아들였다.
+- **좁은 화면의 목차는 여전히 첫 화면의 1/3이다**(360 × 740에서 5항목 × 44px + 패딩 ≈ 270px). CSS로는 터치 타깃을 깎지
+  않고 줄일 수 없다 — `<details>`로 접는 것이 답이고 그것은 마크업이다(§12-13 #76).
 
 세 후보를 놓고 골랐다.
 
@@ -1123,6 +1203,52 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
 - **코드블록 안 `pre`의 여백(v3.3 수정)**: `.prose pre`(JS 실패 시 폴백)의 `margin-block: --sp-7`이
   `.code-wrap > pre`에도 먹어 머리띠와 첫 줄 사이에 52px 빈 띠가 있었다(특이도가 같아 뒤 규칙이 이겼다).
   `prose.css`가 `.prose .code-wrap > pre { margin: 0 }`로 고쳤다. 마크업은 그대로다.
+
+### 5-7-1. 코드 하이라이팅 = IntelliJ IDEA (v3.7 신설)
+
+> **사용자 요청(원문): "코드를 정리할 때는 실제 IDE처럼 색깔 바뀌게(인텔리제이 - 자바 기준)."**
+
+라이트 = **IntelliJ Light**, 다크 = **Darcula**. 값은 JetBrains 소스에서 읽었다 —
+`intellij-community/platform/platform-resources/src/themes/Light.xml`(IntelliJ Light, `parent_scheme="Default"`) ·
+`…/src/DefaultColorSchemesManager.xml`의 Darcula 절. 마크업(§5-7 `.code-wrap`)·highlight.js 로드 방식·`--hl-*` 토큰의
+이름과 개수는 그대로다. 바뀐 것은 **토큰 값**(tokens.css)과 **hljs 클래스 → 토큰 대응**(prose.css §8)이다.
+
+**코드 블록의 면은 종이색이 아니라 IDE의 편집기 배경이다.** `--code-bg` 흰색 / `#2B2B2B`, 테두리 `--code-border`가 그 창의
+틀. 페이지(따뜻한 종이) 위에 "에디터 창"이 열려 있는 것이 사용자 의도이고, 그래서 `--code-bg`는 `--c-surface` 계열에서
+벗어난 유일한 면 토큰이다. 머리띠(`.code-lang` `.code-copy`)의 면은 `color-mix(--code-border 30%, --code-bg)` — IDE 탭 줄처럼
+코드와 같은 계열(라이트 중성 회백 / 다크 `#303132` 근처). 라벨 `--c-meta` 대비 5.2 / 6.4, 복사 버튼 `--c-text-dim` 7.2 / 6.0.
+
+**AA 보정 규칙** — IDE 원본이 코드 배경 대비 4.5:1에 못 미치면 **같은 색상(hue)에서 밝기만 옮겨** 4.5:1을 넘긴 값을 쓴다.
+IDE는 자기 글꼴·안티앨리어싱을 전제로 값을 잡지만 웹에서는 접근성 기준(4.5:1)이 우선이다. 보정한 값은 원본과 함께 적는다.
+
+| 역할 (IntelliJ 이름) | hljs 클래스 | 토큰 | 라이트 (IntelliJ Light) | 다크 (Darcula) |
+|---|---|---|---|---|
+| 편집기 배경 (TEXT bg) | `.hljs` (투명, `.code-wrap`이 면) | `--code-bg` | `#FFFFFF` | `#2B2B2B` |
+| 창 테두리 | `.code-wrap` border | `--code-border` | `#D3CCBB` (IDE에 없음 — 종이 위에서 흰 창을 떼는 선) | `#3C3F41` (Darcula 패널 회색) |
+| 본문 (TEXT fg) | `.hljs` `.hljs-params` | `--code-text` | `#080808` (20:1) | `#A9B7C6` (6.9:1) |
+| 키워드 (DEFAULT_KEYWORD) | `.hljs-keyword` `.hljs-selector-tag` `.hljs-doctag` | `--hl-keyword` | `#0033B3` (9.9:1) | **AA 보정 `#D47E36`** ← 원본 `#CC7832`(4.25:1) → 4.6:1 |
+| true/false/null | `.hljs-literal` | `--hl-literal` | = 키워드 | = 키워드 |
+| 원시형 (int·boolean — IntelliJ에서 키워드) | `.hljs-type` | `--hl-type` | = 키워드 | = 키워드 |
+| 문자열 (DEFAULT_STRING) | `.hljs-string` `.hljs-quote` `.hljs-regexp` | `--hl-string` | `#067D17` (5.3:1) | **AA 보정 `#7A9B67`** ← 원본 `#6A8759`(3.5:1) → 4.5:1 |
+| 숫자 (DEFAULT_NUMBER) | `.hljs-number` | `--hl-number` | `#1750EB` (6.2:1) | `#6897BB` (4.5:1 — 경계값, 그대로) |
+| 주석 (LINE/BLOCK_COMMENT) | `.hljs-comment` (기울임 — Light.xml `FONT_TYPE 2`) | `--hl-comment` | **AA 보정 `#767676`** ← 원본 `#8C8C8C`(3.4:1) → 4.5:1 | **AA 보정 `#929292`** ← 원본 `#808080`(3.6:1) → 4.6:1 |
+| 함수 선언 (DEFAULT_FUNCTION_DECLARATION) | `.hljs-function` `.hljs-title` `.hljs-title.function_` | `--hl-function` `--hl-title` | `#00627A` (6.9:1) | `#FFC66D` (9.1:1) |
+| 클래스·인터페이스 이름 | `.hljs-title.class_` (+ `.inherited__`) | (`--code-text`) | 본문색 — IntelliJ는 클래스명을 색칠하지 않는다 | 본문색 |
+| 어노테이션 (DEFAULT_METADATA) | `.hljs-meta` + 안의 `.hljs-keyword` `.hljs-string` | `--hl-meta` | **AA 보정 `#857209`** ← 원본 `#9E880D`(3.5:1) → 4.8:1 | `#BBB529` (6.6:1) |
+| HTML/XML 태그 이름 (XML_TAG_NAME) | `.hljs-tag` `.hljs-name` | `--hl-tag` `--hl-name` | `#0033B3` **근사** — Light.xml에 값이 없어 키워드로 폴백 | `#E8BF6A` (8.2:1, 소스 확인) |
+| HTML/XML 속성 이름 (XML_ATTRIBUTE_NAME / DEFAULT_ATTRIBUTE) | `.hljs-attr` `.hljs-attribute` | `--hl-attr` | `#174AD4` (7.1:1, DEFAULT_ATTRIBUTE) | `#BABABA` (7.3:1) |
+| CSS 선택자 | `.hljs-selector-class/-id/-attr/-pseudo` | `--hl-selector` | `#0033B3` **근사** (개별값 없음, 키워드 계열) | `#E8BF6A` **근사** (태그 계열) |
+| 내장 객체·지역 변수 (System·Math·매개변수) | `.hljs-built_in` `.hljs-variable` `.hljs-template-variable` `.hljs-symbol` `.hljs-bullet` `.hljs-link` | `--hl-builtin` `--hl-variable` | 본문색 — IntelliJ는 식별자를 색칠하지 않는다 | 본문색 |
+| (정적 필드 DEFAULT_STATIC_FIELD `#871094` / `#9876AA`) | — | **쓰지 않는다** | hljs가 정적 필드를 구분하지 못한다. 엉뚱한 곳에 자주색이 찍히느니 본문색 | — |
+| diff + / − | `.hljs-addition` / `.hljs-deletion` | `--hl-addition` / `--hl-deletion` | 문자열 초록 / `--c-danger`와 같은 값 (IDE에 대응값 없음) | 같음 |
+| 마크다운 제목 | `.hljs-section` (700) | `--hl-title` | — | — |
+
+- **굵기·기울임도 IDE를 따른다.** IDE 편집기는 한 굵기다 — v3.6까지 키워드·함수·타입·이름에 걸었던 600은 뗐다(키워드가
+  굵으면 자바 코드의 절반이 굵다). 남은 것은 주석 기울임(IntelliJ Light 설정)과 마크다운 제목 700(코드가 아니라 문서 구조)뿐.
+- hljs는 함수 "선언"과 "호출"을 가르지 않는다(둘 다 `.hljs-title.function_`) — 함수는 전부 선언색이다. IntelliJ에서는 호출이
+  본문색이라 여기서 IDE와 한 번 갈린다. 다른 방법이 없다(하이라이터를 바꾸는 것은 의존성 승인 대상).
+- 인라인 코드(`.prose code`)는 바뀌지 않는다 — 문장 속 토큰이지 에디터가 아니다(§5-7).
+- 검증: 픽스처의 자바(클래스·어노테이션·제네릭·람다·리터럴)·JS·HTML·CSS 블록을 라이트·다크로 촬영해 대응을 확인했다(§0-3 머리말).
 
 ### 5-8. 연관 글 `.post-related` (v3.3 신설)
 
@@ -1430,7 +1556,7 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
 | 토스트 퇴장 | `is-visible` 제거 후 **400ms** 뒤 DOM 제거 | 260ms (`--dur`) |
 | 모달 닫힘 | `is-open` 제거 후 **220ms** 뒤 DOM 제거 | 160ms (`--dur-fast`) |
 | 모달 열림 | append → **다음 rAF**에 `is-open` | 420ms (`--dur-slow`) |
-| **인트로 종료 (v3.6)** | `.intro`의 `animationend`(`e.target === intro`) → `hidden` + `sessionStorage`. 안전망 타이머는 `--intro-out-at + --dur-intro-out + 500ms`(computed style에서 읽는다) | 막 퇴장 시작 2560ms(`--intro-out-at`) + 600ms(`--dur-intro-out`) = 3160ms |
+| **인트로 종료 (v3.6 · v3.7 값)** | `.intro`의 `animationend`(`e.target === intro`) → `hidden` + `sessionStorage`. 안전망 타이머는 `--intro-out-at + --dur-intro-out + 500ms`(computed style에서 읽는다 — JS는 숫자를 모른다) | 막 퇴장 시작 **1450ms**(`--intro-out-at`) + 600ms(`--dur-intro-out`) = **2050ms**. 전구의 animationend 넷(700·1000·1000·1750)은 target이 달라 무시 |
 
 이 숫자를 JS에서 줄이면 요소가 사라지는 중간에 잘린다. 늘릴 때는 상관없다.
 인트로는 JS가 시간을 세지 않는다 — CSS가 끝났다고 알려 줄 때 받아 적는다(§3-5). 안전망 타이머만 CSS보다 길다.
@@ -1569,9 +1695,12 @@ tokens → base → layout → components → prose
 | **도킹 시 본문 밀기 `body` (v3.2)** | `padding-inline-start` | `--dur` + `--ease`. 첫 페인트(`html[data-side]`)에는 이전 값이 없어 걸리지 않는다 |
 | 사이드바 안의 핀·쉐브론 | `rotate` / `translate` | `--dur-fast` |
 | **`.side-toc-item` (v3.3)** | `color` / `background-color` — `.side-post`와 같다. 현재 절이 옮겨 갈 때 색이 건너간다(위치·크기 모션 없음) | `--dur-fast` |
-| **`.intro-bulb::after` — 전구 켜짐 (v3.6, `@keyframes intro-bulb-on`)** | `opacity` 0→1 (켜진 그림이 꺼진 그림 위에 물든다) | `--dur-intro-on`(400) + `--ease-fade`, delay `--delay-intro`(2000), both |
-| **`.intro` — 막 퇴장 (v3.6, `@keyframes intro-out`)** | `opacity` 1→0, 끝 프레임에 `visibility: hidden` `pointer-events: none` | `--dur-intro-out`(600) + `--ease-fade`, delay `--intro-out-at`(2560), forwards |
-| **`.site-header` `.site-main` `.site-footer` — 본문 진입 (v3.6, `@keyframes intro-arrive`, index.html·첫 방문만)** | `opacity` 0→1 + `translate` 8px→0 | `--dur-intro-out`(600) + `--ease`, delay `--intro-out-at`, both |
+| **`.intro-bulb` — 올라옴 (v3.7, `@keyframes intro-bulb-rise`)** | `translate`(아래 밖 → 0, back-out 9키프레임 + ±5px 가로) · `rotate` ±2° · `scale`(squash/stretch) | `--dur-intro-in`(700) + `linear`(곡선은 키프레임에), delay 0, forwards |
+| **`.intro-bulb` — 띵 (v3.7, `@keyframes intro-bulb-ting`)** | `scale` 1→1.08→1 | `--dur-intro-on`(150) + `--ease`, delay `--delay-intro`(850), fill none |
+| **`.intro-bulb` — 퇴장 (v3.7, `@keyframes intro-bulb-exit`)** | `translate`(0 → 위 밖, 예비 동작 + 가속) · `rotate` · `scale` | `--dur-intro-exit`(600) + `linear`, delay `--intro-exit-at`(1150), forwards |
+| **`.intro-bulb::after` — 켜짐 (v3.6 → v3.7, `@keyframes intro-bulb-on`)** | `opacity` 0→1(첫 35%) + **`filter`(drop-shadow 두 겹 4/10 → 18/56px — 글로우 확산)** | `--dur-intro-on`(150) + `--ease`, delay `--delay-intro`(850), both |
+| **`.intro` — 막 퇴장 (v3.6, `@keyframes intro-out`)** | `opacity` 1→0, 끝 프레임에 `visibility: hidden` `pointer-events: none` | `--dur-intro-out`(600) + `--ease-fade`, delay `--intro-out-at`(**1450**), forwards |
+| **`.site-header` `.site-main` `.site-footer` — 본문 진입 (v3.6, `@keyframes intro-arrive`, index.html·첫 방문만)** | `opacity` 0→1 + `translate` **10px**→0 | `--dur-intro-out`(600) + `--ease`, delay `--intro-out-at`, both |
 | ~~`#themeToggle::before`~~ (v3.6 삭제) | ~~`box-shadow` / `scale`(해↔달)~~ — 사용자 요청 "테마 바꾸는데 깜빡이는 애니 넣지 말고". 아이콘은 즉시 바뀌고 색만 토큰 보간을 따른다 | — |
 
 **테마 크로스페이드의 작동 방식 (v3.4, JS 0줄)** — 사용자 요청 *"다크·라이트 전환할 때 약간의 텀을
@@ -1648,7 +1777,12 @@ tokens → base → layout → components → prose
 | **`.side-toc` `.side-toc-item`** (v3.3) | `components.css` §15 (사이드바 부품 옆) |
 | **`.field-group` `.field-label`** (v3.3) | `components.css` §11 (`.editor-fields`의 `align-items`만 `layout.css`) |
 | **`.intro`(막·`--z-intro`·`@keyframes intro-out`) · `body { --intro-out-at }` · 본문 진입 `@keyframes intro-arrive` · `html[data-intro="done"]`·reduced-motion 블록** (v3.6) | `layout.css` §10 — 화면 전체를 덮고 골격 셋을 움직이는 것은 골격의 일이다 |
-| **`.intro-bulb` + `::before`/`::after`(그림·`--bulb-*`·글로우) · `@keyframes intro-bulb-on`** (v3.6) | `components.css` §16 — 전구는 부품이고 켜짐은 그 부품의 모션이다 |
+| **`.intro-bulb` + `::before`/`::after`(그림·`--bulb-*`·글로우) · `@keyframes intro-bulb-on` · v3.7 `intro-bulb-rise` `intro-bulb-ting` `intro-bulb-exit` · `--bulb-from`** | `components.css` §16 — 전구는 부품이고 올라옴·켜짐·퇴장은 그 부품의 모션이다. 막·합산 시각(`--intro-exit-at` `--intro-out-at`)은 §10 |
+| **index.html의 `.brand` 시각 숨김** (v3.7 §0-3 ①) | `layout.css` §1 (헤더 옆 — 골격의 일이다. `.sr-only` 선언을 복사하되 `:focus-visible` 노출까지) |
+| **`.post { position: relative }` · `.post-summary` 크기** (v3.7 §0-3 ③④) | `layout.css` §7 |
+| **`.post > .toc`의 1280/1540 여백 배치** (v3.7 §0-3 ③) | `components.css` §8 (목차 계열은 전부 여기 — v3.0 결정 그대로) |
+| **`.entry-cat`을 감추는 `body:has()` 두 줄** (v3.7 §0-3 ⑤) | `components.css` §4 (`.entry-cat` 정의 바로 아래) |
+| **코드 머리띠 면 `color-mix(--code-border 30%, --code-bg)` · hljs 대응(굵기 삭제)** (v3.7 §5-7-1) | `prose.css` §7 · §8 |
 
 ### 11-2. 리터럴 금지의 범위
 
@@ -1688,6 +1822,11 @@ tokens → base → layout → components → prose
 | ~~768px~~ | ~~`max-width`~~ | ~~`.list-tools` 세로 스택~~ — **v3.4 폐기.** 검색이 `min(40rem, 100%)`라 분기 없이 좁은 폭에 맞는다 |
 | 768px | `min-width` | `.post-nav` 1열 → 2열, 토스트가 오른쪽 아래로 |
 | 1024px | `min-width` | 에디터 split 2열, **사이드바 도킹**(`body.side-open.side-pinned` / `html[data-side="pinned"]` → 본문 `padding-inline-start: --w-side`, 그림자·스크림·스크롤 잠금 해제) |
+| **1280px** (v3.7) | `min-width` | **post.html의 `.toc`가 칼럼 오른쪽 여백으로**(§5-4). 도킹 상태는 제외 |
+| **1540px** (v3.7) | `min-width` | 도킹 상태에서도 `.toc`가 여백으로 — 1540 − 260 = 1280, 첫 분기와 같은 기하. 두 분기는 한 규칙("칼럼 밖 여백 ≥ 280")의 두 얼굴이다 |
+
+**미디어쿼리가 넷에서 여섯이 됐다(v3.7).** "넷만 쓴다"는 문장은 "배치 전환에만 쓴다"로 읽는다 — 1280/1540은 목차 한 부품의
+가로 위치 하나만 바꾸고, 다른 어떤 부품도 이 분기를 쓰지 않는다. 카드 그리드·헤더·검색은 여전히 분기 없음(아래).
 
 **카드 그리드의 열 수에는 분기가 없다** — `repeat(auto-fill, minmax(17rem, 1fr))`이 폭에 따라 3/2/1열을
 정한다(§4-4). 1440px 분기는 여전히 없다. 목록 페이지가 `--w-page`(1152px)에서 멈추므로 1440에서
@@ -1953,11 +2092,69 @@ CSS는 교체됐다(`tokens.css` 토큰 4개 · `layout.css` §10 · `components
 **검증 목록(개발자 셀프체크)** — ① 첫 로드: 막 → 2.0초 켜짐 → 2.56초부터 걷힘 → 3.16초 `#intro[hidden]`, DevTools
 Application의 sessionStorage에 `blogIntro`. ② 새로고침: 막 없음, `html[data-intro="done"]`. ③ 새 탭에서 열기: 다시 막.
 ④ post.html 직접 열기: 막 없음. ⑤ OS "동작 줄이기" 켜고 새 세션: 막 없음, sessionStorage는 적힘. ⑥ 전구가 켜지는
-2.0~2.4초 사이에 막이 사라지면 `e.target` 판정 누락이다.
+2.0~2.4초 사이에 막이 사라지면 `e.target` 판정 누락이다. (v3.7 값: 켜짐 0.85초, 막 걷힘 1.45~2.05초, `hidden` 2.05초.
+전구의 animationend가 0.7초에 먼저 오므로 **0.7초에 막이 사라지면** `e.target` 판정 누락이다.)
+
+### 12-13. v3.7 이행 — Why 감사가 남긴 마크업 몫 (frontend-dev #76 · frontend-dev / frontend-dev-2 #77 · frontend-dev-2 #78)
+
+CSS는 web-designer가 v3.7로 교체했고 **인트로 v2·코드 하이라이팅·Why 감사 ①③④⑤는 HTML/JS 변경 없이 이미 동작한다.**
+`ui.js` `initIntro()`는 손대지 않는다(computed delay+duration을 읽으므로 새 값 1450+600을 스스로 읽는다). 아래는 §0-3에서
+"마크업이 필요하다"고 적은 것들이다.
+
+| # | 파일 | 담당 | 할 일 | 근거 |
+|---|---|---|---|---|
+| 76 | `post.html` `.toc` + `post.js` `buildToc()`/목차를 채우는 함수 | frontend-dev | **`<aside class="toc" id="toc" hidden>` → `<details class="toc" id="toc" hidden>`, `<p class="toc-title">목차</p>` → `<summary class="toc-title">목차</summary>`.** `nav.toc-list`는 그대로 안에. `post.js`가 목차를 채우며 `toc.open = window.matchMedia('(min-width: 768px)').matches` — 넓은 화면은 펼친 채(지금과 같다), 폰은 접힌 한 줄(32px)로 시작한다. 리사이즈에는 반응하지 않는다(사용자가 여닫은 상태를 뒤집지 않는다). **CSS는 이미 둘 다 받는다** — `.toc-title`이 `<summary>`이면 `summary` 기본 마커를 `::marker`로 그대로 두고(`components.css` §8에 `summary.toc-title` 규칙은 이 작업이 끝난 뒤 web-designer가 붙인다 — 개정 요청할 것), `<p>`이면 지금 모양 | §0-3 ③ — 360×740에서 목차가 첫 화면의 1/3(5항목 × 44px). 터치 타깃을 깎지 않고 줄이는 유일한 길이 접기다. `<details>`는 JS 0줄로 여닫힌다(§4-3 태그 인덱스와 같은 부품 철학) |
+| 77 | `index.html` `post.html` `about.html`(frontend-dev) · `write.html`(frontend-dev-2) `.site-nav` | 둘 다 | **PM이 사용자에게 확인한 뒤**: 내비에서 `<a class="nav-link" href="index.html">글</a>` 삭제 → `태그` `소개` `쓰기` 셋. index.html의 `aria-current="page"`는 어디에도 없게 된다(브랜드가 홈이고 그 페이지에서는 h1이 곧 정체 — §3-3의 "post.html → 없음"과 같은 규칙). `ui.js` `initShell()`의 aria-current 동기화는 그대로(대상이 없으면 아무 일도 없다). CSS는 항목 수에 의존하지 않는다 — 440px 검산은 오히려 34px 여유가 는다(§3-3) | §0-3 ② — "글"과 `.brand`가 같은 곳으로 간다. §0-2가 "새 메모" 버튼을, §3-3이 "분류" 항목을 같은 이유로 뺐다. 사용자가 v3.4에서 "글"을 눈으로 본 항목이라 확인이 먼저다 |
+| 78 | `write.html` `#fSummary` placeholder | frontend-dev-2 | 촬영에서 `예: 클로저가 변수를 붙드는 원리`였다 — §6의 계약값은 `예: auto-fill과 minmax로 반응형 그리드 만들기`. 어느 쪽이든 하나로 맞춘다(계약값 권장 — 요약이 "무엇을 어떻게"까지 말하는 예다) | 감사 중 발견. 화면 문제는 아니고 계약 불일치 |
+
+**검증 목록(개발자 셀프체크)** — #76: h2 3개 이상 글을 360px에서 열면 "▸ 목차" 한 줄, 1024px에서는 펼쳐진 상자, 1280px에서는
+오른쪽 여백에 펼쳐진 상자. 인라인 목차 항목 클릭 → 해시 이동은 그대로. #77: 네 페이지 헤더가 `☰ 메모 블로그 태그 소개 쓰기 ☀`
+(index.html은 `☰ 태그 소개 쓰기 ☀` — 브랜드는 CSS가 숨긴다), Tab 순서 햄버거 → 브랜드 → 태그 → … 그대로.
 
 ---
 
 ## 13. 변경 이력
+
+### v3.7 — 인트로 v2 · 코드 = IntelliJ · Why 감사
+
+사용자 요청 원문: *"전등이 너무 밋밋하다. 전등 켜지는 속도 더 빨리 하고, 사이트 들어오면 전등이 아래에서 울렁거리며 올라오고
+가운데에 딱 와서 띵 켜진 다음 0.3초 기다리고 위로 울렁거리며 올라가자. 그리고 자연스럽게 메모 블로그로 옮겨줘. Why? 기법으로
+지금 화면의 문제점과 개편성을 정리해서 고쳐. 코드를 정리할 때는 실제 IDE처럼 색깔 바뀌게(인텔리제이 - 자바 기준)."*
+
+| 절 | v3.6 | v3.7 |
+|---|---|---|
+| §0-3 | 없음 | **신설 — Why 감사.** 후보 5건 × (왜1·왜2·왜3·근본 원인·조치). ①③④⑤ CSS 완료, ② 마크업(#77, 사용자 확인 후), ③의 좁은 화면은 #76. 고치지 않은 것 셋과 근거 |
+| §1-2 원칙 4 | 인트로 3.2초 | **2.05초**, 등장·퇴장 한 번 |
+| §2 | 인트로 토큰 3(`--delay-intro` 2000 · `--dur-intro-on` 400 · `--dur-intro-out` 600) · 파생 `--intro-out-at`(2560) | **토큰 6**(`--dur-intro-in` 700 · `--delay-intro` 850 · `--dur-intro-on` 150 · `--hold-intro` 300 · `--dur-intro-exit` 600 · `--dur-intro-out` 600) · 파생 **`--intro-exit-at`(1150) `--intro-out-at`(1450) `--bulb-from` `--bulb-glow-in/out`**. **코드 토큰 20개의 값 = IntelliJ Light / Darcula**(이름·`@property` 그대로) |
+| §3 | 헤더 네 페이지 동일 | 동일하되 **index.html의 `.brand`는 CSS가 시각적으로 숨긴다**(§0-3 ①) |
+| §3-5 | 꺼진 전구 2초 → 켜짐 400 → 막 600 (3160) | **전면 개정** — 올라옴 700(back-out 9키프레임·±5px 울렁·±2°·squash/stretch) → 띵 150(밝기 35% + 글로우 확산 + scale 1.08) → 정지 300 → 퇴장 600(예비 동작·가속) → 막·본문 600(퇴장 절반 지점부터 겹침, 본문 10px). 막 `overflow: hidden`. `.intro-bulb` animation 셋의 fill 규칙. 막에는 animation 하나뿐(ui.js가 읽는다). JS 규칙 불변(안전망 2550) |
+| §4-4 | `.entry-cat` 항상 | **필터 선택 / 단일 분류면 CSS가 감춤**(`body:has()`, ARIA가 상태) |
+| §5-2 | 요약 `--fs-lg` 1.7 | **`--fs-md` 1.6 `--sp-3`** — 본문과 갈린다. 머리말 4줄 위계 명문화 |
+| §5-4 | 인라인 목차 | 인라인 유지 + **≥1280(도킹 ≥1540)에서 오른쪽 여백으로 absolute**(top 없음 = 제자리, sticky 아님, 그리드 없음). 표·검산 |
+| §5-7-1 | 없음 | **신설 — 코드 하이라이팅 대응표**(역할 · hljs 클래스 · 토큰 · 라이트/다크 값 · 출처 · AA 보정 6건 · 근사 3건). 에디터 창 면, 머리띠 면, 굵기 삭제, 선언/호출 한계 |
+| §8-1 | 인트로 종료 3160 | **2050**, 전구 animationend 넷 무시 |
+| §11 | 인트로 3행 | **6행**(rise·ting·exit 추가, on에 filter, out 1450, arrive 10px) |
+| §11-1 | — | v3.7 분담 6행(전구 모션 §16 / brand 숨김 §1 / post relative·summary §7 / toc 분기 §8 / entry-cat §4 / prose §7·§8) |
+| §11-3 | 분기 넷 | **+ 1280 · 1540**(목차 한 부품만). "넷만"은 "배치 전환에만"으로 |
+| §12 | §12-12까지 | **§12-13 신설** — #76(목차 `<details>`) #77(내비 "글" 삭제, 사용자 확인 후) #78(placeholder 불일치) |
+
+**같은 라운드에 web-designer가 수행한 CSS 변경**
+
+- `tokens.css` — 코드 블록 20개 값 교체(라이트·다크, 출처·대비·AA 보정 주석) · 인트로 토큰 3 → 6(시간표 주석)
+- `layout.css` — §1 `body:has(> .list-page) .brand` 시각 숨김 + `:focus-visible` 노출 · §7 `.post { position: relative }` ·
+  `.post-summary` `--fs-md`/1.6/`--sp-3` · **§10 재작성**: `--intro-exit-at` `--intro-out-at`, `.intro { overflow: hidden }`,
+  `intro-arrive` 10px, 주석의 시간표
+- `components.css` — §4 `.entry-cat` 감춤 `body:has()` 2줄 · §8 `.post > .toc` 1280/1540 분기 · **§16 재작성**: `.intro-bulb`에
+  `--bulb-from` `transform-origin` animation 셋, `@keyframes intro-bulb-rise`(9) `intro-bulb-ting`(3) `intro-bulb-exit`(6),
+  `::after`에 `--bulb-glow-in/out` + `intro-bulb-on`(opacity + filter 3키프레임, `--ease`)
+- `prose.css` — §7 머리띠 면 `color-mix(--code-border 30%, --code-bg)` + 대비 주석 · **§8 재작성**: IntelliJ 대응, 굵기 600 삭제,
+  `.hljs-title.class_` 본문색, `.hljs-meta` 안 문자열, `.hljs-literal`/`.hljs-type` 분리
+- `base.css` — 변경 없음
+
+**검증** — 픽스처 4편으로 5503에서: 인트로를 시각별로 얼려 찍는 스크래치 하네스(음수 `animation-delay` + `paused`)로 라이트 15프레임 ·
+다크 4프레임 · 360px 2프레임 확인(0: 전구 없음 / 350: 가운데 위 오버슈트·기울기 / 920: 켜짐·글로우·1.08 / 1600: 위쪽 1/4 +
+막 25% + 본문 올라옴 / 2050: 본문만). index·post·about·write를 1440/768/360(iframe) × 라이트/다크로 촬영해 §0-3을 적었고,
+①③④⑤ 조치 후 index 1440·post 1440/1280/1024를 다시 찍어 확인했다. 대비는 awk로 27쌍 계산(§5-7-1 값).
 
 ### v3.6 — 인트로 전등(index.html 첫 방문), 테마 아이콘 transition 삭제
 

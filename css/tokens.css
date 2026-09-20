@@ -68,29 +68,38 @@
   --c-shadow-rgb: 38 30 18;   /* --sh-pop의 색(따뜻한 회갈) */
   --c-selection:  #cfe7e1;
 
-  /* ── 코드 하이라이팅 ────────────────────────────────────────────────────
-     highlight.js 기본 테마를 쓰지 않고 여기서 직접 정의한다.
-     이 17종은 "장식"이 아니라 코드를 읽는 기능이므로 v3.0에서도 그대로 남는다. */
-  --code-bg:     #f2eee4;
-  --code-border: #e0d8c6;
-  --code-text:   #2c2820;
-  --hl-comment:  #696356;     /* 코드 배경 대비 약 4.9:1 — 주석도 읽혀야 한다 */
-  --hl-keyword:  #9a3a68;
-  --hl-string:   #2e7345;
-  --hl-number:   #a85a24;
-  --hl-literal:  #a85a24;
-  --hl-function: #21568f;
-  --hl-title:    #21568f;
-  --hl-attr:     #7d5d12;
-  --hl-builtin:  #0f6a7d;
-  --hl-type:     #0f6a7d;
-  --hl-variable: #9a4526;
-  --hl-tag:      #9a3a68;
-  --hl-name:     #9a3a68;
-  --hl-selector: #21568f;
-  --hl-meta:     #696356;
-  --hl-addition: #2e7345;
-  --hl-deletion: #a63b28;
+  /* ── 코드 하이라이팅 = IntelliJ IDEA (v3.7, 계약서 §5-7-1) ─────────────────
+     사용자 요청 "코드를 정리할 때는 실제 IDE처럼 색깔 바뀌게(인텔리제이 - 자바 기준)".
+     라이트 = IntelliJ Light, 다크 = Darcula. 값은 JetBrains 소스에서 읽었다 —
+       intellij-community/platform/platform-resources/src/themes/Light.xml (IntelliJ Light)
+       intellij-community/platform/platform-resources/src/DefaultColorSchemesManager.xml (Darcula 절)
+     highlight.js 기본 테마는 여전히 싣지 않는다 — 색은 여기서만 나온다.
+     코드 블록의 면은 종이색이 아니라 IDE의 편집기 배경(흰색 / #2B2B2B)이다 — 페이지 위에 "에디터 창"이
+     열려 있는 것이 사용자 의도다. 그래서 --code-bg는 --c-bg·--c-surface와 다른 계열이고, 경계선이 그 창의 테두리다.
+
+     AA 보정 — IDE 값이 4.5:1에 못 미치면 같은 색상(hue)에서 밝기만 옮겨 4.5:1을 넘긴 값을 쓴다("AA 보정").
+     IDE는 자기 글꼴·안티앨리어싱을 전제로 값을 잡지만, 웹에서는 접근성 기준이 우선이다(CLAUDE.md·§1-2 원칙 6).
+     보정한 값은 아래 주석과 계약서 §5-7-1 표에 원본과 함께 적었다. */
+  --code-bg:     #ffffff;     /* IntelliJ Light TEXT background */
+  --code-border: #d3ccbb;     /* IDE엔 없는 값 — 흰 창을 종이 위에서 떼는 테두리(--c-border 계열, 흰색 대비 1.6:1) */
+  --code-text:   #080808;     /* TEXT foreground. 흰색 대비 20:1 */
+  --hl-comment:  #767676;     /* AA 보정: 원본 #8C8C8C(3.4:1) → 4.5:1이 되는 같은 회색의 가장 가까운 값 */
+  --hl-keyword:  #0033b3;     /* DEFAULT_KEYWORD. 9.9:1 */
+  --hl-string:   #067d17;     /* DEFAULT_STRING. 5.3:1 */
+  --hl-number:   #1750eb;     /* DEFAULT_NUMBER. 6.2:1 */
+  --hl-literal:  #0033b3;     /* true/false/null — IntelliJ에서는 키워드다 */
+  --hl-function: #00627a;     /* DEFAULT_FUNCTION_DECLARATION. 6.9:1 */
+  --hl-title:    #00627a;     /* hljs-title(함수·절 제목). 클래스명(.class_)은 prose.css가 본문색으로 되돌린다 */
+  --hl-attr:     #174ad4;     /* DEFAULT_ATTRIBUTE(HTML/XML 속성 이름). 7.1:1 */
+  --hl-builtin:  #080808;     /* System·Math 같은 내장 식별자 — IntelliJ는 식별자를 색칠하지 않는다 */
+  --hl-type:     #0033b3;     /* int·boolean 같은 원시형 — IntelliJ에서는 키워드색 */
+  --hl-variable: #080808;     /* 지역 변수·매개변수 = 본문색(정적 필드 #871094는 hljs가 구분하지 못해 쓰지 않는다) */
+  --hl-tag:      #0033b3;     /* XML_TAG_NAME — Light.xml에 값이 없어 키워드로 폴백(근사) */
+  --hl-name:     #0033b3;     /* hljs-name(HTML 태그 이름) = 태그와 같다 */
+  --hl-selector: #0033b3;     /* CSS 선택자 — IntelliJ Light에 개별값 없음, 키워드 계열(근사) */
+  --hl-meta:     #857209;     /* 어노테이션(DEFAULT_METADATA). AA 보정: 원본 #9E880D(3.5:1) → 4.8:1 */
+  --hl-addition: #067d17;     /* diff + = 문자열 초록과 같은 값 */
+  --hl-deletion: #a63b28;     /* diff − = --c-danger와 같은 값(IDE에 대응값 없음) */
 
   /* ── 타이포 ────────────────────────────────────────────────────────────
      외부 웹폰트 금지(승인 대상). 한글 폴백을 명시적으로 넣는다.
@@ -195,18 +204,26 @@
   --dur-theme: 1200ms;
   --ease-fade: cubic-bezier(.65, 0, .35, 1);
 
-  /* 인트로 전등 (v3.6, 계약서 §3-5) — index.html 첫 방문 한 번. layout.css §10 · components.css §16만 쓴다.
-     사용자 요청 "전등 그림이 먼저 나오면서 2초 뒤 켜지고, 그 다음 자연스럽게 블로그가 렌더링".
-     · 2000ms: 사용자가 말한 숫자 그대로. 꺼진 전구를 "보는" 시간이라 이보다 짧으면 왜 있었는지 모른다.
-     · 400ms 켜짐: 백열등이 정격 밝기에 이르는 시간(수백 ms)을 흉내낸다. 160ms면 스위치 "딸깍",
-       600ms면 조광기다. --ease-fade(대칭)로 밝기가 한 번에 오른다.
-     · 600ms 퇴장: 오버레이가 걷히며 본문이 같은 시간에 8px 올라온다. --dur-slow(420)보다 긴 이유 —
-       화면 전체가 바뀌는 유일한 모션이라 부품 하나(모달)보다 한 단계 느려야 "밀려난다"가 아니라
-       "드러난다"로 읽힌다. 800ms부터는 대기로 느껴진다.
-     켜짐 → 퇴장 사이의 한 박자(--dur-fast)는 layout.css가 --intro-out-at으로 합산한다. */
-  --delay-intro:   2000ms;
-  --dur-intro-on:  400ms;
-  --dur-intro-out: 600ms;
+  /* 인트로 전등 v2 (v3.7, 계약서 §3-5) — index.html 첫 방문 한 번. layout.css §10 · components.css §16만 쓴다.
+     사용자 판정(v3.6) "전등이 너무 밋밋하다. 켜지는 속도 더 빨리. 아래에서 울렁거리며 올라와 가운데 딱 와서
+     띵 켜진 다음 0.3초 기다리고 위로 울렁거리며 올라가자. 그리고 자연스럽게 메모 블로그로."
+     시간표(합계 ≈2.05초 — v3.6의 3.16초에서 1초 넘게 짧아졌다):
+       0 ~ 700      전구가 화면 아래에서 가운데로 올라온다(--dur-intro-in). 마지막 30%는 가운데를 살짝 지나쳤다
+                    되돌아오는 튕김 — 700ms는 "던져 올린 것이 멈추는" 길이. 500이면 튕김이 안 보이고 900부터는 느리다
+       850          띵 — 켜진다(--delay-intro = 700 + 150). 150ms는 멈춘 전구를 "확인"하는 한 박자(--dur-fast 값과 같다)
+       850 ~ 1000   켜짐 150ms(--dur-intro-on). v3.6의 400은 백열등 흉내였는데 사용자에게는 "느리다"였다.
+                    150 = 스위치 "딸깍"보다 한 박자 긴 값 — 글로우가 퍼지는 것이 눈에 잡히는 최소
+       1000 ~ 1150  정지(--hold-intro 300은 켜지는 순간부터 센다: 850 + 300 = 1150). 사용자 숫자 그대로
+       1150 ~ 1750  위로 퇴장(--dur-intro-exit). 가속 — 던져 올린 것이 아니라 "떠나는" 움직임
+       1450 ~ 2050  막이 걷힌다(--dur-intro-out). 전구 퇴장의 절반 지점에서 시작해 두 모션이 겹친다 —
+                    전구가 다 나간 뒤 막이 걷히면 그 사이 300ms가 "빈 화면"이다
+     길이는 전부 여기, 합산(--intro-exit-at · --intro-out-at)은 layout.css §10이 한다. */
+  --dur-intro-in:   700ms;
+  --delay-intro:    850ms;
+  --dur-intro-on:   150ms;
+  --hold-intro:     300ms;
+  --dur-intro-exit: 600ms;
+  --dur-intro-out:  600ms;
 
   /* ── 레이아웃 ──────────────────────────────────────────────────────────
      읽기 칼럼은 여전히 --w-prose 하나다(post.html의 본문·헤더·푸터).
@@ -276,26 +293,27 @@
   --c-shadow-rgb: 0 0 0;      /* 어두운 배경에선 순수 검정 그림자가 가장 자연스럽다 */
   --c-selection:  #1f4a44;
 
-  --code-bg:     #1b1914;
-  --code-border: #343026;
-  --code-text:   #ddd7c8;
-  --hl-comment:  #8b8477;     /* 코드 배경 대비 약 4.9:1 */
-  --hl-keyword:  #e59cc2;
-  --hl-string:   #92d69e;
-  --hl-number:   #ecaa6c;
-  --hl-literal:  #ecaa6c;
-  --hl-function: #7cb9f0;
-  --hl-title:    #7cb9f0;
-  --hl-attr:     #e7c97c;
-  --hl-builtin:  #71d4d1;
-  --hl-type:     #71d4d1;
-  --hl-variable: #f0a385;
-  --hl-tag:      #e59cc2;
-  --hl-name:     #e59cc2;
-  --hl-selector: #7cb9f0;
-  --hl-meta:     #8b8477;
-  --hl-addition: #92d69e;
-  --hl-deletion: #e4735c;
+  /* 코드 = Darcula (v3.7). 값의 출처·AA 보정 규칙은 라이트 블록 주석. 대비는 전부 #2B2B2B 기준. */
+  --code-bg:     #2b2b2b;     /* Darcula TEXT background */
+  --code-border: #3c3f41;     /* Darcula 패널 회색 — 편집기 창의 테두리(IDE의 도구창 경계와 같은 값) */
+  --code-text:   #a9b7c6;     /* TEXT foreground. 6.9:1 */
+  --hl-comment:  #929292;     /* AA 보정: 원본 #808080(3.6:1) → 4.6:1 */
+  --hl-keyword:  #d47e36;     /* AA 보정: 원본 #CC7832(4.25:1) → 4.6:1. 같은 주황에서 밝기만 4% 올렸다 */
+  --hl-string:   #7a9b67;     /* AA 보정: 원본 #6A8759(3.5:1) → 4.5:1 */
+  --hl-number:   #6897bb;     /* DEFAULT_NUMBER. 4.5:1(경계값 — 그대로 통과) */
+  --hl-literal:  #d47e36;     /* 키워드와 같다 */
+  --hl-function: #ffc66d;     /* DEFAULT_FUNCTION_DECLARATION. 9.1:1 */
+  --hl-title:    #ffc66d;
+  --hl-attr:     #bababa;     /* XML_ATTRIBUTE_NAME. 7.3:1 */
+  --hl-builtin:  #a9b7c6;     /* 본문색 — 라이트와 같은 이유 */
+  --hl-type:     #d47e36;     /* 원시형 = 키워드색 */
+  --hl-variable: #a9b7c6;     /* 본문색 */
+  --hl-tag:      #e8bf6a;     /* XML_TAG_NAME / HTML_TAG_NAME. 8.2:1 */
+  --hl-name:     #e8bf6a;
+  --hl-selector: #e8bf6a;     /* CSS 선택자 — Darcula에 개별값 없음, 태그 계열(근사) */
+  --hl-meta:     #bbb529;     /* DEFAULT_METADATA(어노테이션). 6.6:1 */
+  --hl-addition: #7a9b67;     /* diff + = 문자열 초록 */
+  --hl-deletion: #e4735c;     /* diff − = --c-danger. 4.7:1 */
 
   /* 어두운 바탕에선 그림자가 잘 보이지 않으므로 알파를 키운다. */
   --sh-pop:
