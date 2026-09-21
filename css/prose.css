@@ -524,10 +524,12 @@
 .prose pre code {
   display: block;
   /* 본문 17~19px에 대해 코드 16~17px. 여기서 --fs-sm(최대 15px)로 떨어뜨리면
-     코드 읽기가 갑자기 힘들어진다. em으로 본문에 비례시킨다. */
+     코드 읽기가 갑자기 힘들어진다. em으로 본문에 비례시킨다.
+     v3.9: 에디터 textarea(.editor-area, layout.css §8)가 같은 값(calc(--fs-prose × .92) · --lh-code)을 읽는다 — 나란히 보기에서
+     같은 코드 블록이 왼쪽·오른쪽 같은 줄 높이로 선다(계약서 §2·§6). 0.92를 바꾸면 그쪽도 함께 바꾼다. */
   font-family: var(--ff-mono);
   font-size: 0.92em;
-  line-height: 1.72;
+  line-height: var(--lh-code);
   letter-spacing: 0;
   color: var(--code-text);
   /* 인라인 코드 규칙 되돌리기 */
@@ -537,7 +539,8 @@
   border-radius: 0;
   white-space: pre;
   word-break: normal;
-  tab-size: 2;
+  /* v3.9: 2 → 4. 자바·C 계열 관행이고 사용자 글이 자바다. 에디터 textarea와 같은 값 — 탭 문자가 든 코드가 두 화면에서 같은 폭. */
+  tab-size: 4;
 }
 
 /* ============================================================================

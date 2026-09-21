@@ -45,22 +45,14 @@
 }
 
 /* ============================================================================
-   2. 인덱스 — 분류 / 태그 (계약서 §4-3)
+   2. 인덱스 — 태그 (계약서 §4-3. v3.9: 분류 인덱스 행 #catRow 폐기 — 한 축만 남는다)
    ----------------------------------------------------------------------------
-   두 축을 "모양"이 아니라 "라벨과 색"으로 구분한다.
-   v2.x는 카테고리(탭+레일+점+밑줄)와 태그(알약+테두리)를 다섯 가지 시각 신호로
-   갈랐고, 그 다섯 가지가 화면 높이의 4분의 1을 먹었다.
-   두 축을 구분하는 가장 싼 방법은 그냥 이름을 적는 것이다.
+   v3.0~3.8은 "한 부품으로 두 축(분류·태그)"을 라벨과 색으로 갈랐다. v3.9 사용자 판정 "태그 리스트 불필요하게 2개(하나 삭제)" —
+   분류명 = 태그명인 블로그에서 같은 알약 줄이 둘이었다. 분류는 사이드바(§15)와 카드의 .entry-cat(§4)이 맡으므로 행을 지웠다.
+   .index-label(행 머리의 "분류" 소문)도 같이 사라졌다 — 태그 손잡이는 <summary>가 곧 라벨이다.
+   부품(.index-row .index-list .index-item .index-name .index-count .index-fold*)은 그대로 #tags 안에서 쓴다.
    v3.0의 `#` 접두사는 v3.1에서 삭제됐다(사용자 판정). 그 자리는 태그 색(--c-tag)이 맡는다.
    ========================================================================= */
-.index-label {
-  flex: none;
-  /* 라벨이 항목보다 앞서 읽히되 항목을 이기면 안 된다 — 작고 낮은 색. */
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: var(--ls-wide);
-  color: var(--c-text-mute);
-}
 
 /* v3.2 축소 — 사용자 판정 "카테고리가 너무 커". 글자 --fs-sm → --fs-xs, 좌우 패딩·구분자 간격 절반.
    높이(--h-control-sm)는 그대로다 — 손가락이 누르는 것이라 줄이지 않는다. 대신 글자가 작아져
@@ -127,10 +119,7 @@
   color: var(--c-meta);
 }
 
-/* 글이 0편인 분류. opacity로 흐리게 하면 대비가 4.5:1 아래로 떨어진다.
-   "약한 색"이 아니라 "한 단계 낮은 색 토큰"으로 내린다. */
-.index-item.is-empty { color: var(--c-text-mute); }
-.index-item.is-empty:hover { color: var(--c-text-dim); }
+/* (.index-item.is-empty — 글 0편 항목 — 는 v3.9에 분류 인덱스와 함께 삭제. 태그는 글에서 모으므로 0편이 없다. is-empty는 .side-cat(§15)에만.) */
 
 /* 이름 칸. 긴 분류명이 줄을 통째로 밀지 않게 한다.
    overflow: clip + clip-margin — hidden이면 0.3em 아래 밑줄(위 규칙)까지 잘린다.
@@ -317,13 +306,16 @@
   text-overflow: ellipsis;
 }
 
-/* v3.7 Why 감사 ⑤ (계약서 §0-3) — 카드의 분류 라벨은 "한 행에 다른 분류의 글이 섞일 때" 값을 한다(§4-4).
-   그 전제가 깨지는 두 경우엔 모든 카드가 같은 글자를 반복한다: ⓐ 분류 인덱스에서 하나를 골라 걸러 낸 뒤
-   (선택된 항목이 "전체"가 아닐 때 — aria-current="true"가 곧 상태, §4-3) ⓑ 분류가 하나뿐일 때(인덱스 항목이
-   "전체" + 하나 = 둘). 목록 화면(#catIndex가 있는 곳)에서만 걸린다 — 연관 글 카드(post.html)는 인덱스가 없어 그대로.
-   사이드바가 열려 있을 때는 감추지 않는다 — 트리는 "어느 분류가 있는가"를 말하지 "이 카드가 어느 분류인가"는 못 말한다. */
-body:has(#catIndex > .index-item:not([data-cat="*"])[aria-current="true"]) .post-list .entry-cat,
-body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat { display: none; }
+/* v3.7 Why 감사 ⑤ → v3.9 재작성 (계약서 §4-3·§4-4) — 카드의 분류 라벨은 "한 행에 다른 분류의 글이 섞일 때" 값을 한다.
+   v3.7은 두 경우에 감췄다: ⓐ 분류 인덱스에서 하나를 골라 걸러 낸 뒤 ⓑ 분류가 하나뿐일 때. 상태의 출처가 #catIndex였는데
+   그 행이 v3.9에 폐기됐다. 이제 출처는 사이드바 트리(#sideTree, ui.js renderSide)이고, 감추는 경우는 ⓑ 하나만 남는다:
+   · ⓑ "글이 있는 분류(.side-cat:not(.is-empty))가 둘 이상 없다" — 블로그 전체에서 라벨이 늘 같은 글자라 정보가 0이다.
+     :has(#sideTree .side-cat) 조건은 트리가 그려진 뒤에만 걸리게 한다(app.js는 renderSide → renderList 순이라 깜빡임은 없지만,
+     트리가 비어 있는 상태(데이터 실패 → .side-empty)에서 카드가 있을 리 없으니 조건이 헐거워도 해가 없다 — 그래도 뜻을 분명히 적는다).
+   · ⓐ는 뺐다 — #catRow가 없는 화면에서 ?cat= 필터 중의 라벨은 "지금 걸러진 목록이다"를 말하는 유일한 보이는 표시다. 감추면
+     ?cat=java 화면이 "카드가 줄어든 전체 목록"과 구별되지 않는다. 사이드바(.side-cat-name[aria-current="true"])는 기본이 닫힘이라 대신 못 한다.
+   연관 글 카드(post.html)는 .post-list 밖이라 그대로. 사이드바가 열려 있는지는 여전히 조건이 아니다. */
+body:has(#sideTree .side-cat):not(:has(#sideTree .side-cat:not(.is-empty) ~ .side-cat:not(.is-empty))) .post-list .entry-cat { display: none; }
 
 /* 이 화면에서 가장 눈에 띄는 글자여야 한다 — h1(.page-title)보다도.
    목록의 주인공은 사이트 이름이 아니라 글 제목이다. */
@@ -479,6 +471,20 @@ body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat 
 .btn-primary:hover {
   background: color-mix(in oklab, var(--c-accent) 86%, var(--c-text));
   border-color: transparent;
+  color: var(--c-on-accent);
+}
+
+/* v3.9 (계약서 §6-1) — 눌리지 않는 버튼은 hover에도 반응하지 않는다. base.css가 :disabled에 opacity .5 + not-allowed를 주지만
+   hover 규칙이 그 위에서 색을 바꾸면 "눌릴 듯" 보인다. #btnSave가 서버 없음 상태에서 항상 disabled로 서 있는 첫 부품이다. */
+.btn:disabled:hover {
+  border-color: var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+.btn-primary:disabled:hover {
+  border-color: var(--c-accent);
+  background: var(--c-accent);
   color: var(--c-on-accent);
 }
 
@@ -1026,29 +1032,10 @@ summary.toc-title:hover { color: var(--c-accent); }
   color: var(--c-text-dim);
 }
 
-/* 블록 리듬. 모달 본문은 p / ol / ul이 섞여 들어오는 유일한 자리다
-   (editor.js의 내보내기 안내) — 형제라면 무엇이든 같은 간격으로 떨어뜨린다. */
+/* 블록 리듬. 모달 본문의 형제 블록(p·필드)은 무엇이든 같은 간격으로 떨어뜨린다.
+   v3.9: ul/ol/li 규칙(목록 마커·들여쓰기)은 삭제했다 — 내보내기 안내("1~6단계")만 쓰던 것이고 내보내기가 폐지됐다(계약서 §6-1).
+   모달 본문에 목록이 다시 필요해지면 그때 계약과 함께 되살린다(base.css의 전역 리셋이 마커를 지운다는 사실은 기억해 둘 것). */
 .modal-body > * + * { margin-block-start: var(--sp-4); }
-
-/* base.css가 `ul, ol { padding:0; list-style:none }`으로 전역 리셋을 건다.
-   그 리셋이 여기까지 오면 내보내기 안내의 "1~6단계"가 번호도 들여쓰기도 없는
-   평문 한 덩어리가 된다. 그 목록은 사람이 손으로 수행할 유일한 지시문이라
-   "몇 단계인지"가 보이지 않으면 하이브리드 저장이 그 자리에서 끊긴다. */
-.modal-body ul { list-style: disc; }
-.modal-body ol { list-style: decimal; }
-
-.modal-body ul,
-.modal-body ol {
-  /* 1.5em = 두 자리 번호("10.")까지 마커가 글줄 밖으로 밀려나지 않는 최소 들여쓰기 */
-  padding-inline-start: 1.5em;
-}
-
-.modal-body li { margin-block: var(--sp-2); }
-.modal-body li > ul,
-.modal-body li > ol { margin-block: var(--sp-1); }
-
-/* 번호가 "설명"이 아니라 "순서"로 읽혀야 한다. */
-.modal-body li::marker { color: var(--c-accent); font-weight: 700; }
 
 .modal-body strong { color: var(--c-text); font-weight: 700; }
 
@@ -1125,7 +1112,7 @@ select.field {
    요약·태그·id 칸의 라벨이 sr-only라, 기존 글을 열면 값이 찬 상자 셋이 이름 없이 나란히 놓였다
    ("함수가 선언된 위치의 스코프를 기억…" / "js, scope, closure" / "2026-09-15-closure" — 어느 칸이
    무엇인지는 값을 읽고 추측해야 했다). placeholder는 입력을 시작하면 사라지는 라벨이다.
-   .field-group이 라벨 + 입력칸을 세로로 묶고, 라벨은 인덱스 라벨(.index-label)과 같은 소문이다. */
+   .field-group이 라벨 + 입력칸을 세로로 묶고, 라벨은 사이드바 머리 제목(.side-title)과 같은 소문(小文)이다 — v3.9까지 .index-label이 그 원형이었다. */
 .field-group {
   display: flex;
   flex-direction: column;
@@ -1239,7 +1226,7 @@ select.field {
 .md-btn[data-md="template"] { margin-inline-start: auto; }
 
 /* ── 저장 상태 ────────────────────────────────────────────────────────────
-   기본은 "저장됨"(초록 점), .is-dirty는 "내보내지 않음"(경고색).
+   기본은 "저장됨"(초록 점), .is-dirty는 "저장하지 않음"(경고색 — v3.9: 내보내기 폐지로 문구도 저장 하나다).
    v2.x의 맥동 애니메이션은 폐기됐다 — 색과 문구로 이미 충분하고,
    에디터 화면에서 무한히 뛰는 점은 글쓰기를 방해한다. */
 .editor-status {
@@ -1265,15 +1252,19 @@ select.field {
 .editor-status.is-dirty { color: var(--c-warn); }
 .editor-status.is-dirty::before { background: var(--c-warn); }
 
-/* ── 로컬 서버 표시 + 저장 버튼 (계약서 §6, v3.5) ──────────────────────────
+/* ── 로컬 서버 표시 + 저장 버튼 (계약서 §6-1, v3.5 → v3.9 저장 단일 모드) ──────────
    docs/api.md — Docker로 띄운 로컬 서버가 있으면 에디터가 파일을 직접 쓴다(PUT /api/posts/{id}).
-   editor.js가 /api/health로 감지해 #btnSave와 #editorServer의 hidden을 떼는 것이 상태의 전부다.
-   · #editorServer: .editor-actions의 마지막 항목, auto 마진으로 줄 오른쪽 끝. 저장 버튼이 "왜 생겼는지"를
-     같은 줄에서 말한다. 생김새는 .editor-status와 같은 어휘(작은 글자 + 점) — 점은 초록(--c-ok, "연결됨").
-     상태줄(.editor-status)에 문구를 섞지 않는 이유: setStatus()가 textContent를 통째로 갈아 끼우므로
-     자식을 두면 지워진다. 별도 요소가 가장 싸다.
-   · 저장이 보이면(#btnSave:not([hidden])) 뒤따르는 #btnExport는 보조 버튼으로 내려간다 — 주 동작은 하나여야
-     한다. DOM 순서가 저장 → 내보내기라 형제 결합자만으로 되고 :has()가 필요 없다. */
+   v3.9 사용자 판정 "Ctrl+S 했을 때 파일 자동 저장(다운로드 방식 없애)" — 내보내기(#btnExport)가 사라지고 저장이 유일한 동작이 됐다.
+   상태 셋(확인 중 / 연결됨 / 서버 없음)의 손잡이는 #btnSave의 disabled · #editorServer의 hidden과 .is-off · #btnRetry의 hidden뿐이다.
+   · #btnSave: 항상 그 자리에 있고 "눌릴 수 있는지"만 바뀐다(disabled). 생김새는 base.css의 :disabled(opacity .5) + 위 §5의
+     :disabled:hover 되돌림 — 여기엔 규칙이 없다. v3.5의 hidden 토글은 "버튼이 있는지 없는지"를 서버가 정하는 셈이었다.
+   · #editorServer: #btnSave 다음, auto 마진으로 줄 오른쪽 끝. 저장 버튼이 "왜 눌리지 않는지 / 왜 눌리는지"를 같은 줄에서 말한다.
+     생김새는 .editor-status와 같은 어휘(작은 글자 + 점) — 연결됨은 초록(--c-ok), 서버 없음(.is-off)은 경고색(--c-warn — 라이트 5.1:1
+     / 다크 9.1:1, AA). 문구가 다르고 점의 색은 보조다 — 색만으로 상태를 말하지 않는다.
+     상태줄(.editor-status)에 문구를 섞지 않는 이유: setStatus()가 textContent를 통째로 갈아 끼우므로 자식을 두면 지워진다.
+   · #btnRetry("다시 연결", .btn.btn-ghost): 서버 없음에서만 보인다. 규칙 없음 — ghost 버튼 그대로. 채운 버튼이 하나 더 서면 어느 것이
+     저장인지 흐려진다.
+   · v3.5의 `#btnSave:not([hidden]) ~ #btnExport` 격하 규칙 둘은 삭제 — 주 동작이 하나면 격하할 것이 없다. */
 .editor-server {
   display: inline-flex;
   align-items: center;
@@ -1284,6 +1275,7 @@ select.field {
   font-weight: 600;
   color: var(--c-text-mute);
   white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease);
 }
 
 .editor-server::before {
@@ -1293,18 +1285,17 @@ select.field {
   block-size: 7px;
   border-radius: var(--r-full);
   background: var(--c-ok);
+  transition: background-color var(--dur-fast) var(--ease);
 }
 
-#btnSave:not([hidden]) ~ #btnExport {
-  border-color: var(--c-border);
-  background: var(--c-surface);
-  color: var(--c-text);
+/* 서버 없음(v3.9). 문구 "서버 없음 · start.bat(Docker) 실행 후 저장"은 30자라 360px(내용폭 320)에서 nowrap이면 칼럼을 넘친다 —
+   이 상태에서만 접는다. 점(::before)은 flex: none이라 첫 줄 머리에 그대로 붙는다. */
+.editor-server.is-off {
+  color: var(--c-warn);
+  white-space: normal;
 }
 
-#btnSave:not([hidden]) ~ #btnExport:hover {
-  border-color: var(--c-accent);
-  color: var(--c-accent);
-}
+.editor-server.is-off::before { background: var(--c-warn); }
 
 /* 수정 모드 안내 배지(editor.js #editorMode). */
 .editor-mode {
@@ -1467,7 +1458,8 @@ select.field {
    다른 색을 쓰면 같은 분류가 두 화면에서 다른 것으로 보인다.
    ========================================================================= */
 
-/* 머리 제목. .index-label과 같은 규칙 — "분류"라는 같은 말이 두 화면에서 같은 모습이어야 한다. */
+/* 머리 제목. v3.8까지 인덱스 행의 .index-label과 같은 규칙이었다(같은 "분류"라는 말이 두 화면에서 같은 모습). v3.9에 그 행이 사라져
+   이 소문(小文) 어휘의 원형은 여기다 — .field-label(§11)이 같은 값을 쓴다. */
 .side-title {
   font-size: var(--fs-xs);
   font-weight: 700;
@@ -1758,7 +1750,7 @@ select.field {
      drop-shadow가 꼭지까지 두르지 않아 빛은 유리에서만 난다.
 
    움직임 — .intro-bulb 하나에 animation 셋(올라옴 · 띵 · 퇴장), ::after에 하나(켜짐). 전부 개별 변환 속성
-   (translate · rotate · scale)이라 서로 덮어쓰지 않고, 시간이 겹치지 않는다(0~700 / 850~1000 / 1150~1750).
+   (translate · rotate · scale)이라 서로 덮어쓰지 않고, 시간이 겹치지 않는다(0~700 / 850~1000 / 1350~1950 — v3.9 --hold-intro 500).
      올라옴  intro-bulb-rise   화면 아래 밖(--bulb-from = 50vh + 90px — 어떤 높이의 화면에서도 완전히 밖)에서
              가운데로. 세로는 back-out 곡선(오버슈트 1.2)을 키프레임 9개로 찍었다 — 가운데를 3% 지나쳤다 되돌아오는
              "튕김"이 곡선에 들어 있다. 가로는 ±5px 사인파 1.5주기가 감쇠하며 좌우로 "울렁"이고, 기울기 ±2°와
