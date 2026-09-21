@@ -17,7 +17,7 @@
 |---|---|---|
 | `pm-integrator` | **전체 총괄** — 검수·분배·우선순위·충돌 조정 + **로컬 에디터 서버** | `docs/meeting-*.md`, `docs/HANDOFF.md`, `CLAUDE.md`, `server/*`, `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `docs/api.md`, `.claude/**` |
 | `web-designer` | **웹 구조 총괄** — 정보구조·화면설계·계약서 + 비주얼 | `docs/contract.md`, `css/*` |
-| `frontend-dev` | 코어 뷰·데이터 파이프라인 | `index.html` `post.html` `about.html`, `js/{config,util,store,markdown,app,post,about,theme-init}.js`, `posts/*` |
+| `frontend-dev` | 코어 뷰·데이터 파이프라인 | `index.html` `post.html`, `js/{config,util,store,markdown,app,post,theme-init}.js`, `posts/*` |
 | `frontend-dev-2` | 에디터·인터랙션·접근성 | `write.html`, `js/{editor,ui,admin}.js`, `start.bat` `start.ps1` |
 
 **소유하지 않은 파일은 읽기만 하고 수정하지 않는다.** 두 에이전트가 같은 파일을 건드리면 서로의 작업을 덮어쓴다.
@@ -72,20 +72,19 @@
 ## 구조
 
 ```
-index.html / post.html / about.html / write.html
+index.html / post.html / write.html                  (about.html은 v3.9에서 삭제)
+.nojekyll    필수 — 없으면 GitHub Pages의 Jekyll이 posts/*.md를 .html로 바꿔 글이 404
 css/  tokens base layout components prose            (이 순서로 로드. animations.css는 v3.0에서 삭제)
-js/   theme-init(head에서 먼저) config util store markdown ui admin app post about editor
-posts/       index.json + categories.json + <분류>/*.md   (현재 글 0편)
+js/   theme-init(head에서 먼저) config util store markdown ui admin app post editor
+posts/       index.json + categories.json + <분류>/*.md
 docs/        contract.md(계약서), api.md(서버 규약), meeting-NN.md(회의록), HANDOFF.md(인수인계)
-start.bat / start.ps1   로컬 미리보기 (Docker 없는 PC용 폴백 — 저장 API 없음)
+start.bat / start.ps1   start.bat은 Docker가 있으면 compose, 없으면 start.ps1(정적 미리보기 — 저장 API 없음, 글 저장 불가)
 server/      FastAPI 로컬 에디터 서버 (app.py 엔트리, posts.py 파일 규칙) — Dockerfile·docker-compose.yml로 실행. 규약은 docs/api.md
 .claude/     agents/ 4인 정의, skills/ 24개
 ```
 
-## 글 추가 흐름 (하이브리드)
+## 글 추가 흐름 (서버 단일 — v3.9에서 내보내기 폐지)
 
-**Docker가 있으면** `docker compose up` → `write.html`의 "저장"이 `posts/`에 바로 쓰고 **자동으로 커밋**한다(`docs/api.md` §2-1, `BLOG_AUTO_COMMIT`). 푸시는 사용자가 `/ship`.
-**없으면** 아래 내보내기 흐름.
-
-`write.html`에서 작성 → "파일로 내보내기" → `.md`와 `index.json` 다운로드 → `posts/`에 넣고 커밋.
-작성 중 초안은 localStorage에 자동 임시저장되지만, **내보내기 전까지는 영구 저장이 아니다.**
+`docker compose up` → `write.html`에서 작성 → "저장"(Ctrl+S)이 `posts/`에 바로 쓰고 **자동으로 커밋**한다(`docs/api.md` §2-1, `BLOG_AUTO_COMMIT`). 푸시는 사용자가 `/ship`.
+**Docker가 없는 PC에서는 글을 저장할 수 없다** — `start.bat`은 미리보기 전용이고, 에디터의 저장 버튼은 `disabled`에 "서버 없음" 문구가 뜬다(계약 §6-1). 파일 내보내기(다운로드)는 없다.
+작성 중 초안은 localStorage에 자동 임시저장되지만, **서버에 저장하기 전까지는 영구 저장이 아니다.**

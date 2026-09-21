@@ -29,7 +29,7 @@ git add -A && git status --short
 ```bash
 git push
 ```
-거절되면 `/sync` 먼저.
+거절되면 `/sync` 먼저. 인증 오류(403·credential)면 `gh auth login` 후 다시(2026-09-22부터 푸시는 gh 로그인 후에만).
 
 ## 반영 확인 (Pages는 1~2분 걸린다)
 

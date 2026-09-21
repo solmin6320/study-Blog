@@ -1,7 +1,7 @@
 # 인수인계 문서 — 개인 학습 블로그
 
 > 이 문서 하나만 읽으면 프로젝트 맥락이 복원되도록 작성했다.
-> **최종 갱신: 2026-09-21 (라운드 6 개발 중 · HEAD `02a4a47` v3.7 + 계약서 v3.8 진행 · 글 0편)**
+> **최종 갱신: 2026-09-22 (라운드 8 개발 중 · HEAD `13936b9` 계약서 v3.9 이행 진행 · 사용자 글 1편)** — 이번 갱신은 부분: §1·§4·§6·§7·§9·§10(저장 단일 모드·about 삭제·`.nojekyll`·`gh auth login`). 나머지 절은 2026-09-21 실측 그대로.
 > 갱신 방법: Claude Code에서 `/handoff` 실행. 오래된 인수인계 문서는 없는 것보다 나쁘다(이 문서는 9/15 v2.2 상태로 6일간 방치돼 meeting-04 M4-11 결함이 됐다).
 
 ---
@@ -9,7 +9,7 @@
 ## § 1. 이 프로젝트가 무엇인가
 
 공부한 내용을 기록하는 **개인 학습 블로그**. 순수 HTML/CSS/JS로 만들고, **빌드 도구 없이** GitHub Pages(`https://github.com/solmin6320/study-Blog`, 공개)에 정적 파일을 그대로 올린다.
-글은 **로컬 에디터 서버**(FastAPI, Docker — 파이썬은 여기에만)로 저장하거나, Docker가 없으면 `.md`로 내보내 폴더에 넣는다. 방문자는 읽기 전용이다.
+글은 **로컬 에디터 서버**(FastAPI, Docker — 파이썬은 여기에만)로만 저장한다(라운드 8, 계약 v3.9 §6-1 — `.md` 내보내기는 폐지). Docker가 없는 PC는 미리보기 전용이다. 방문자는 읽기 전용이다.
 
 ### 사용자가 직접 말한 요구사항 (검수 기준선)
 
@@ -22,7 +22,7 @@
 | 5 | 본문에 어떤 내용이든(표·그래프·텍스트·코드) | 부분 — 인라인 SVG 그래프 불가(살균 표면을 넓히지 않기로 결정 3). 이미지로 넣는다. 라운드 7 이미지 업로드(B-4)가 실질 해법 |
 | 6 | 최신 반응형 웹 | 부분 — 360/768/1024/1440 헤드리스 통과, **실기기 미확인**(3라운드째) |
 | 7 | 애니메이션·슬라이드 등 (jQuery 허용) | 충족 — 콘텐츠 도착·테마 크로스페이드·전구 인트로(v3.6~3.7) |
-| 8 | 사용자가 직접 그때그때 추가 | 충족 — 서버 저장 + 내보내기. 단 저장 흐름 치명 3건(T4-1~3) 라운드 6에서 수정 중 |
+| 8 | 사용자가 직접 그때그때 추가 | 충족 — 서버 저장 단일(라운드 8에서 내보내기 폐지, 사용자 판정). 저장 흐름 치명 3건(T4-1~3)은 라운드 6에서 수정. 사용자 첫 글 `posts/java/` 1편 실재 |
 | 9 | 가독성·전체 구조·세부 구조·고퀄리티 | 부분 — 가독성 실측 양호, 관심사 분리(M4-12) 라운드 7 |
 | 10 | 배경은 단색보다 흐르는 느낌 + 어울리는 애니메이션 | **기준선 폐기** — 사용자 선택으로 흐르는 배경 제거(`base.css`), 모션은 "은은하게" |
 | 11 | 외부 의존성은 사용자 사전 승인 | 충족 — CDN 3종(marked·DOMPurify·highlight.js, SRI). jQuery 승인만 받고 미사용. fastapi·uvicorn은 로컬 서버 한정 |
@@ -36,7 +36,7 @@
 
 - **Node.js 미사용**: 사용자 명시. 빌드가 없어야 `git push` 하나로 배포가 끝난다.
 - **파이썬은 로컬 서버에만**(2026-09-18 사용자 결정): "쓰고 나면 끝"을 위해 저장 API가 필요했고, 공개 사이트는 여전히 정적 파일뿐이다. Docker는 `docker compose up` 한 줄로 켜기 위한 포장이다.
-- **하이브리드 저장**: 서버가 있으면 `posts/`에 직접 쓰고 자동 커밋(라운드 6), 없으면 `.md` 내보내기. 어느 쪽이든 데이터는 파일로 남는다.
+- **저장 단일 모드**(라운드 8, meeting-06 #2 사용자 판정 "다운로드 방식 없애"): 서버가 `posts/`에 직접 쓰고 자동 커밋(라운드 6). 라운드 7까지의 `.md` 내보내기 폴백은 폐지 — 다운로드한 `index.json`을 사람이 옮기는 흐름이 `created` 드리프트의 원인이었다. Docker 없는 PC는 미리보기 전용.
 - **분류를 폴더로**: 글이 쌓여도 탐색기에서 바로 구분된다.
 
 ---
@@ -67,9 +67,9 @@
 | 마크다운 | `js/markdown.js` | 338 | |
 | UI 공통 | `js/ui.js` | 623 | 테마·모달·사이드바 |
 | 관리자 | `js/admin.js` | 53 | hostname `localhost`면 관리자 |
-| 목록·상세·소개 | `js/app.js` `js/post.js` `js/about.js` | 540 · 479 · 50 | |
-| 에디터 | `js/editor.js` | 2,084 | 라운드 7에 3파일 분리 예정(결정 5) |
-| HTML | `index.html` `post.html` `about.html` `write.html` | 145 · 168 · 103 · 279 | |
+| 목록·상세 | `js/app.js` `js/post.js` | 540 · 479 | `js/about.js`는 라운드 8(v3.9)에서 삭제 |
+| 에디터 | `js/editor.js` | 2,084 | 라운드 7에 3파일 분리 예정(결정 5). 라운드 8에 내보내기 경로 삭제 |
+| HTML | `index.html` `post.html` `write.html` | 145 · 168 · 279 | `about.html`은 라운드 8(v3.9)에서 삭제 |
 | 서버 | `server/app.py` `server/posts.py` | ~450 · ~670 | FastAPI. `Dockerfile`·`docker-compose.yml` |
 | 문서 | `docs/contract.md` v3.8(2,600+) · `docs/api.md` v1.1 · `docs/meeting-02~05.md` | | |
 | 글 | `posts/index.json`·`categories.json` — **글 0편, 분류 0개** | | 픽스처는 `/fixture` v2 규칙(샌드박스) |
@@ -94,15 +94,16 @@
 ## § 4. 폴더·파일 구조
 
 ```
-index.html / post.html / about.html / write.html     (인라인 스크립트·스타일 0 — CSP)
-start.bat / start.ps1    로컬 미리보기(PowerShell HttpListener, 5500). Docker 없는 PC 폴백 — 저장 API 없음
+index.html / post.html / write.html     (인라인 스크립트·스타일 0 — CSP. about.html은 v3.9에서 삭제)
+.nojekyll                **필수** — 없으면 GitHub Pages의 Jekyll이 posts/*.md를 .html로 바꿔 글이 404 (2026-09-22 실제 발생, `13936b9`)
+start.bat / start.ps1    start.bat: Docker 데몬이 있으면 compose, 없으면 start.ps1(PowerShell HttpListener, 5500 — 정적 미리보기 전용, 저장 API 없음 → 글 저장 불가)
 Dockerfile / docker-compose.yml / .dockerignore      로컬 에디터 서버. `docker compose up` → http://localhost:5500
 
 css/   tokens → base → layout → components → prose   (이 순서로 로드. animations.css는 v3.0에서 삭제)
-js/    theme-init(head) · config · util · store · markdown · ui · admin · app(index) · post · about · editor(write)
+js/    theme-init(head) · config · util · store · markdown · ui · admin · app(index) · post · editor(write)   (about.js는 v3.9에서 삭제)
 posts/ index.json(메타 목록) · categories.json(분류) · <slug>/<id>.md
 server/ app.py(HTTP·저장 흐름·자동 커밋) · posts.py(store.js 이식) · requirements.txt
-docs/  contract.md(계약서 v3.8) · api.md(서버 규약 v1.1) · meeting-NN.md(회의록) · HANDOFF.md(이 문서)
+docs/  contract.md(계약서 v3.9) · api.md(서버 규약 v1.1) · meeting-NN.md(회의록) · HANDOFF.md(이 문서)
 .claude/ agents/ 4인 정의 · skills/ 24개
 ```
 
@@ -112,7 +113,7 @@ docs/  contract.md(계약서 v3.8) · api.md(서버 규약 v1.1) · meeting-NN.m
 |---|---|---|
 | `pm-integrator` | 총괄·검수·분배 + 로컬 서버 | `docs/meeting-*.md` `docs/HANDOFF.md` `CLAUDE.md` `server/*` `Dockerfile` `docker-compose.yml` `.dockerignore` `docs/api.md` `.claude/**` |
 | `web-designer` | 구조·계약서·비주얼 | `docs/contract.md` `css/*` |
-| `frontend-dev` | 목록·상세·소개·데이터 | `index.html` `post.html` `about.html` `js/{config,util,store,markdown,app,post,about,theme-init}.js` `posts/*` |
+| `frontend-dev` | 목록·상세·데이터 | `index.html` `post.html` `js/{config,util,store,markdown,app,post,theme-init}.js` `posts/*` |
 | `frontend-dev-2` | 에디터·인터랙션·접근성 | `write.html` `js/{editor,ui,admin}.js` `start.bat` `start.ps1` |
 
 ---
@@ -161,21 +162,20 @@ pinned: false
 
 ---
 
-## § 6. 글 추가 흐름 (하이브리드)
+## § 6. 글 추가 흐름 (서버 단일 — 라운드 8, 계약 v3.9 §6-1)
 
-**A. Docker가 있을 때 (권장)**
+**저장 경로는 하나다: 로컬 에디터 서버(Docker).**
 ```
-docker compose up            # 첫 실행은 이미지 빌드 1~2분. http://localhost:5500
+docker compose up            # 첫 실행은 이미지 빌드 1~2분. http://localhost:5500  (start.bat도 Docker가 있으면 이걸 띄운다)
 write.html → 저장(Ctrl+S)    # PUT /api/posts/{id} → posts/<slug>/<id>.md + index.json 갱신 → posts/만 자동 커밋
 /ship                        # 사용자가 푸시(공개 시점은 사용자가 정한다)
+                             # 푸시는 `gh auth login` 후에만 된다(2026-09-22) — 로그인 전 push는 인증 오류로 거절된다
 ```
 - 자동 커밋(`BLOG_AUTO_COMMIT=1` 기본)의 신원은 `.env`의 `BLOG_GIT_NAME`·`BLOG_GIT_EMAIL`(없으면 저장소 로컬 `git config`, 그것도 없으면 커밋 생략 + 응답 `git.reason`). **push는 하지 않는다** — 토큰을 디스크에 두지 않는다(사용자 결정 1 권장안 A).
 - 서버가 `created`를 강제한다: 기존 글이면 디스크 값, 새 글이면 `now`. 규약은 `docs/api.md`.
+- 배포에는 루트의 **`.nojekyll`이 필수** — 없으면 Pages의 Jekyll이 `posts/*.md`를 `.html`로 바꿔 글이 404다(2026-09-22 실제 발생, `13936b9`에서 추가). 지우지 않는다.
 
-**B. Docker가 없을 때**
-`write.html` → "파일로 내보내기" → `.md` + `index.json`(+ `categories.json`) 다운로드 → `posts/`에 넣고 커밋. 내보내기 전까지 초안은 localStorage뿐이라 영구 저장이 아니다.
-
-`start.bat`(라운드 6 B-6)은 Docker 데몬이 있으면 compose를, 없으면 `start.ps1`을 띄운다.
+**Docker가 없는 PC** — `start.bat`이 `start.ps1`(정적 서버)로 떨어진다. 미리보기는 되지만 **글을 저장할 수 없다**: 에디터의 저장 버튼은 `disabled`, `#editorServer`가 `서버 없음 · start.bat(Docker) 실행 후 저장`을 보이고 `다시 연결` 버튼이 뜬다. 쓰던 초안은 localStorage에 남는다(영구 저장 아님). 라운드 7까지의 "파일로 내보내기"(`.md`·`index.json` 다운로드)는 **폐지**됐다 — 사용자 판정(meeting-06 #2·결정 사항 1).
 
 ---
 
@@ -219,7 +219,8 @@ write.html → 저장(Ctrl+S)    # PUT /api/posts/{id} → posts/<slug>/<id>.md 
 
 | 항목 | 결정 | 시점 |
 |---|---|---|
-| 저장 방식 | 하이브리드(서버 저장 + 내보내기 폴백) | 9/18 파이썬·Docker 허용, 로컬 한정 |
+| 저장 방식 | ~~하이브리드(서버 저장 + 내보내기 폴백)~~ → **서버 저장 단일**(내보내기 폐지). Docker는 유지 | 9/18 파이썬·Docker 허용, 로컬 한정 → 9/21 meeting-06 #2 "다운로드 방식 없애" · 결정 사항 1 확정 |
+| 소개 페이지 | `about.html`·내비 `소개` 삭제 | 9/21 meeting-06 #6 |
 | 의존성 | jQuery·marked·highlight.js·DOMPurify. Chart.js·KaTeX 제외 | 초기 |
 | 배포 | GitHub Pages 공개 저장소, 방문자 읽기 전용 | 초기 |
 | 화면 | 메모지·흐르는 배경 폐기 → 리스트/카드 그리드, 사이드바, 은은한 모션 | v3.0~3.4 |
@@ -253,7 +254,7 @@ write.html → 저장(Ctrl+S)    # PUT /api/posts/{id} → posts/<slug>/<id>.md 
 
 ### C. 로컬에서 확인하는 법
 - **Docker Desktop이 있으면** `docker compose up` → `http://localhost:5500` (저장 API 포함). 끝은 `Ctrl+C` / `docker compose down`.
-- **없으면** `start.bat` 더블클릭(PowerShell 5.1 내장, Python·Node 불필요) → 같은 주소, 저장 API 없음.
+- **없으면** `start.bat` 더블클릭(PowerShell 5.1 내장, Python·Node 불필요) → 같은 주소, 저장 API 없음 — **미리보기 전용, 글 저장 불가**(내보내기 폐지).
 - 둘 다 5500 — **하나만** 켠다. `file://`로 열면 fetch가 막혀 빈 화면이다.
 - 관리자 UI는 hostname이 `localhost`일 때 자동(`?admin=`은 폐기). `127.0.0.1`은 start.ps1이 400을 준다.
 
@@ -261,7 +262,9 @@ write.html → 저장(Ctrl+S)    # PUT /api/posts/{id} → posts/<slug>/<id>.md 
 |---|---|
 | 목록이 "불러오는 중"에서 멈춤 | `posts/index.json` JSON 오류 |
 | 글 클릭 시 "없습니다" | `id`·폴더 불일치(index의 category 폴더에 파일이 없음). 서버는 이 상태를 409로 막는다 |
-| 에디터에 "저장" 버튼이 없음 | `/api/health`가 안 닿음 — start.ps1(저장 API 없음)이거나 Docker가 꺼짐 |
+| 에디터의 "저장" 버튼이 `disabled`, "서버 없음" 문구 | `/api/health`가 안 닿음 — start.ps1(저장 API 없음)이거나 Docker가 꺼짐. Docker를 켠 뒤 `다시 연결` 클릭(새로고침 불필요) |
+| 배포 사이트에서 글 클릭 시 404(로컬은 정상) | 루트 `.nojekyll` 없음 — Jekyll이 `posts/*.md`를 `.html`로 바꾼다. 파일을 되살리고 푸시 |
+| `git push`가 인증 오류 | `gh auth login` 먼저(2026-09-22부터) |
 | 저장은 됐는데 "커밋 실패: 신원" | `.env`에 `BLOG_GIT_NAME`·`BLOG_GIT_EMAIL` 추가 후 `docker compose up -d` 재기동 |
 | `docker compose up`이 "port is already allocated" | start.ps1이 5500을 잡고 있다. `netstat -ano \| findstr :5500` → 종료 |
 | Docker Desktop이 "unexpected error … sailor-ingest.sock" | Docker Desktop 자체 문제(2026-09-21 발생). 종료 → `%LOCALAPPDATA%\Docker\run\` 정리 → 재시작. 프로젝트와 무관 |

@@ -13,31 +13,32 @@ model: opus
 
 ```
 write.html
-js/editor.js   에디터: 입력·미리보기·툴바·단축키·자동저장·내보내기
+js/editor.js   에디터: 입력·미리보기·툴바·단축키·자동저장·서버 저장(PUT /api/posts)
 js/ui.js       테마 토글, 헤더 stuck, 진입 애니메이션, 토스트, 모달, 포커스 트랩
 js/admin.js    관리자 모드 판정 및 data-admin-only 처리
-start.bat             로컬 미리보기 서버
+start.bat / start.ps1   start.bat은 Docker가 있으면 compose, 없으면 start.ps1(정적 미리보기 — 저장 API 없음)
 ```
 
 **`css/*`는 web-designer, `index.html`·`post.html`·`store.js`·`markdown.js`·`app.js`·`post.js`는 frontend-dev 소유다. 읽기만 하고 수정하지 않는다.**
 `store.js`·`markdown.js`의 공용 함수가 필요하면 **직접 고치지 말고** `window.Blog.*`로 호출한다. 시그니처 변경이 필요하면 frontend-dev에게 요청 사항으로 보고한다.
 클래스명·구조 변경이 필요하면 web-designer에게 `docs/contract.md` 개정을 요청한다.
 
-# 하이브리드 저장 흐름 (이 프로젝트의 핵심)
+# 저장 흐름 — 서버 단일 모드 (이 프로젝트의 핵심. 계약 §6-1, `docs/api.md` §4)
 
 1. `write.html`에서 글을 쓴다 → 입력 중 localStorage 자동 임시저장(debounce 800ms).
-2. "파일로 내보내기" → frontmatter가 붙은 `.md`와 그 글이 반영된 새 `index.json`을 **둘 다** 다운로드.
-3. 사용자가 두 파일을 `posts/`에 넣고 커밋하면 영구 반영.
-4. 수정 모드(`?id=`): `.md`를 fetch해 필드를 채우고, **`created`는 원본 보존**, `updated`만 현재 시각으로 갱신해 내보낸다.
+2. 로드 시 `/api/health`로 서버를 감지한다. **연결됨**이면 `#btnSave` 활성, **서버 없음**이면 `disabled` + `#editorServer.is-off` 문구 + `#btnRetry`(다시 연결). 파일 내보내기(다운로드)는 **없다** — v3.9에서 폐지.
+3. "저장"(Ctrl+S) → `validate` → 새 분류면 `PUT /api/categories` 먼저 → `PUT /api/posts/{id}`. 서버가 `posts/<slug>/<id>.md`·`index.json`을 쓰고 자동 커밋한다. 응답의 `meta.created`가 진실이다.
+4. 수정 모드(`?id=`): `.md`를 fetch해 필드를 채우고, **`created`는 원본 보존**, `updated`만 현재 시각으로 갱신해 저장한다. `id`가 바뀌면 `previousId`를 붙인다.
+5. 서버 없음·확인 중의 Ctrl+S는 `preventDefault` + 안내 토스트(브라우저 "페이지 저장" 대화상자를 막는다).
 
-**내보내지 않은 변경이 있으면 반드시 눈에 띄게 경고한다**(`.editor-status.is-dirty` + `beforeunload`). 데이터 유실은 이 프로젝트에서 가장 치명적인 결함이다.
+**저장하지 않은 변경이 있으면 반드시 눈에 띄게 경고한다**(`.editor-status.is-dirty` + `beforeunload`). 데이터 유실은 이 프로젝트에서 가장 치명적인 결함이다.
 
 # 에디터 품질 기준
 
 - 미리보기는 `.prose`로 렌더해 **실제 글과 픽셀 단위로 같아 보여야** 한다. 미리보기와 결과가 다르면 에디터의 존재 의미가 없다.
 - 툴바(굵게/기울임/제목/링크/코드/목록/인용/표/구분선)는 선택 영역을 감싸고 **커서 위치를 복구**한다.
-- Tab은 textarea 안에서 들여쓰기(포커스 이동 방지), Ctrl+S 내보내기, Ctrl+B/I 서식.
-- 제목·본문이 비면 내보내기를 막고 이유를 안내한다.
+- Tab은 textarea 안에서 들여쓰기(포커스 이동 방지), Ctrl+S 저장, Ctrl+B/I 서식. Enter·`//`·닫는 괄호 규칙은 계약 §6-2 표가 명세다.
+- 제목·본문이 비면 저장을 막고 이유를 안내한다.
 
 # 관리자 모드
 

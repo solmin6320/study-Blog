@@ -84,7 +84,7 @@ STATE.md는 git에 올린다(`/ship`이 함께 커밋). 다른 PC는 `/sync`로 
 ## B. `docs/HANDOFF.md` — 구조가 바뀐 라운드에만
 
 `/handoff full` 또는 아래 중 하나가 이번 라운드에 있었을 때만:
-소유권 표 변경 · 새 페이지/폴더(`about.html`, `server/`) · 데이터 모델 필드 변경 · 절대 규칙 변경 · 새 스킬 묶음.
+소유권 표 변경 · 페이지/폴더 추가·삭제(예: `server/` 신설, `about.html` 삭제) · 저장 흐름 변경(예: v3.9 내보내기 폐지) · 데이터 모델 필드 변경 · 절대 규칙 변경 · 새 스킬 묶음.
 
 기존 9절 구조를 유지하되 **바뀐 절만** 고친다. 전체 재작성은 하지 않는다(387줄을 매번 다시 쓰면 아무도 안 고친다). 각 절 머리에 `(실측 YYYY-MM-DD)`를 남겨 어느 절이 오래됐는지 보이게 한다.
 
@@ -97,8 +97,9 @@ STATE.md는 git에 올린다(`/ship`이 함께 커밋). 다른 PC는 `/sync`로 
 2. `.claude/`는 저장소에 있으므로 에이전트 4개·스킬 전부 그대로 동작한다.
 3. **로컬 전용 파일**(공개 저장소에 없음)을 이전 PC에서 복사: `.claude/agents/tutor.md`, `.claude/skills/learn/SKILL.md`.
    그리고 `printf '.claude/agents/tutor.md\n.claude/skills/learn/\n' >> .git/info/exclude`
-4. 미리보기: `start.bat`(Docker 있으면 저장 서버, 없으면 PowerShell 정적 서버). 5500이 막혀 있으면 `.claude/launch.json`의 포트를 바꾼다.
-5. Claude Code에서 첫 메시지: `/sync 하고 docs/STATE.md 읽고 이어서 해`
+4. 미리보기: `start.bat`(Docker 있으면 저장 서버, 없으면 PowerShell 정적 서버 — **글 저장 불가**, 내보내기는 v3.9에서 폐지). 5500이 막혀 있으면 `.claude/launch.json`의 포트를 바꾼다.
+5. 푸시하려면 `gh auth login` 먼저. 루트 `.nojekyll`이 있는지 확인(없으면 Pages에서 `posts/*.md`가 404).
+6. Claude Code에서 첫 메시지: `/sync 하고 docs/STATE.md 읽고 이어서 해`
 ```
 
 ---

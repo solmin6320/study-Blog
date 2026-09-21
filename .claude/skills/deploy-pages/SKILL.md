@@ -5,17 +5,19 @@ description: GitHub Pages 배포 상태를 점검하거나, 새 저장소·새 P
 
 # /deploy-pages — 배포 설정
 
-## 현재 상태 (2026-09-17)
+## 현재 상태 (2026-09-22)
 
 - 원격: `https://github.com/solmin6320/study-Blog.git`, 브랜치 `main`
 - Pages: Settings → Pages → Deploy from a branch → `main` / `/(root)` — **켜져 있음**
 - 주소: `https://solmin6320.github.io/study-Blog/`
-- 인증: Git Credential Manager에 저장돼 있어 `git push`가 바로 된다. `gh`는 로그인 안 돼 있음(필요 없다).
+- 인증: **푸시는 `gh auth login` 후에만**(2026-09-22 사용자 지시). 로그인 전 `git push`는 인증 오류로 거절된다.
+- **루트 `.nojekyll` 필수**: 없으면 Pages의 Jekyll이 `posts/*.md`를 `.html`로 바꿔 글이 404 (2026-09-22 실제 발생, `13936b9`에서 추가). 지우지 않는다.
 
 일상 작업은 `/ship`. 이 스킬은 아래 두 경우만.
 
 ## A. 배포가 안 뜰 때
 
+0. 루트에 `.nojekyll`이 있는지(`git ls-files .nojekyll`). 없으면 빈 파일로 다시 만들어 푸시 — 글만 404이고 HTML은 뜨는 증상이 이것이다.
 1. `git log origin/main -1`과 GitHub의 main 최신 커밋이 같은지.
 2. 저장소 → Actions 탭 → "pages build and deployment"가 실패했는지. 실패 로그의 첫 줄이 원인이다.
 3. 하위 경로 배포(`/study-Blog/`)라 **절대 경로(`/css/…`)는 깨진다.** 전부 상대 경로여야 한다:

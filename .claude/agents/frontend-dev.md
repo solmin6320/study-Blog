@@ -13,7 +13,7 @@ model: opus
 
 ```
 index.html   post.html
-js/config.js util.js store.js markdown.js app.js post.js
+js/theme-init.js config.js util.js store.js markdown.js app.js post.js
 posts/index.json  posts/*.md
 ```
 

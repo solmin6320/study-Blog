@@ -1,12 +1,14 @@
 # 로컬 에디터 서버 API v1.1
 
-> **Docker가 있으면 `docker compose up`, 없으면 `start.bat`(저장 API 없음, 내보내기만).**
+> **글 저장은 이 서버(Docker, `docker compose up`) 하나로만 한다 — 저장 단일 모드(계약 v3.9 §6-1, 내보내기 폐지).**
+> Docker가 없는 PC의 `start.bat`은 `start.ps1`(정적 미리보기, 저장 API 없음)로 떨어진다 — 글을 쓸 수는 있지만 **저장할 수 없다.**
 > 둘 다 5500 포트를 쓴다 — **한 번에 하나만 켠다.**
 
 이 문서는 `frontend-dev-2`가 `write.html`·`js/editor.js`를 서버에 연동할 때의 **단일 진실 공급원**이다.
 서버 코드(`server/`)는 이 문서에 맞춘다. 어긋나면 문서가 아니라 코드가 결함이다.
 
 > **v1.1 (2026-09-21, 라운드 6)** — 헬스 축소(`{ok, version}`, `?git=1`) · 자동 커밋(B-1, 응답 `git`) · Host 검사 · 글 찾기·created·정렬 규칙을 `store.js`와 일치 · 대소문자 규칙. 바뀐 절: §0 · §2 health · §2-1(신설) · §2 PUT 표·동작 · §3 · §5 · §6(신설).
+> **2026-09-22 (라운드 8, 문서만)** — 내보내기 폐지(계약 v3.9 §6-1)에 맞춰 머리말·§4 문장 정리. 엔드포인트·스키마·`server/` 코드는 **변경 없음**(v1.1 그대로).
 
 ## 0. 원칙
 
@@ -158,10 +160,10 @@ git commit --only -m "글: <title> (<id>)" -- posts/        # 삭제는 "글 삭
 
 ## 4. `frontend-dev-2`가 `js/editor.js`에서 할 일
 
-1. **서버 감지** — 페이지 로드 시 `fetch('/api/health', {cache:'no-store'})`. `res.ok && json.ok === true`이면 "서버 모드". 실패(네트워크 오류·404·`start.ps1`이 준 텍스트 404)는 **조용히** 내보내기 모드로 남는다. 타임아웃 2초 권장(`AbortController`).
-2. **저장 버튼** — 서버 모드에서만 보인다/활성화된다. 마크업(클래스명·위치)은 계약서 §6에 `web-designer`가 추가한 것을 따른다. 내보내기 버튼은 그대로 둔다(서버 모드에서도 폴백으로 유효).
-3. **PUT 호출** — `doExport`가 만드는 `meta` 객체(8개)에 `body: form.body`를 더하고, 수정 모드에서 `state.originalId !== meta.id`이면 `previousId: state.originalId`를 붙여 `fetch('/api/posts/' + encodeURIComponent(meta.id), { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })`. `validate`·`ensureUsableCategory`·`ensureCreated`는 내보내기와 똑같이 먼저 거친다. 새 분류(`cats.added.length > 0`)가 있으면 **글보다 먼저** `PUT /api/categories`에 `buildCategoriesJson()` 결과를 보낸다(순서가 바뀌면 글이 미등록 분류로 저장된다).
-4. **응답 처리** — `200`이면 `state.created = json.meta.created`, `state.originalId = json.meta.id`, `state.originalCategory = json.meta.category`, `state.originalPath = json.path`, `dirty=false`, `store.draft.clear(state.slot)`(내보내기와 달리 디스크 저장이 확인된 것이므로 초안을 지워도 된다), 상태줄 "저장됨 · `json.path`". `json.git`이 있으면 "· 커밋 `hash`" 또는 "· 커밋 실패: `reason`"을 덧붙인다(§2-1). 4xx/5xx면 `json.error.message`를 토스트로 그대로 보여 주고 초안은 남긴다. `409`는 "파일을 손으로 정리한 뒤 다시 시도" 안내를 덧붙인다. 네트워크 실패면 "서버가 꺼졌습니다 — 내보내기로 저장하세요"로 폴백을 안내한다.
+1. **서버 감지** — 페이지 로드 시 `fetch('/api/health', {cache:'no-store'})`. `res.ok && json.ok === true`이면 **연결됨**. 실패(네트워크 오류·404·`start.ps1`이 준 텍스트 404·타임아웃)는 **서버 없음** 상태 — `#btnSave`는 `disabled`로 남고 `#editorServer`가 `서버 없음 · start.bat(Docker) 실행 후 저장`을 말하며 `#btnRetry`(다시 연결)가 보인다. 세 상태(확인 중·연결됨·서버 없음)의 마크업·클래스·문구는 계약서 §6-1 표가 진실이다. 타임아웃 2초 권장(`AbortController`). 자동 재시도(폴링)는 하지 않는다 — `다시 연결` 버튼이 `detectServer()`를 다시 부른다.
+2. **저장 버튼** — **항상 보인다**(저장이 유일한 저장 동작이라 자리가 고정된다). 연결됨에서만 `disabled`가 풀린다. 서버 없음·확인 중의 Ctrl+S는 `preventDefault` + 안내 토스트(브라우저의 "페이지 저장" 대화상자를 막는다). 내보내기 버튼·다운로드 경로는 **없다**(v3.9 폐지).
+3. **PUT 호출** — `buildMeta`가 만드는 `meta` 객체(8개)에 `body: form.body`를 더하고, 수정 모드에서 `state.originalId !== meta.id`이면 `previousId: state.originalId`를 붙여 `fetch('/api/posts/' + encodeURIComponent(meta.id), { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })`. `validate`·`ensureUsableCategory`·`ensureCreated`를 먼저 거친다. 새 분류(`cats.added.length > 0`)가 있으면 **글보다 먼저** `PUT /api/categories`에 `buildCategoriesJson()` 결과를 보낸다(순서가 바뀌면 글이 미등록 분류로 저장된다).
+4. **응답 처리** — `200`이면 `state.created = json.meta.created`, `state.originalId = json.meta.id`, `state.originalCategory = json.meta.category`, `state.originalPath = json.path`, `dirty=false`, `store.draft.clear(state.slot)`(디스크 저장이 확인된 것이므로 초안을 지워도 된다), 상태줄 "저장됨 · `json.path`", 그리고 `store.loadIndex(true)`·`store.loadCategories(true)` 뒤 사이드바를 다시 그린다(새 글·새 분류가 새로고침 없이 보이도록 — 계약 §6-1 "저장 피드백"). `json.git`이 있으면 "· 커밋 `hash`" 또는 "· 커밋 실패: `reason`"을 덧붙인다(§2-1). 4xx/5xx면 `json.error.message`를 토스트로 그대로 보여 주고 초안은 남긴다. `409`는 "파일을 손으로 정리한 뒤 다시 시도" 안내를 덧붙인다. 네트워크 실패면 토스트 `서버가 꺼졌습니다 — start.bat(Docker)를 실행한 뒤 다시 연결` + **서버 없음 상태로 전환**(1번). 초안은 localStorage에 남고 `beforeunload`가 창 닫기를 경고한다.
 5. **하지 말 것** — `created`를 클라이언트에서 계산해 덮어쓰지 않는다(서버 응답이 진실). `innerHTML` 직접 대입 금지는 그대로.
 
 ## 5. 검증 기록 (Docker Desktop을 켠 뒤 `/api-check`)

@@ -8,26 +8,30 @@ description: 학습 블로그의 확정 규약(폴더 구조, 데이터 모델, 
 ## 폴더 구조
 
 ```
-index.html          글 목록 (메모지 보드)
+index.html          글 목록 (리스트/카드 그리드 — 메모지는 v3.0에서 폐기)
 post.html           글 상세
 write.html          에디터 (관리자 전용 UI)
-css/         tokens / base / layout / components / prose / animations
-js/          config / store / markdown / ui / app / post / editor / admin
+.nojekyll           필수 — 없으면 Pages의 Jekyll이 posts/*.md를 .html로 바꿔 글이 404
+css/         tokens / base / layout / components / prose   (animations.css는 v3.0에서 삭제)
+js/          theme-init / config / util / store / markdown / ui / admin / app / post / editor
 posts/index.json    글 메타 목록 (본문 없음)
-posts/*.md          글 본문 (frontmatter 포함)
-docs/               회의록
-start.bat           로컬 미리보기 서버
+posts/categories.json  분류
+posts/<slug>/*.md   글 본문 (frontmatter 포함)
+docs/               contract.md(계약서) / api.md(서버 규약) / meeting-NN.md / HANDOFF.md
+server/ + Dockerfile / docker-compose.yml   로컬 에디터 서버(파이썬, 로컬 전용)
+start.bat / start.ps1   Docker 있으면 compose, 없으면 정적 미리보기(저장 불가)
 ```
 
 ## 확정 사항
 
 | 항목 | 값 |
 |---|---|
-| 빌드 도구 | 없음 (Node.js 미사용) |
+| 빌드 도구 | 없음 (Node.js 미사용). 파이썬은 로컬 서버(`server/`)에만 |
 | 허용 CDN | jQuery, marked.js, highlight.js, DOMPurify — 고정 버전 |
-| 배포 | GitHub Pages (공개) |
-| 글 저장 | 하이브리드: 에디터 작성 → .md 내보내기 → posts/ 커밋 |
-| 임시저장 | localStorage (내보내기 전까지의 초안만) |
+| 배포 | GitHub Pages (공개). 푸시는 `gh auth login` 후 `/ship` |
+| 글 저장 | **서버 단일 모드**(v3.9): `docker compose up` → write.html 저장(Ctrl+S) → 서버가 posts/에 쓰고 자동 커밋. 내보내기(다운로드) 폐지 |
+| 임시저장 | localStorage (서버에 저장하기 전까지의 초안만) |
+| 소개 페이지 | 없음 — `about.html`은 v3.9에서 삭제. 내비는 글·태그·쓰기 3항목 |
 | 관리자 모드 | UI 노출 스위치일 뿐, 보안 장치가 아님 |
 | JS 네임스페이스 | `window.Blog.*` 하나만 |
 | 색상·간격 | 전부 `css/tokens.css`의 CSS 변수 |
