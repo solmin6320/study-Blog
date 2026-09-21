@@ -1,152 +1,113 @@
 ---
 name: handoff
-description: 이 학습 블로그 프로젝트를 다른 환경(다른 Claude Code 세션, ChatGPT, Cursor, Copilot 등)에서 이어받을 수 있도록 인수인계 문서(docs/HANDOFF.md)를 생성한다. 토큰 소진·세션 종료·환경 이전 시 사용한다. "인수인계", "핸드오프", "다른 데서 이어서", "토큰 떨어질 것 같아", "상태 정리해줘" 같은 요청에서 사용한다.
+description: 다른 로컬 환경(다른 PC·다른 Claude Code 세션·다른 도구)에서 지금 하던 일을 그대로 이어받게 한다. 가벼운 상태 문서 docs/STATE.md를 매번 갱신하고, 무거운 배경 문서 docs/HANDOFF.md는 구조가 바뀐 라운드에만 손본다. "인수인계", "핸드오프", "다른 PC에서 이어서", "토큰 떨어질 것 같아", "상태 정리해줘", "다른 데서도 추가하게" 요청과 한도 임박 시 사용한다.
 ---
 
-# 인수인계 문서 생성
+# /handoff — 두 층 인수인계
 
-## 목적
+인수인계 문서가 무거우면 갱신을 미루고, 미루면 오래돼서 못 믿는다. 그래서 둘로 나눈다.
 
-이 프로젝트는 **4인 에이전트 체제**와 **17개 스킬**이라는 Claude Code 고유 장치 위에서 돌아간다. 다른 환경에는 그게 없다.
-따라서 인수인계 문서는 **그 장치들이 없어도 같은 품질로 작업을 이어갈 수 있게** 만들어야 한다. 단순한 진행 상황 요약이 아니다.
+| 문서 | 무엇 | 언제 갱신 | 비용 |
+|---|---|---|---|
+| `docs/STATE.md` | **지금 상태** — HEAD, 진행 중 라운드, 누가 어디까지, 다음 한 걸음, 로컬 전용 파일 | **매번** (`/ship` 직전, 한도 임박, 세션 종료) | 30줄, 1~2분 |
+| `docs/HANDOFF.md` | **배경** — 프로젝트가 무엇인지, 절대 규칙과 이유, 구조, 데이터 모델, 아키텍처 판단, 다른 도구에서 재현하는 법 | 구조·규칙·소유권이 바뀐 라운드 끝에만 | 길다, 드물게 |
 
-**판단 기준: 이 문서 하나만 읽은 낯선 개발자가, 저장소를 처음 열어보고도 다음 작업을 정확히 이어갈 수 있는가.**
+받는 쪽의 시작 순서는 항상 같다: **`/sync` → `docs/STATE.md` → (처음이면) `docs/HANDOFF.md` → `docs/meeting-NN.md` 최신 지시.**
 
-## 절대 원칙
-
-1. **추측 금지.** 모든 내용은 실제 파일을 읽어서 쓴다. "아마 되어 있을 것"은 쓰지 않는다. 확인 못 한 것은 `미확인`이라고 명시한다.
-2. **미완성을 숨기지 않는다.** 인수인계에서 가장 위험한 건 "다 됐다"는 거짓 보고다. 받는 쪽이 그걸 믿고 넘어가면 결함이 묻힌다.
-3. **날짜·수치는 실측한다.** `date -Iseconds`, `wc -l`, `find | wc -l`로 확인한 값만 쓴다.
-4. **문서는 한국어로.** 단, 코드·클래스명·파일명은 원문 유지.
+원칙은 그대로다 — **추측 금지, 미완성 숨기지 않기, 수치는 실측, 한국어.**
 
 ---
 
-## 1단계 — 현황 실측 (문서를 쓰기 전에 반드시)
+## A. `docs/STATE.md` — 매번 (기본 동작)
+
+인자 없이 `/handoff`를 부르면 이것만 한다.
+
+### A-1. 실측 (이 다섯 줄이면 된다)
 
 ```bash
-cd "C:/기술 블로그"
-
-# 파일 목록과 규모
-find . -path ./.claude -prune -o -type f -print | sort
-wc -l css/*.css js/*.js 2>/dev/null
-find posts -name '*.md' | wc -l
-
-# 데이터 무결성
-python -c "import json;d=json.load(open('posts/index.json',encoding='utf-8'));print('posts:',len(d['posts']))"
-python -c "import json;d=json.load(open('posts/categories.json',encoding='utf-8'));print('cats:',len(d['categories']))"
-
-# 미완성 흔적
-grep -rn "TODO\|FIXME\|XXX\|구현 예정\|미구현" js/ css/ *.html | head -20
-
-# 깨진 연결 (가장 자주 나는 결함)
-grep -ohE "getElementById\('[^']+'\)" js/*.js | sort -u > /tmp/js_ids.txt
-grep -ohE 'id="[^"]+"' *.html | sort -u > /tmp/html_ids.txt
-# 두 목록을 직접 대조해 JS가 찾는데 HTML에 없는 id를 찾는다
-
-# git 상태 (있다면)
-git log --oneline -10 2>/dev/null; git status --short 2>/dev/null
+git log --oneline -3 && git status --short && git stash list
+ls docs/meeting-*.md | tail -1
+find posts -path "*_tmp*" -o -name "*.bak*" | head        # 픽스처 흔적 — 있으면 STATE에 적고 /fixture 복원
+git ls-files --others --exclude-standard --ignored -i --exclude-from=.git/info/exclude 2>/dev/null   # 로컬 전용 파일
+netstat -ano | grep -E ":(5500|5501|5502|5503|5610)\s.*LISTENING"
 ```
 
-**미완성 기능을 찾는 요령**: 파일이 존재한다고 완성된 게 아니다. 해당 기능의 진입점(버튼·핸들러)이 HTML과 JS 양쪽에 다 있는지 확인하라.
+백그라운드 에이전트가 있으면 **완료 알림·보고서에서** 파일별 완료/미완을 뽑는다. 알림이 없는 에이전트는 `진행 중(보고 없음)`으로 적는다 — 끝났다고 추측하지 않는다.
+
+### A-2. 형식 (그대로 복사해 채운다)
+
+```markdown
+# STATE — 지금 상태 (YYYY-MM-DD HH:MM KST)
+
+> 받는 쪽: `/sync` → 이 문서 → `docs/meeting-NN.md` "다음 라운드 작업 지시". 배경은 `docs/HANDOFF.md`.
+
+## 1. 위치
+- HEAD: `abc1234 커밋 제목` / origin/main과 동일 여부 / stash: 없음 또는 `stash@{0} 설명 — 버려도 됨/살려야 함`
+- 진행 중 라운드: 라운드 N (`docs/meeting-NN.md`), 계약서 vX.Y
+
+## 2. 누가 어디까지 (미커밋 포함)
+| 담당 | 끝난 것(파일) | 남은 것(회의록 항목 번호) | 상태 |
+|---|---|---|---|
+| web-designer | … | … | 완료 / 진행 중 / 보고 없음 / 미투입 |
+| frontend-dev | … | … | |
+| frontend-dev-2 | … | … | |
+| pm-integrator | … | … | |
+
+## 3. 다음 한 걸음 (이것부터)
+1. 정확한 명령 또는 스킬. 예: `/resume-agent frontend-dev-2 — meeting-05 #1~#4, #9` / `/round-start …`
+2. …
+
+## 4. 사용자 결정 대기
+- 없음 / 항목 (meeting-NN "사용자 결정 필요" 번호)
+
+## 5. 이 PC에만 있는 것 (git으로 안 옮겨진다)
+| 경로 | 무엇 | 다른 PC에서 |
+|---|---|---|
+| `.claude/agents/tutor.md`, `.claude/skills/learn/` | 학습 튜터(공개 저장소에 안 올림, `.git/info/exclude`) | 복사해 오고 exclude에 두 줄 다시 추가 |
+| `.git/info/exclude` | 위 두 경로 | `printf '.claude/agents/tutor.md\n.claude/skills/learn/\n' >> .git/info/exclude` |
+| `posts/*.bak.*`, `posts/_tmp-*` | 픽스처 잔해 | 있으면 `/fixture` 4단계로 지운다 |
+| 로컬 서버 | 5610(오케스트레이터) 등 떠 있던 포트 | 새 PC에선 무관 |
+
+## 6. 주의
+- 이번 세션에서 알게 된, 다음 사람이 밟을 함정 1~3개 (예: "`animationend`는 버블링 — `e.target === intro` 필수")
+```
+
+### A-3. 검증 두 가지
+
+1. §3의 첫 줄만 보고 낯선 세션이 **명령 하나로** 착수할 수 있는가. 못 하면 다시 쓴다.
+2. §2 표의 "끝난 것"이 `git status`·보고서와 일치하는가. 추측이면 "보고 없음"으로 바꾼다.
+
+STATE.md는 git에 올린다(`/ship`이 함께 커밋). 다른 PC는 `/sync`로 받는다.
 
 ---
 
-## 2단계 — docs/HANDOFF.md 작성
+## B. `docs/HANDOFF.md` — 구조가 바뀐 라운드에만
 
-아래 9개 섹션을 **전부** 채운다. 빈 섹션을 남기지 않는다.
+`/handoff full` 또는 아래 중 하나가 이번 라운드에 있었을 때만:
+소유권 표 변경 · 새 페이지/폴더(`about.html`, `server/`) · 데이터 모델 필드 변경 · 절대 규칙 변경 · 새 스킬 묶음.
 
-### § 1. 이 프로젝트가 무엇인가
-- 한 문단 요약: 개인 학습 블로그, 메모지 형태, 순수 HTML/CSS/JS, GitHub Pages 배포
-- **사용자가 직접 말한 요구사항 13개**를 원문에 가깝게 나열 (`.claude/agents/pm-integrator.md`에 기록돼 있다)
-- 왜 이런 제약을 택했는지 (Node.js 미사용, 하이브리드 저장 등) — 이유를 모르면 다음 사람이 규칙을 깬다
+기존 9절 구조를 유지하되 **바뀐 절만** 고친다. 전체 재작성은 하지 않는다(387줄을 매번 다시 쓰면 아무도 안 고친다). 각 절 머리에 `(실측 YYYY-MM-DD)`를 남겨 어느 절이 오래됐는지 보이게 한다.
 
-### § 2. 절대 규칙 (깨면 안 되는 것)
-`CLAUDE.md`의 절대 규칙 6개를 그대로 옮기고, 각각에 **왜 그런지** 한 줄씩 덧붙인다.
-특히 강조할 것:
-- `created` 불변 / `updated` 갱신 — 사용자가 직접 요구한 기능
-- DOMPurify 살균 경로 — 공개 배포라 XSS가 실재하는 위험
-- 새 의존성은 사용자 승인 필요
+§ 8 "다른 환경에서 이어받는 방법"에는 아래 **새 PC 최초 설정** 절이 있어야 한다. 없으면 추가한다.
 
-### § 3. 현재 완성도 (실측 기준)
+```markdown
+### 새 PC 최초 설정 (10분)
+
+1. `git clone https://github.com/solmin6320/study-Blog.git` → 폴더를 Claude Code로 연다.
+2. `.claude/`는 저장소에 있으므로 에이전트 4개·스킬 전부 그대로 동작한다.
+3. **로컬 전용 파일**(공개 저장소에 없음)을 이전 PC에서 복사: `.claude/agents/tutor.md`, `.claude/skills/learn/SKILL.md`.
+   그리고 `printf '.claude/agents/tutor.md\n.claude/skills/learn/\n' >> .git/info/exclude`
+4. 미리보기: `start.bat`(Docker 있으면 저장 서버, 없으면 PowerShell 정적 서버). 5500이 막혀 있으면 `.claude/launch.json`의 포트를 바꾼다.
+5. Claude Code에서 첫 메시지: `/sync 하고 docs/STATE.md 읽고 이어서 해`
 ```
-| 영역 | 파일 | 줄 수 | 상태 | 비고 |
-```
-상태는 `완성` / `부분` / `미완성` / `미확인` 중 하나. **부분·미완성은 무엇이 빠졌는지 구체적으로.**
-
-### § 4. 폴더·파일 구조
-전체 트리와 각 파일의 **한 줄 역할**. 다음 사람이 어느 파일을 열어야 할지 바로 알 수 있게.
-
-### § 5. 데이터 모델
-- frontmatter 필드 전부와 의미
-- `posts/index.json`, `posts/categories.json` 실제 예시 (파일에서 발췌)
-- 글 파일 경로 규칙 `posts/<category-slug>/<id>.md`
-- **글 추가 흐름**(하이브리드): 에디터 작성 → 내보내기 → 폴더에 넣기 → 커밋
-
-### § 6. 아키텍처 핵심 판단과 그 이유
-다음 사람이 "왜 이렇게 했지?" 하고 갈아엎지 않도록, **의도적으로 내린 결정**을 근거와 함께 남긴다. 예:
-- 목록 화면은 `index.json`만 읽고 `.md`는 안 읽는다 (성능)
-- 목록 화면에 marked/highlight.js를 안 싣는다 (~280KB 절약)
-- jQuery는 승인됐으나 사용처가 0건이라 안 싣는다
-- `categories.json`이 깨져도 동작하는 3단 폴백 (사용자가 직접 편집하는 파일이라)
-- 관리자 모드는 보안이 아니라 UI 노출 스위치
-
-### § 7. 지금 해야 할 일 (우선순위 순)
-```
-| # | 할 일 | 담당 영역 | 왜 지금 | 건드릴 파일 |
-```
-**가장 중요한 섹션이다.** 받는 쪽이 이것만 보고 바로 착수할 수 있어야 한다.
-각 항목에 "완료 판정 기준"을 한 줄로 적는다.
-
-### § 8. 다른 환경에서 이어받는 방법
-환경별로 나눠서 구체적으로:
-
-**Claude Code (다른 세션)**
-- `.claude/agents/` 4개와 `.claude/skills/` 18개가 그대로 있으므로 그냥 이어가면 된다
-- `/round-start`로 개발, `/blog-meeting`으로 회의
-
-**Claude Code가 아닌 환경 (ChatGPT, Cursor, Copilot 등)**
-- 에이전트·스킬이 **없다.** 대신 이렇게 한다:
-  - `docs/contract.md`(마크업 계약서)가 디자인·구현의 단일 진실 공급원이다. 클래스명은 여기서 가져다 쓴다
-  - `CLAUDE.md`의 절대 규칙을 프롬프트 앞에 붙여라
-  - 파일 소유권 표는 **한 번에 한 영역만 고치라**는 의미로 해석하면 된다(동시 편집 충돌 방지)
-  - 4인 역할은 `.claude/agents/*.md`를 읽으면 그대로 재현할 수 있다 — 그 내용을 시스템 프롬프트로 쓰면 된다
-- **파일을 통째로 복사해 옮길 때 주의**: UTF-8 인코딩 유지. 한글이 깨지면 전부 실패다
-
-**로컬에서 확인하는 법**
-- `start.bat` 더블클릭 → `http://localhost:5500/index.html`
-- 반드시 HTTP로 열어야 한다. `file://`로 열면 브라우저가 fetch를 막아 글이 안 보인다
-- 관리자 UI는 `?admin=1`
-
-### § 9. 알려진 이슈 / 미해결 질문
-- 발견했지만 아직 못 고친 결함 (파일:줄 + 재현 조건)
-- 사용자 결정이 필요한 사항
-- 계약서 개정 대기 중인 항목
-없으면 "없음"이라고 명시한다.
 
 ---
 
-## 3단계 — 검증
+## C. 한도 임박·세션 종료 때
 
-문서를 다 쓴 뒤 스스로 점검한다:
+1. `/handoff`(STATE.md만) → 2. `/ship`(STATE.md 포함 커밋·푸시). 에이전트가 파일을 고치는 중이면 **그 파일은 STATE §2에 "진행 중(미커밋)"으로 적고 커밋에서 뺀다** — 반쯤 고친 파일을 올리면 다음 세션이 그걸 완성본으로 믿는다. 픽스처는 절대 커밋하지 않는다.
 
-1. **§7만 읽고 바로 작업을 시작할 수 있는가?** 추상적이면 다시 써라
-2. **§3의 상태가 실제 파일과 일치하는가?** 한 항목이라도 추측이면 다시 확인
-3. **Claude Code가 없는 환경에서도 §8이 충분한가?** "스킬을 쓰세요"로 끝나면 실패
-4. 문서에 적힌 파일 경로가 실제로 존재하는가 (`ls`로 확인)
+## D. 보고
 
-## 4단계 — 사용자에게 보고
-
-- `docs/HANDOFF.md` 경로를 알려준다
-- **인수인계 시 반드시 함께 넘겨야 할 파일**을 명시한다:
-  ```
-  docs/HANDOFF.md      ← 이것만으로 맥락 복원
-  docs/contract.md     ← 클래스명·구조 계약
-  CLAUDE.md            ← 절대 규칙
-  .claude/             ← Claude Code 환경이면 통째로
-  ```
-- 다른 환경에 붙여넣을 **시작 프롬프트 예시**를 한 문단 제공한다
-
-## 갱신 시점
-
-이 문서는 한 번 쓰고 끝이 아니다. **라운드가 끝날 때마다 갱신**한다.
-오래된 인수인계 문서는 없는 것보다 나쁘다 — 받는 쪽이 틀린 정보를 믿고 작업한다.
+세 줄: `docs/STATE.md` 갱신됨(HEAD·라운드) / HANDOFF.md 손댔는지(어느 절) / 다른 PC 시작 프롬프트 한 줄 —
+`/sync 하고 docs/STATE.md 읽고 이어서 해`
