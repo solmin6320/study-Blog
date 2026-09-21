@@ -12,7 +12,14 @@
    놓일 면이 없다. 여기에 색 선택 UI를 되살리지 않는다.
 
    배포 도메인 잠금: Blog.admin.isAdmin()(= hostname이 localhost 계열)이 false면
-   start()가 lockForVisitor()만 부르고 끝난다. 에디터는 초기화되지 않고 DOM에서 제거된다. */
+   start()가 lockForVisitor()만 부르고 끝난다. 에디터는 초기화되지 않는다(.editor 노드 제거는
+   admin.init()이 한다 — 계약서 §3·§8-2 예외, v3.8).
+
+   v3.8(meeting-05 라운드 6): 저장 흐름의 유실 경로 셋을 막는다 —
+     T4-1 저장 직전·직후 autosave debounce 취소(뒤늦게 발화해 방금 지운 초안을 되살리던 것),
+     T4-2 새 글 저장 뒤 state.slot = 저장된 id + URL ?id= 갱신(초안이 'new' 슬롯에 고아로 남던 것),
+     T4-3 id 변경(rename) 저장 뒤 슬롯도 새 id로(옛 id 슬롯에 고아 초안).
+   그리고 툴바 템플릿·퀴즈(A-11·A-4), 줄 첫머리 `//` 코드 블록 단축 입력(U-1, 계약서 §6-2). */
 (function (window, document) {
   'use strict';
 
@@ -34,10 +41,21 @@
   /* posts/ 안에서 이미 뜻이 정해진 이름. 폴더로 쓰면 파일과 헷갈린다. */
   var RESERVED_SLUGS = ['index', 'categories', 'posts'];
 
+  /* 복습 템플릿·퀴즈 스니펫(계약서 §6-2·§5-7-3, meeting-05 접점 표).
+     진실은 config.js의 CFG.recap(frontend-dev 소유)이다. 아직 없으면 접점 표의 문자열 그대로를 쓴다 —
+     두 값이 다르면 post.js의 요약 카드가 템플릿의 h2를 못 알아본다. */
+  var RECAP_TEMPLATE_FALLBACK = '## 핵심\n\n\n## 다시 볼 때 이것만\n- \n\n## 헷갈린 것\n- \n';
+  var QUIZ_SNIPPET = '<details>\n<summary>Q. </summary>\n\n답\n\n</details>\n';
+
+  /* 줄 첫머리 `//`(+언어) — 계약서 §6-2. 언어는 [a-z0-9+#-]{1,20}. */
+  var FENCE_TRIGGER_RE = /^\/\/([a-z0-9+#-]{1,20})?$/;
+  var FENCE_LINE_RE = /^```/gm;
+
   var dom = {};
   var state = {
     mode: 'new',          // 'new' | 'edit'
-    slot: 'new',          // 초안 저장 키. 세션 내내 바뀌지 않아야 초안이 흩어지지 않는다.
+    slot: 'new',          // 초안 저장 키. 'new' 또는 글 id. 디스크에 글이 생기거나 id가 바뀌면(onSaved) 따라 바뀐다 —
+                          // 슬롯이 실제 id와 어긋나면 초안이 고아가 된다(T4-2·T4-3).
     created: '',          // 수정 모드에서 보존해야 하는 원본 게시 시각
     originalId: '',
     originalCategory: '',
@@ -184,13 +202,14 @@
     return found;
   }
 
-  /* config의 기본 분류가 slug일 수도, v1의 한글 표시 이름일 수도 있다. 둘 다 받아 준다. */
+  /* config의 기본 분류가 slug일 수도, v1의 한글 표시 이름일 수도 있다. 둘 다 받아 준다.
+     M4-4(meeting-04): 기본값이 없으면 "미선택"('')이다. 예전에는 첫 분류 → 미분류로 조용히 내려가서,
+     분류를 고르지 않은 글이 첫 분류 폴더에 저장됐다. 분류는 글이 들어갈 폴더라 사용자가 고른 값만 쓴다.
+     분류가 0개여도 '미분류'는 셀렉트에서 직접 고른 것만 인정한다(validate가 막는다). */
   function defaultCategorySlug() {
     var want = String((CFG.editor && CFG.editor.defaultCategory) || '').trim();
     var hit = findCat(want) || findCatByName(want);
-    if (hit) return hit.slug;
-    if (cats.list.length) return cats.list[0].slug;
-    return UNCATEGORIZED;
+    return hit ? hit.slug : '';
   }
 
   function hasOption(select, value) {
@@ -207,6 +226,9 @@
     if (!dom.category) return;
     var want = (keep === undefined || keep === null) ? dom.category.value : keep;
     U.clear(dom.category);
+    /* 첫 항목은 "아직 고르지 않음"(value ''). 저장·내보내기는 validate()가 여기서 막고 셀렉트에 포커스를 준다(M4-4).
+       placeholder 문구는 라벨이 아니라 다음 행동 안내다 — 이름은 <label for="fCategory">가 맡는다. */
+    dom.category.appendChild(U.el('option', { value: '', text: '분류를 고르세요' }));
     cats.list.forEach(function (c) {
       dom.category.appendChild(U.el('option', { value: c.slug, text: optionLabel(c) }));
     });
@@ -222,25 +244,19 @@
   function selectCategory(value) {
     if (!dom.category) return;
     var v = String(value || '').trim();
-    if (!v) v = defaultCategorySlug();
+    if (!v) v = defaultCategorySlug();       // 기본 분류가 없으면 ''(미선택)로 남는다
     if (!hasOption(dom.category, v)) {
       dom.category.appendChild(U.el('option', {
         value: v, text: v + ' (categories.json에 없음)'
       }));
     }
     dom.category.value = v;
-    syncCategoryHint();
   }
 
+  /* ''는 "아직 고르지 않음"이다. 여기서 미분류로 바꿔치기하지 않는다 — validate()가 거부한다(M4-4).
+     (셀렉트의 title 툴팁은 계약서 §6 title 규칙(v3.8)으로 없앴다 — 이름은 라벨, 경로는 저장 결과 상태줄이 말한다.) */
   function chosenCategory() {
-    var v = dom.category ? String(dom.category.value || '').trim() : '';
-    return v || UNCATEGORIZED;
-  }
-
-  function syncCategoryHint() {
-    if (!dom.category) return;
-    dom.category.setAttribute('title',
-      '이 글은 posts/' + chosenCategory() + '/ 폴더에 저장됩니다');
+    return dom.category ? String(dom.category.value || '').trim() : '';
   }
 
   /* ---------- 새 분류 만들기 ----------
@@ -378,9 +394,30 @@
     }
   }
 
+  /* 상태줄에 링크가 섞인 문장을 쓴다(M4-5 — 저장 뒤 "글 보기 →"·"목록").
+     parts는 문자열 또는 노드. 다음 setStatus(text)가 textContent를 갈아 끼우면 링크는 자연히 사라진다.
+     새 부품 없음 — .editor-status 안의 <a>는 base.css의 본문 링크 규칙을 그대로 받는다. */
+  function setStatusNodes(parts, dirty) {
+    if (!dom.status) return;
+    U.clear(dom.status);
+    U.append(dom.status, parts);
+    if (typeof dirty === 'boolean') {
+      state.dirty = dirty;
+      dom.status.classList.toggle('is-dirty', dirty);
+    }
+  }
+
   function markDirty() {
     state.dirty = true;
     if (dom.status) dom.status.classList.add('is-dirty');
+  }
+
+  /* 오류 토스트는 role="alert"(끼어들어 읽힘). U.toast는 role="status"로 만드므로 여기서 바꾼다 —
+     같은 태스크 안이라 접근성 트리에는 alert로 처음 나타난다. 경고·성공은 status 그대로. */
+  function toastErr(message) {
+    var node = U.toast(message, 'err');
+    if (node) node.setAttribute('role', 'alert');
+    return node;
   }
 
   /* ---------- 미리보기 ---------- */
@@ -413,7 +450,7 @@
       newCats: addedCatObjects(),
       form: form
     });
-    setStatus(ok ? '임시저장됨 · 아직 파일로 내보내지 않았어요' : '임시저장 실패(브라우저 저장소 차단)', true);
+    setStatus(ok ? '임시저장됨 · 아직 ' + (state.server ? '서버에 저장하지' : '파일로 내보내지') + ' 않았어요' : '임시저장 실패(브라우저 저장소 차단)', true);
     return ok;
   }
 
@@ -471,8 +508,13 @@
     }
 
     if (!applied) {
-      var value = target.value;
-      target.value = value.slice(0, start) + text + value.slice(end);
+      /* 폴백. setRangeText도 value 대입도 Chromium에서는 되돌리기 스택을 비운다(2026-09-21 헤드리스 실측) —
+         차이는 스크롤 위치·선택 보존뿐이라 있으면 setRangeText를 쓴다. */
+      if (typeof target.setRangeText === 'function') target.setRangeText(text, start, end, 'end');
+      else {
+        var value = target.value;
+        target.value = value.slice(0, start) + text + value.slice(end);
+      }
     }
 
     setSelection(
@@ -719,8 +761,8 @@
     var usable = raw.trim() !== '' && raw.indexOf('\n') === -1 && raw.indexOf('|') === -1;
     var sel = usable ? { start: a, end: b, text: raw.trim() } : { start: b, end: b, text: '' };
 
-    var colSel = U.el('select', { class: 'field', title: '열 수' });
-    var rowSel = U.el('select', { class: 'field', title: '머리글을 뺀 본문 행 수' });
+    var colSel = U.el('select', { class: 'field' });
+    var rowSel = U.el('select', { class: 'field' });
     var n;
     for (n = 2; n <= 6; n += 1) colSel.appendChild(U.el('option', { value: String(n), text: n + '열' }));
     for (n = 1; n <= 10; n += 1) rowSel.appendChild(U.el('option', { value: String(n), text: n + '행' }));
@@ -791,6 +833,37 @@
     });
   }
 
+  /* ---------- 템플릿·퀴즈 (v3.8, 계약서 §6-2·§5-7-3) ---------- */
+
+  function recapTemplate() {
+    return (CFG.recap && typeof CFG.recap.template === 'string' && CFG.recap.template) || RECAP_TEMPLATE_FALLBACK;
+  }
+
+  /* 본문이 비었으면(공백만) 템플릿 전체로 갈고 커서를 첫 절 아래 빈 줄에, 아니면 커서 위치에 블록으로 끼운다.
+     자동 삽입은 하지 않는다 — 빈 템플릿이 그대로 저장되고 초안 비교(sameForm)가 "바뀌었다"고 오판한다(meeting-05 A-11). */
+  function insertTemplate() {
+    var tpl = recapTemplate();
+    var firstBlank = tpl.indexOf('\n') + 1;      // "## 핵심\n" 바로 다음 = 첫 절 아래 빈 줄
+    if (dom.body.value.trim() === '') {
+      replaceRange(0, dom.body.value.length, tpl, firstBlank, firstBlank);
+      return;
+    }
+    insertBlock(tpl, firstBlank, firstBlank);
+  }
+
+  /* 뒤에 글이 바로 이어지면 빈 줄 하나를 더 둔다 — </details> 다음 줄에 글이 붙으면 marked가 HTML 블록에 삼킨다(§5-7-3). */
+  function trailBreak(value, pos) {
+    var rest = value.slice(pos);
+    if (!rest || rest.charAt(0) === '\n') return '';
+    return '\n';
+  }
+
+  function insertQuiz() {
+    var caret = QUIZ_SNIPPET.indexOf('Q. ') + 3;
+    var text = QUIZ_SNIPPET + trailBreak(dom.body.value, dom.body.selectionEnd);
+    insertBlock(text, caret, caret);
+  }
+
   var TOOLBAR = {
     bold: function () { surround('**', '**', '굵게'); },
     italic: function () { surround('*', '*', '기울임'); },
@@ -801,9 +874,74 @@
     codeblock: insertCodeBlock,
     list: function () { linePrefix('- ', /^[-*+][ \t]+/); },
     quote: function () { linePrefix('> ', /^>[ \t]*/); },
+    quiz: insertQuiz,
     table: openTableDialog,
-    hr: function () { insertBlock('---\n\n'); }
+    hr: function () { insertBlock('---\n\n'); },
+    template: insertTemplate
   };
+
+  /* ---------- `//` 코드 블록 단축 입력 (U-1, 계약서 §6-2) ----------
+     사용자 원문(2026-09-20): "메모 쓸 때 // 2개 치면 코드를 쓸 수 있는 블록으로 만들어(단축키)".
+     줄 첫머리(공백 0개)에 `//` 또는 `//java`를 치고 Enter/Space를 누르면 그 줄이 ```lang 펜스 3줄이 되고
+     커서는 가운데 빈 줄에 놓인다. 판정은 input 이벤트에서 한다 — keydown은 IME·붙여넣기·모바일 키보드에서
+     `/`가 안 오는 경우가 있다. 이미 펜스 블록 안(커서 위쪽 줄 첫머리 ``` 줄이 홀수)이면 코드 안의 주석이므로 건드리지 않는다.
+
+     바꾸는 방법: replaceRange(execCommand insertText). 계약서는 setRangeText를 적었지만 Chromium은 setRangeText가
+     되돌리기 스택을 통째로 비운다(2026-09-21 헤드리스 Chrome·Edge 실측: 직후 execCommand('undo')가 false).
+     execCommand 경로는 Ctrl+Z 한 번에 `//java` 상태로 돌아온다(같은 실측) — 계약이 요구한 결과는 이쪽이 낸다.
+     execCommand는 input 이벤트를 다시 일으키므로 재진입 가드를 둔다. */
+
+  var fencing = false;
+
+  /* 이번 입력이 "확정 신호"(Enter 또는 Space 한 글자)였는가. inputType이 없는 옛 브라우저는 마지막 글자로 판단한다. */
+  function isFenceTrigger(e, value, pos) {
+    var last = value.charAt(pos - 1);
+    if (last !== '\n' && last !== ' ') return false;
+    var type = e && e.inputType;
+    if (!type) return true;
+    if (type === 'insertLineBreak' || type === 'insertParagraph') return last === '\n';
+    if (type === 'insertText') return e.data === ' ' || e.data === '\n' || e.data === null;
+    return false;
+  }
+
+  function insideFence(before) {
+    var hits = before.match(FENCE_LINE_RE);
+    return Boolean(hits) && hits.length % 2 === 1;
+  }
+
+  function maybeFence(e) {
+    if (fencing) return false;
+    if (e && e.isComposing) return false;
+    var pos = dom.body.selectionStart;
+    if (pos !== dom.body.selectionEnd || pos < 3) return false;
+    var value = dom.body.value;
+    if (!isFenceTrigger(e, value, pos)) return false;
+
+    var lineEnd = pos - 1;                                   // 확정 글자(Enter/Space)의 위치
+    var lineStart = value.lastIndexOf('\n', lineEnd - 1) + 1;
+    var m = FENCE_TRIGGER_RE.exec(value.slice(lineStart, lineEnd));
+    if (!m) return false;
+    if (insideFence(value.slice(0, lineStart))) return false;
+
+    var lang = m[1] || '';
+    var open = '```' + lang + '\n';
+    var text = open + '\n```\n';                             // 세 줄 + 다음 줄 내용과 떨어뜨리는 개행
+    var caret = lineStart + open.length;
+    fencing = true;
+    try {
+      replaceRange(lineStart, pos, text, caret, caret);
+    } finally {
+      fencing = false;
+    }
+    return true;
+  }
+
+  function onBodyInput(e) {
+    if (fencing) return;                                     // execCommand가 일으킨 중첩 input
+    if (maybeFence(e)) return;                               // replaceRange가 onEdit·renderPreview까지 했다
+    onEdit();
+    renderPreview();
+  }
 
   /* ---------- 키보드 ----------
 
@@ -923,7 +1061,6 @@
          음성 명령 사용자가 "나란히 보기"라고 말했을 때 이 버튼이 눌려야 하기 때문이다.
          예전 값("나란히 로 전환")은 화면 글자를 포함하지 않아 이름과 명령이 어긋났다. */
       dom.previewToggle.setAttribute('aria-label', label + '로 전환 (지금: ' + MODE_LABEL[mode] + ')');
-      dom.previewToggle.setAttribute('title', '지금: ' + MODE_LABEL[mode] + ' · 누르면 ' + MODE_LABEL[next]);
     }
   }
 
@@ -951,6 +1088,12 @@
     if (!form.title) {
       U.toast('제목을 입력해 주세요', 'warn');
       dom.title.focus();
+      return false;
+    }
+    /* M4-4: 분류는 글이 저장될 폴더다. 고르지 않았으면 조용히 첫 분류로 보내지 않고 여기서 멈춘다. */
+    if (!form.category) {
+      U.toast('분류를 골라 주세요 — 글이 저장될 폴더입니다 (없으면 "+ 새 분류" 또는 미분류)', 'warn');
+      dom.category.focus();
       return false;
     }
     if (!form.body.trim()) {
@@ -1054,6 +1197,8 @@
     state.exporting = on;
     if (!dom.exportBtn) return;
     dom.exportBtn.disabled = on;
+    /* 내려받는 동안 서버 저장도 잠근다 — 같은 글이 두 경로로 동시에 나가면 어느 쪽이 최신인지 알 수 없다. */
+    if (dom.saveBtn) dom.saveBtn.disabled = on || state.saving;
     if (!on && document.activeElement === document.body) dom.exportBtn.focus();
   }
 
@@ -1071,6 +1216,12 @@
     if (state.mode !== 'edit' || state.created) { onOk(); return; }
 
     var now = U.nowIsoKst();
+    var confirmed = false;
+    /* M4-3: 예전에는 "지금 시각" 버튼이 onOk()를 부르고 return false로 모달을 열어 둔 채
+       다음 모달(내보내기 안내)이 대신 닫아 주길 기대했다. 서버 저장 경로에는 다음 모달이 없어
+       확인창이 영구히 남고 배경이 inert로 잠겼다. 이제는 모달이 닫힌 뒤(onClose) 이어 간다 —
+       표 대화상자와 같은 방식이고, 내보내기 경로의 다음 모달은 닫힌 뒤에 열리므로 함께 닫힐 일이 없다.
+       onClose는 같은 클릭 흐름 안에서 동기로 불리므로 다운로드 제스처도 유지된다. */
     Blog.ui.modal({
       title: '이 글의 원래 게시일 정보가 없습니다',
       bodyNodes: [
@@ -1080,13 +1231,9 @@
       ],
       actions: [
         { label: '취소', variant: 'ghost' },
-        {
-          label: '지금 시각을 게시일로', variant: 'primary', onClick: function () {
-            onOk(now);
-            return false;   // doExport가 다음 모달을 띄운다. 여기서 또 닫으면 그게 같이 닫힌다.
-          }
-        }
-      ]
+        { label: '지금 시각을 게시일로', variant: 'primary', onClick: function () { confirmed = true; } }
+      ],
+      onClose: function () { if (confirmed) onOk(now); }
     });
   }
 
@@ -1349,7 +1496,7 @@
     if (dom.exportBtn) {
       if (state.server) {
         dom.exportBtn.removeAttribute('aria-keyshortcuts');
-        dom.exportBtn.setAttribute('title', '파일로 내보내기');
+        dom.exportBtn.removeAttribute('title');   // 단축키가 없는 버튼은 title도 없다(계약서 §6 title 규칙)
       } else {
         dom.exportBtn.setAttribute('aria-keyshortcuts', 'Control+S');
         dom.exportBtn.setAttribute('title', '파일로 내보내기 (Ctrl+S)');
@@ -1360,11 +1507,13 @@
     var verb = state.server ? '저장' : '내보내기';
     if (dom.body) {
       dom.body.setAttribute('placeholder',
-        '여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S ' + verb + '.');
+        '여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S ' + verb + '.\n'
+        + '줄 첫머리에 // 로 코드 블록 (//java 처럼 언어도).');
     }
     if (dom.bodyHint) {
       dom.bodyHint.textContent = 'Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. '
-        + 'Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S ' + (state.server ? '저장' : '파일로 내보내기') + '.';
+        + 'Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S ' + (state.server ? '저장' : '파일로 내보내기') + '. '
+        + '줄 첫머리에 //를 치고 Enter 또는 Space를 누르면 코드 블록이 됩니다.';
     }
   }
 
@@ -1414,6 +1563,8 @@
 
   function setSaving(on) {
     state.saving = on;
+    /* 저장 중에는 내보내기도 잠근다(meeting-05 dev-2 #8). PUT이 끝나기 전에 내려받은 .md는 곧 옛 파일이 된다. */
+    if (dom.exportBtn) dom.exportBtn.disabled = on || state.exporting;
     if (!dom.saveBtn) return;
     dom.saveBtn.disabled = on;
     /* disabled가 되는 순간 포커스는 body로 튕긴다(setExporting과 같은 이유). 끝나면 돌려준다. */
@@ -1432,6 +1583,8 @@
     var built = buildMeta(createdOverride);
     var form = built.form;
     var meta = built.meta;
+    /* buildMeta가 id 칸을 정리한 "뒤"의 화면 스냅샷. onSaved가 저장 중 입력 여부를 이것과 비교한다. */
+    var sent = readForm();
 
     /* PUT 본문 = 메타 8개 + body. created는 서버가 디스크 값으로 판정한다 — 새 글이면 무시하고 now,
        기존 글이면 디스크 값 유지. 클라이언트가 보낸 created가 진실이 되는 유일한 경우는
@@ -1443,6 +1596,12 @@
 
     /* 새 분류가 있으면 글보다 먼저 등록한다. 순서가 바뀌면 글이 미등록 분류로 저장된다(api.md §4-3). */
     var needCats = cats.added.length > 0;
+
+    /* T4-1: 타이핑 뒤 800ms 안에 Ctrl+S를 누르면 debounce가 아직 대기 중이다. 그대로 두면 PUT이
+       끝나 초안을 지운 "뒤에" 발화해 방금 지운 초안을 되살리고 dirty를 다시 켠다.
+       내보내기 경로(flushDraft)와 같이 — 대기 중인 것을 취소하고, 지금 상태를 초안에 확정해 둔다.
+       확정해 두는 이유: 저장이 거절되거나 서버가 죽으면 "임시저장본은 그대로"라는 상태줄이 참이어야 한다. */
+    flushDraft();
 
     setSaving(true);
     setStatus('서버에 저장하는 중…');
@@ -1464,35 +1623,45 @@
       return readJson(res).then(function (json) {
         if (!res.ok) throw mkErr('api', apiErrorMessage(res, json, '저장'));
         if (!json || !json.ok || !json.meta) throw mkErr('api', '서버 응답을 읽을 수 없습니다 · 내보내기로 저장하세요');
-        onSaved(json, needCats);
+        onSaved(json, needCats, sent);
       });
     }).catch(function (err) {
       setSaving(false);
       if (err && err.code === 'api') {
         /* 서버가 거절했다. 초안·dirty는 그대로 — 사용자가 고쳐서 다시 누른다. */
-        U.toast(err.message, 'err');
+        toastErr(err.message);
         setStatus('저장하지 못했어요 · 임시저장본은 그대로 있습니다', true);
         return;
       }
       /* 네트워크 실패 = 서버가 사라졌다. 모드가 내보내기로 돌아간 것이 화면에서 보여야 한다(계약서 §6-1). */
       setServerMode(false);
-      U.toast('서버가 꺼졌습니다 — 내보내기로 저장하세요', 'err');
+      toastErr('서버가 꺼졌습니다 — 내보내기로 저장하세요');
       setStatus('서버 연결이 끊겼어요 · 파일로 내보내기를 눌러 저장하세요', true);
     });
   }
 
+  /* 응답의 git(docs/api.md §2-1, BLOG_AUTO_COMMIT). 없으면 빈 문자열 — 필드가 없는 서버도 정상이다. */
+  function gitNote(json) {
+    var git = json && json.git;
+    if (!git || typeof git !== 'object') return '';
+    if (git.committed === true) return ' · 커밋 ' + String(git.hash || '').slice(0, 7);
+    if (git.committed === false) return ' · 커밋 실패: ' + String(git.reason || '이유 없음');
+    return '';
+  }
+
   /* 200 — 디스크 저장이 확인됐다. 내보내기(M7)와 달리 초안을 지워도 된다.
-     응답의 meta가 실제로 쓴 값이므로 화면 상태는 응답으로 덮는다(created를 클라이언트가 계산하지 않는다). */
-  function onSaved(json, savedCats) {
+     응답의 meta가 실제로 쓴 값이므로 화면 상태는 응답으로 덮는다(created를 클라이언트가 계산하지 않는다).
+     sentForm은 PUT에 실은 폼 스냅샷 — 저장 중에 더 친 글자가 있는지 이것과 비교한다. */
+  function onSaved(json, savedCats, sentForm) {
     var saved = json.meta;
+    var oldSlot = state.slot;
     state.created = saved.created || state.created;
     state.originalId = saved.id;
     state.originalCategory = saved.category || '';
     state.originalPath = json.path || postPathOf(saved.id, saved.category);
 
     /* 이제 이 글은 디스크에 있다. 새 글이었어도 "수정 모드"가 맞다 — 제목을 고쳐도 id가
-       따라 바뀌지 않고(refreshAutoId), 다시 저장하면 같은 파일을 덮어쓴다. 초안 slot은 세션 내내
-       바뀌지 않는다(흩어지면 안 된다). id 칸에 서버가 확정한 값을 되비친다. */
+       따라 바뀌지 않고(refreshAutoId), 다시 저장하면 같은 파일을 덮어쓴다. id 칸에 서버가 확정한 값을 되비친다. */
     state.mode = 'edit';
     state.idTouched = true;
     if (dom.id.value !== saved.id) dom.id.value = saved.id;
@@ -1501,10 +1670,31 @@
     if (savedCats) cats.added = [];
     cats.loaded = true;
 
-    store.draft.clear(state.slot);
+    /* T4-1: 저장 중에 친 글자가 걸어 둔 debounce는 여기서 끊는다. 그 글자는 아래에서 sentForm과 비교해
+       "저장 완료 뒤의 dirty"로만 남긴다 — 저장이 끝난 뒤에 발화해 방금 지운 초안을 되살리는 일이 없어야 한다. */
+    if (autosave.cancel) autosave.cancel();
+
+    /* T4-2·T4-3: 초안 슬롯은 "디스크의 id"를 따라간다. 새 글이면 'new' → id, id를 바꿔 저장했으면(previousId) 옛 id → 새 id.
+       옛 슬롯의 초안은 방금 저장된 내용(또는 그보다 옛것)이라 지우고, 저장 중 입력분만 새 슬롯에 다시 쓴다.
+       URL도 ?id=<id>로 바꿔 둔다 — 새로고침·뒤로가기가 이 글을 다시 열고, 그때 새 슬롯의 초안을 찾는다.
+       예전에는 슬롯이 'new'/옛 id에 남아 이어 쓴 초안이 고아가 됐고, 다음 새 글에서 그 초안을 불러오면
+       id는 A인데 내용은 B라 A를 덮어썼다(meeting-04 T4-2). */
+    store.draft.clear(oldSlot);
+    state.slot = saved.id;
+    if (U.getQuery().id !== saved.id) U.setQuery({ id: saved.id, cat: '' });
+
     setSaving(false);
-    setStatus('저장됨 · ' + state.originalPath, false);
+    var status = ['저장됨 · ' + state.originalPath + gitNote(json) + ' · ',
+      U.el('a', { href: 'post.html?id=' + encodeURIComponent(saved.id), text: '글 보기 →' }), ' · ',
+      U.el('a', { href: 'index.html', text: '목록' })];
+    setStatusNodes(status, false);
     U.toast(json.isNew ? '새 글을 저장했습니다' : '저장했습니다', 'ok');
+
+    /* 저장 중에 더 친 글자는 아직 디스크에 없다. 저장이 끝난 지금 dirty로 올리고 새 슬롯에 초안을 확정한다. */
+    if (sentForm && !sameForm(Object.assign({}, sentForm, { id: saved.id }), readForm())) {
+      markDirty();
+      saveDraftNow();
+    }
 
     /* 내보내기 폴백이 쓰는 목록 사본을 서버가 쓴 최신으로 맞춘다. 실패해도 저장은 이미 끝났다. */
     promised(function () { return store.loadIndex(true); }).then(function (data) {
@@ -1593,13 +1783,24 @@
             restoreDraftCats(draft.data.newCats);
             var form = draft.data.form;
             writeForm(form, form.body);
-            if (draft.data.created) state.created = draft.data.created;
+            /* T4-2: 슬롯 메타(mode·originalId·created·원본 경로)도 되살린다. 디스크에 있는 글의 초안을
+               "새 글"로 불러오면 내보내기가 created=now를 찍고(규약 4 위반) 다른 id로 한 벌 더 만든다.
+               created는 디스크 값이 있으면 그것이 진실이다 — 초안의 값은 비어 있을 때만 채운다. */
+            if (draft.data.mode === 'edit' && state.mode !== 'edit') {
+              state.mode = 'edit';
+              if (draft.data.originalId) state.originalId = draft.data.originalId;
+            }
+            if (!state.created && draft.data.created) state.created = draft.data.created;
             if (!state.originalCategory && draft.data.originalCategory) state.originalCategory = draft.data.originalCategory;
             if (!state.originalPath && draft.data.originalPath) state.originalPath = draft.data.originalPath;
+            if (state.mode === 'edit' && dom.modeBadge && dom.modeBadge.hasAttribute('hidden')) {
+              showEditBadge({ created: state.created, title: form.title },
+                state.originalPath || postPathOf(state.originalId || form.id, state.originalCategory || form.category));
+            }
             state.idTouched = true;
             renderPreview();
             markDirty();
-            setStatus('임시저장본을 불러왔습니다 · 아직 내보내지 않았어요', true);
+            setStatus('임시저장본을 불러왔습니다 · 아직 ' + (state.server ? '저장하지' : '내보내지') + ' 않았어요', true);
           }
         }
       ]
@@ -1786,7 +1987,7 @@
   }
 
   /* ---------- 툴바 키보드 (roving tabindex) ----------
-     버튼 10개가 전부 탭 스톱이면 제목칸에서 본문까지 Tab을 11번 눌러야 한다.
+     버튼 12개(v3.8)가 전부 탭 스톱이면 제목칸에서 본문까지 Tab을 13번 눌러야 한다.
      WAI-ARIA toolbar 패턴: 탭 스톱은 언제나 하나이고, 안에서는 좌우 화살표로 옮겨 다닌다.
      (write.html의 role="toolbar"와 짝이다. 한쪽만 바꾸면 안내와 동작이 어긋난다.) */
 
@@ -1829,7 +2030,7 @@
   }
 
   function bindCategory() {
-    U.on(dom.category, 'change', function () { syncCategoryHint(); onEdit(); });
+    U.on(dom.category, 'change', onEdit);
 
     U.on(dom.btnNewCat, 'click', function () {
       if (dom.catNew && dom.catNew.hasAttribute('hidden')) openNewCat();
@@ -1865,7 +2066,7 @@
   }
 
   function bind() {
-    U.on(dom.body, 'input', function () { onEdit(); renderPreview(); });
+    U.on(dom.body, 'input', onBodyInput);
     U.on(dom.body, 'keydown', onBodyKeydown);
     /* 본문을 떠나면 Tab 탈출 대기도 함께 푼다. 돌아왔을 때 첫 Tab이
        예고 없이 포커스를 옮기면 "Tab은 들여쓰기"라는 약속이 깨진다. */
@@ -1970,18 +2171,14 @@
   }
 
   /* ---------- 배포 도메인 잠금 ----------
-     관리자 판정이 false(= localhost가 아님)면 폼·툴바·미리보기를 DOM에서 통째로 제거하고
-     안내 문단(#editorVisitor, 계약서 §6의 .editor-visitor)만 남긴다.
-     숨기는 게 아니라 지운다 — hidden은 개발자도구 없이도 되돌릴 수 있고,
-     "숨겼으니 잠갔다"는 착각을 만든다. 에디터 리스너는 하나도 붙이지 않는다.
+     관리자 판정이 false(= localhost가 아님)면 안내 문단(#editorVisitor, 계약서 §6의 .editor-visitor)만 남긴다.
+     폼·툴바·미리보기(.editor)는 마크업에서 data-admin-only + hidden으로 시작하고, admin.init()이 판정 결과에 따라
+     노드째 지우거나(방문자) hidden을 뗀다(관리자) — 계약서 §3·§8-2 예외(v3.8). 같은 일을 두 곳에서 하지 않으므로
+     여기서는 .editor를 건드리지 않는다. 에디터 리스너는 하나도 붙이지 않는다.
 
      안내 블록이 마크업에 없으면(다른 사람이 지웠을 때) 같은 문장을 만들어 넣는다.
      빈 <main>은 "고장"으로 읽힌다. 문구는 write.html의 것과 같아야 한다. */
   function lockForVisitor() {
-    U.qsa('.editor', document).forEach(function (node) {
-      if (node.parentNode) node.parentNode.removeChild(node);
-    });
-
     var note = dom.visitorNote;
     if (!note) {
       note = U.el('div', { class: 'editor-visitor', id: 'editorVisitor' }, [

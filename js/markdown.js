@@ -271,13 +271,17 @@
     });
   }
 
-  /* h2/h3에 안전한 id를 부여하고 목차용 목록을 만든다. 중복 제목이면 -2, -3을 붙인다. */
+  /* h2/h3에 안전한 id를 부여하고 목차용 목록을 만든다. 중복 제목이면 -2, -3을 붙인다.
+     id에는 h- 접두사를 붙인다(M4-6) — 본문 제목이 "toc"·"main"·"side"·"post"이면 페이지 요소의 id와 부딪혀
+     목차 클릭이 엉뚱한 곳으로 뛴다. used는 root 안만 세므로 접두사로 이름 공간을 아예 가른다. */
+  var HEADING_ID_PREFIX = 'h-';
+
   function collectHeadings(root) {
     var used = Object.create(null);
     var list = [];
     U.qsa('h2, h3', root).forEach(function (h, index) {
       var text = h.textContent.trim();
-      var base = U.slugHeading(text) || ('section-' + (index + 1));
+      var base = HEADING_ID_PREFIX + (U.slugHeading(text) || ('section-' + (index + 1)));
       var id = base;
       var n = 2;
       while (used[id]) { id = base + '-' + n; n += 1; }

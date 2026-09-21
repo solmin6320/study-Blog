@@ -23,16 +23,21 @@
   var postById = Object.create(null);
   var slugById = Object.create(null);
   var searchById = Object.create(null);
+  /* id → 비교 키로 정규화한 태그 배열. 필터·개수는 이 키로 맞추고 화면 글자는 post.tags(원문)를 쓴다 —
+     "CSS"와 "css"를 같은 태그로 세되 사용자가 적은 표기는 바꾸지 않는다(연관 글 post.js와 같은 규칙). */
+  var tagKeysById = Object.create(null);
 
   function setPosts(list) {
     state.posts = list;
     postById = Object.create(null);
     slugById = Object.create(null);
     searchById = Object.create(null);
+    tagKeysById = Object.create(null);
     list.forEach(function (post) {
       var slug = store.categorySlug(post.category);
       postById[post.id] = post;
       slugById[post.id] = slug;
+      tagKeysById[post.id] = post.tags.map(U.normTag);
       /* 검색 대상은 화면에 없는 요약까지 포함한다(계약서 §0-1: summary는 검색 대상으로 살아 있다).
          분류는 폴더명(css)과 표시 이름(CSS) 둘 다 걸리게 한다. */
       searchById[post.id] = [
@@ -69,7 +74,8 @@
     var q = state.query.trim().toLowerCase();
     if (q && (searchById[post.id] || '').indexOf(q) === -1) return false;
     if (state.tags.length) {
-      var hit = post.tags.some(function (tag) { return state.tags.indexOf(tag) !== -1; });
+      var keys = tagKeysById[post.id] || [];
+      var hit = keys.some(function (key) { return state.tags.indexOf(key) !== -1; });
       if (!hit) return false;
     }
     return true;
@@ -141,6 +147,20 @@
 
     U.setHidden(dom.empty, posts.length !== 0);
     if (!posts.length) renderEmpty();
+
+    markReady();
+  }
+
+  /* 카드의 arrive 모션은 첫 렌더에만(계약서 §4-4·§11-4, M4-10). 필터 재렌더까지 매번 떠오르면 테마 전환
+     저점과 겹쳐 이중 공백이 되고 같은 결과에도 다시 움직인다. 첫 renderList() 뒤 300ms(--dur 260 + 여유,
+     §8-1)에 #postList에 data-ready를 한 번 붙이고 떼지 않는다 — CSS가 그 아래 .entry의 animation을 끈다.
+     0장(빈 목록)이어도 붙인다. 그래야 검색으로 첫 카드가 나타날 때도 "필터 결과"로 취급된다. */
+  var readyMarked = false;
+
+  function markReady() {
+    if (readyMarked) return;
+    readyMarked = true;
+    window.setTimeout(function () { dom.list.setAttribute('data-ready', ''); }, 300);
   }
 
   /* ---------- 빈 상태 ---------- */
@@ -256,13 +276,23 @@
 
   /* 태그는 지금 보고 있는 분류 안의 것만 센다. 분류를 고른 뒤에도 전체 태그가 남아 있으면
      "눌러도 아무것도 안 나오는 태그"가 생긴다. */
+  /* 반환: key(비교용 소문자) → { name, count }. name은 그 태그가 처음 보인 글의 표기 그대로다 —
+     목록은 최신 글부터 정렬돼 있지 않으므로(state.posts는 index.json 순) 어느 표기가 남을지는 파일 순서를 따른다.
+     한 글 안에서 "CSS, css"처럼 같은 키가 겹치면 한 번만 센다. */
   function tagCounts() {
     var counts = Object.create(null);
     postsInCat().forEach(function (post) {
-      post.tags.forEach(function (tag) { counts[tag] = (counts[tag] || 0) + 1; });
+      var seen = Object.create(null);
+      post.tags.forEach(function (tag) {
+        var key = U.normTag(tag);
+        if (!key || seen[key]) return;
+        seen[key] = true;
+        if (!counts[key]) counts[key] = { name: String(tag).trim(), count: 0 };
+        counts[key].count += 1;
+      });
     });
     /* 선택된 태그는 이 분류에 없더라도 0으로 남긴다. 보이지 않는 필터가 걸려 있으면 안 된다. */
-    state.tags.forEach(function (tag) { if (!counts[tag]) counts[tag] = 0; });
+    state.tags.forEach(function (key) { if (!counts[key]) counts[key] = { name: key, count: 0 }; });
     return counts;
   }
 
@@ -270,7 +300,7 @@
     if (!dom.tagIndex || !dom.tagFold) return;
     var counts = tagCounts();
     var tags = Object.keys(counts).sort(function (a, b) {
-      if (counts[b] !== counts[a]) return counts[b] - counts[a];
+      if (counts[b].count !== counts[a].count) return counts[b].count - counts[a].count;
       return a.localeCompare(b, 'ko');
     });
 
@@ -284,10 +314,11 @@
     frag.appendChild(indexItem({
       tag: '*', name: '전체', count: postsInCat().length, active: state.tags.length === 0
     }));
-    tags.forEach(function (tag) {
+    tags.forEach(function (key) {
+      /* data-tag(필터 값·주소)는 키, 화면 글자는 원문 표기. */
       frag.appendChild(indexItem({
-        tag: tag, name: tag, count: counts[tag],
-        active: state.tags.indexOf(tag) !== -1, empty: !counts[tag]
+        tag: key, name: counts[key].name, count: counts[key].count,
+        active: state.tags.indexOf(key) !== -1, empty: !counts[key].count
       }));
     });
     U.clear(dom.tagIndex);
@@ -334,8 +365,10 @@
   function readUrl() {
     var q = U.getQuery();
     state.query = q.q || '';
-    state.cat = q.cat ? String(q.cat).trim() : '*';
-    state.tags = q.tags ? q.tags.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [];
+    /* 분류 slug는 소문자다(계약서 §9-3). 손으로 친 ?cat=CSS 가 "그런 분류는 없습니다"로 떨어지지 않게 낮춘다. */
+    state.cat = q.cat ? String(q.cat).trim().toLowerCase() : '*';
+    /* 태그도 비교 키로 읽는다 — 상세 페이지의 ?tags=CSS 링크와 인덱스의 data-tag가 같은 키여야 한다. */
+    state.tags = q.tags ? q.tags.split(',').map(U.normTag).filter(Boolean) : [];
     return q.sort !== undefined;
   }
 

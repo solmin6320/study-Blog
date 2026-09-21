@@ -3,5 +3,18 @@
     "title": "메모 블로그",
     "subtitle": "공부한 것을 기록하는 곳"
   },
-  "posts": []
+  "posts": [
+    {
+      "id": "2026-09-21-note-125149",
+      "title": "캡슐화",
+      "summary": "캡슐화",
+      "created": "2026-09-21T13:34:51+09:00",
+      "updated": "2026-09-21T13:34:51+09:00",
+      "tags": [
+        "Java"
+      ],
+      "category": "java",
+      "pinned": false
+    }
+  ]
 }

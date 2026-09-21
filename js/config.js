@@ -72,6 +72,14 @@
        값을 채울 때는 반드시 categories.json에 실재하는 slug(= 폴더명)여야 한다. */
     editor: {
       defaultCategory: ''
+    },
+
+    /* 요약 카드(계약서 §5-7-2, meeting-05 A-1·A-11 접점). 약속은 h2 제목 문자열 하나다 —
+       post.js는 heading과 같은 절을 카드로 옮기고, editor.js는 template을 "템플릿" 버튼으로 넣는다.
+       두 파일이 같은 문자열을 여기서 읽어야 제목이 어긋나 카드가 안 뜨는 일이 없다. */
+    recap: {
+      heading: '다시 볼 때 이것만',
+      template: '## 핵심\n\n\n## 다시 볼 때 이것만\n- \n\n## 헷갈린 것\n- \n'
     }
   };
 })(window);

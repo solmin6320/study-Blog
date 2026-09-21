@@ -58,14 +58,14 @@
     <a class="nav-link" href="index.html" aria-current="page">글</a>
     <a class="nav-link" href="index.html#tags">태그</a>
     <a class="nav-link" href="about.html">소개</a>
-    <a class="nav-link" href="write.html" data-admin-only>쓰기</a>
+    <a class="nav-link" href="write.html" data-admin-only hidden>쓰기</a>
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
 
 <!-- 사이드바 — 분류별 글 목록. 세 페이지 마크업이 바이트 단위로 같다(사양 B).
-     <header> 뒤·<main> 앞에 두는 이유: Tab 순서가 햄버거 → 사이드바 → 본문이 되어야
-     열자마자 다음 Tab이 사이드바 안으로 들어간다. #sideTree는 ui.js renderSide()가 채운다.
+     문서 순서는 헤더 → 사이드바 → 본문. 열릴 때 포커스는 ui.js focusIntoSide()가 옮긴다(계약서 §3-2).
+     #sideTree는 ui.js renderSide()가 채운다.
      열림·고정 상태는 <body> 클래스(side-open / side-pinned)로, ui.js가 붙인다. -->
 <aside class="side" id="side" aria-label="분류별 글 목록">
   <div class="side-head">
@@ -126,6 +126,7 @@
     </div>
   </noscript>
 
+  <!-- 첫 렌더 300ms 뒤 app.js가 data-ready=""를 붙인다. 그 뒤 필터로 다시 그려지는 카드는 arrive 없음(계약서 §4-4·§11-4). -->
   <div class="post-list" id="postList" aria-live="polite"></div>
 
   <!-- hidden으로 시작한다. app.js start()가 fetch 직전에 켜고, 로드가 끝나면 다시 끈다. -->

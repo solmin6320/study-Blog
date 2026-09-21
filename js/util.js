@@ -109,6 +109,13 @@
     return (Math.abs(hashCode(str)) % 10007) / 10007;
   }
 
+  /* 태그 비교 키. 화면에는 사용자가 적은 그대로(CSS) 보여 주되 필터·개수·연관 글은 이 키로 맞춘다 —
+     "CSS"와 "css"가 다른 태그로 갈라지면 인덱스에 같은 태그가 두 줄 서고 한쪽 글이 필터에서 빠진다.
+     app.js·post.js가 같은 함수를 써야 ?tags= 링크와 인덱스 판정이 어긋나지 않는다(meeting-05 dev 7). */
+  function normTag(tag) {
+    return String(tag === null || tag === undefined ? '' : tag).trim().toLowerCase();
+  }
+
   /* 제목 anchor용 slug. 한글은 그대로 남긴다(브라우저가 알아서 인코딩하고, 주소가 읽힌다). */
   function slugHeading(text) {
     return String(text || '').trim().toLowerCase()
@@ -408,7 +415,7 @@
   Blog.util = {
     qs: qs, qsa: qsa, el: el, on: on, append: append, clear: clear, setHidden: setHidden,
     escapeHtml: escapeHtml, hashCode: hashCode, hashUnit: hashUnit,
-    slugHeading: slugHeading, slugAscii: slugAscii, clamp: clamp, pad2: pad2,
+    normTag: normTag, slugHeading: slugHeading, slugAscii: slugAscii, clamp: clamp, pad2: pad2,
     sortCats: sortCats, entryCard: entryCard,
     toDate: toDate, fmtDot: fmtDot, fmtKo: fmtKo, yearOf: yearOf,
     fmtRelative: fmtRelative, sameMoment: sameMoment,

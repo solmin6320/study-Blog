@@ -6,6 +6,7 @@
   'use strict';
 
   var Blog = window.Blog;
+  var CFG = Blog.config;
   var U = Blog.util;
   var store = Blog.store;
   var md = Blog.markdown;
@@ -103,8 +104,9 @@
     var frag = document.createDocumentFragment();
     tags.forEach(function (tag) {
       frag.appendChild(U.el('li', { class: 'tag' }, [
-        /* 쉼표가 든 태그는 ?tags=a,b 왕복이 깨진다. 인코딩으로 막을 수 있는 범위까지만 감싼다. */
-        U.el('a', { href: 'index.html?tags=' + encodeURIComponent(tag), text: tag })
+        /* 쉼표가 든 태그는 ?tags=a,b 왕복이 깨진다. 인코딩으로 막을 수 있는 범위까지만 감싼다.
+           주소에는 비교 키(소문자)를 싣는다 — 목록의 인덱스가 같은 키로 판정한다(app.js readUrl). 화면 글자는 원문. */
+        U.el('a', { href: 'index.html?tags=' + encodeURIComponent(U.normTag(tag)), text: tag })
       ]));
     });
     U.clear(dom.tags);
@@ -140,7 +142,54 @@
     var h2Count = headings.filter(function (h) { return h.level === 2; }).length;
     if (h2Count < TOC_MIN_H2) { U.setHidden(dom.toc, true); return; }
     md.buildToc(headings, dom.tocList);
+    /* #76: 목차는 <details>다. 폰(768 미만)은 첫 화면의 1/3을 먹지 않게 접힌 한 줄로, 넓은 화면은 펼친 채 시작한다.
+       리사이즈에는 반응하지 않는다 — 사용자가 여닫은 상태를 뒤집지 않는다. */
+    if ('open' in dom.toc) dom.toc.open = window.matchMedia('(min-width: 768px)').matches;
     U.setHidden(dom.toc, false);
+  }
+
+  /* ---------- 요약 카드 (계약서 §5-7-2, meeting-05 A-1) ----------
+     본문에서 제목이 CFG.recap.heading인 절(h2 + 다음 h2 전까지의 형제 블록)을 .prose 바로 앞의 카드로 "옮긴다".
+     복제가 아니라 이동인 이유 — 복제하면 스크린리더가 같은 내용을 두 번 읽고 Ctrl+F가 두 번 찾는다.
+     h2 노드를 그대로 옮기므로 markdown.js가 준 id가 남아 목차·사이드바 목차·직접 링크가 그대로 닿는다.
+     노드 이동이라 살균과 무관하고 innerHTML을 쓰지 않는다. 미리보기(editor.js)는 옮기지 않는다. */
+  function recapBlocks(h2) {
+    var blocks = [];
+    var node = h2.nextSibling;
+    while (node && !(node.nodeType === 1 && node.tagName === 'H2')) {
+      blocks.push(node);
+      node = node.nextSibling;
+    }
+    /* 공백 텍스트 노드만 있는 절은 빈 절이다 — 빈 카드는 "고장"으로 읽히므로 만들지 않는다. */
+    var hasBlock = blocks.some(function (n) { return n.nodeType === 1; });
+    return hasBlock ? blocks : [];
+  }
+
+  function findRecapHeading() {
+    var want = CFG.recap.heading;
+    var h2s = U.qsa('h2', dom.body).filter(function (h) { return h.parentNode === dom.body; });
+    for (var i = 0; i < h2s.length; i += 1) {
+      if (h2s[i].textContent.trim() === want) return h2s[i];
+    }
+    return null;
+  }
+
+  function mountRecap() {
+    if (!dom.body || !CFG.recap || !CFG.recap.heading) return;
+    var h2 = findRecapHeading();
+    if (!h2) return;
+    var blocks = recapBlocks(h2);
+    if (!blocks.length) return;
+
+    var aside = U.el('aside', { class: 'post-recap', id: 'postRecap' });
+    var body = U.el('div', { class: 'prose' });
+    aside.appendChild(h2);
+    blocks.forEach(function (n) { body.appendChild(n); });
+    aside.appendChild(body);
+    /* 살균이 id를 지웠을 때만 폴백 — 보통은 markdown.js의 h-… id가 그대로라 목차 링크가 카드로 온다. */
+    if (!h2.id) h2.id = 'recapTitle';
+    aside.setAttribute('aria-labelledby', h2.id);
+    dom.body.parentNode.insertBefore(aside, dom.body);
   }
 
   /* ---------- 이전 / 다음 ---------- */
@@ -260,7 +309,16 @@
      제목 수 ≤ 50이라 getBoundingClientRect() 전수 조회가 싸다. */
   var SPY_LINE = 0.4;
 
+  /* 문서가 스크롤 끝에 닿았는가. 마지막 절이 화면 60%보다 짧으면 그 제목은 영영 40% 선을 못 넘는다(M4-7) —
+     끝까지 내려왔으면 읽고 있는 것은 마지막 절이다. 스크롤이 아예 안 생기는 짧은 글은 제외한다(항상 끝이므로). */
+  function atScrollEnd() {
+    var doc = document.documentElement;
+    if (doc.scrollHeight <= window.innerHeight) return false;
+    return window.innerHeight + window.scrollY >= doc.scrollHeight - 2;
+  }
+
   function pickCurrent(headings) {
+    if (atScrollEnd()) return headings.length - 1;
     var limit = window.innerHeight * SPY_LINE;
     var found = -1;
     for (var i = 0; i < headings.length; i += 1) {
@@ -298,20 +356,55 @@
       keepInTree(tree, items[index]);
     }
 
-    var io = new IntersectionObserver(function () {
+    /* 목차 클릭 직후는 클릭한 절을 고정한다(M4-7). 대상 절이 짧으면 앵커 스크롤이 멈춘 자리에서 40% 선을
+       *다음* 제목이 넘어 있어 IO 판정이 클릭한 항목을 바로 빼앗는다 — 사용자는 "내가 누른 게 왜 꺼지지"를 본다.
+       고정은 사용자가 직접 움직일 때(휠·터치·키보드·포인터) 풀린다. 스크롤 이벤트는 듣지 않는다 —
+       smooth 앵커 이동 자체가 스크롤이라 그걸로 풀면 고정이 되지 않고, 이 파일에 스크롤 핸들러를 두지 않는다는
+       규칙(계약서 §5-4)도 지킨다. */
+    var pinned = false;
+    var unpinOffs = [];
+    var NAV_KEYS = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+
+    function unpin() {
+      pinned = false;
+      unpinOffs.forEach(function (off) { off(); });
+      unpinOffs = [];
       setActive(pickCurrent(headings));
+    }
+
+    /* 사이드바 안에서의 휠·터치·클릭은 본문을 움직이지 않는다 — 목차를 더 보려고 트리를 굴리는 동안 고정이 풀리면 안 된다. */
+    function onUserMove(e) {
+      if (e.target && e.target.closest && e.target.closest('.side')) return;
+      if (e.type === 'keydown' && NAV_KEYS.indexOf(e.key) === -1) return;
+      unpin();
+    }
+
+    function pin(index) {
+      setActive(index);
+      if (pinned) return;
+      pinned = true;
+      var opts = { passive: true };
+      unpinOffs = ['wheel', 'touchmove', 'pointerdown', 'keydown'].map(function (type) {
+        return U.on(window, type, onUserMove, opts);
+      });
+    }
+
+    var io = new IntersectionObserver(function () {
+      if (!pinned) setActive(pickCurrent(headings));
     }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
     headings.forEach(function (h) { io.observe(h.el); });
 
-    /* 목차 클릭·직접 링크는 해시의 id로 즉시 옮긴다. 스크롤이 뒤따르면 IO가 다시 판정한다.
-       깨진 퍼센트 인코딩은 jumpToHash와 같은 이유로 그냥 포기한다. */
-    U.on(window, 'hashchange', function () {
+    /* 목차 클릭·직접 링크는 해시의 id로 즉시 옮기고 고정한다. 깨진 퍼센트 인코딩은 jumpToHash와 같은 이유로 포기한다. */
+    function applyHash() {
       var id;
       try { id = decodeURIComponent(window.location.hash.slice(1)); } catch (err) { return; }
       for (var i = 0; i < headings.length; i += 1) {
-        if (headings[i].id === id) { setActive(i); return; }
+        if (headings[i].id === id) { pin(i); return; }
       }
-    });
+    }
+    U.on(window, 'hashchange', applyHash);
+    /* 직접 링크(post.html?id=…#h-…)로 들어오면 hashchange가 없다 — 로드 시 한 번 같은 판정을 한다. */
+    applyHash();
   }
 
   /* ---------- index.json 어긋남 안내 ---------- */
@@ -399,6 +492,7 @@
     }
 
     buildToc(result.headings);
+    mountRecap();
     renderRelated(meta);
     renderNav(meta.id);
     noticeIndexDrift(meta);
@@ -434,16 +528,11 @@
     Blog.admin.init();
 
     var id = U.getQuery().id;
-    if (!id) {
-      showError('어떤 글을 열까요?',
-        '주소에 글 id가 없습니다.',
-        '예: post.html?id=2026-09-13-css-grid');
-      return;
-    }
 
     /* 사이트명은 본문보다 먼저 자리를 잡아야 한다. 사이드바도 같은 데이터로 그린다 —
        본문(loadPost)과 별개로 굴려서 글이 없거나 본문이 실패해도 분류 트리는 살아 있게 한다
-       (그래야 "그런 글은 없습니다" 화면에서 다른 글로 갈 길이 남는다).
+       (그래야 "그런 글은 없습니다" 화면에서 다른 글로 갈 길이 남는다). ?id가 없는 오류 화면도 같다(M4-9) —
+       그래서 id 검사보다 먼저 시작한다. id가 없으면 activeId가 null이라 현재 글 표시 없이 트리만 그려진다.
        분류(categories.json)를 같이 기다리는 이유 — 없으면 categoryList()가 글에서 유추한 이름·순서로 트리를 그린다.
        loadPost도 같은 두 약속을 쓰므로 요청은 늘지 않고, loadCategories()는 실패해도 reject하지 않는다.
        이 약속을 sideReady로 들고 있는 이유 — 사이드바 목차(mountSideToc)는 트리 안의 현재 글 항목 아래에
@@ -458,6 +547,13 @@
         /* 사이트명을 못 채워도 본문 표시는 계속한다. 사이드바에는 빈 데이터를 넘겨 .side-empty 한 줄이 뜨게 한다. */
         renderSide([], id);
       });
+
+    if (!id) {
+      showError('어떤 글을 열까요?',
+        '주소에 글 id가 없습니다.',
+        '예: post.html?id=2026-09-13-css-grid');
+      return;
+    }
 
     /* loadPost는 "없는 글"을 null로 돌려주고, 읽을 수 없는 상황(file://·네트워크)만 reject한다. */
     store.loadPost(id).then(function (post) {

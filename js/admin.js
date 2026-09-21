@@ -23,17 +23,20 @@
     return LOCAL_HOSTS.indexOf(window.location.hostname) !== -1;
   }
 
-  /* 관리자가 아니면 요소를 감추는 게 아니라 DOM에서 제거한다.
-     CSS만으로 숨기면 개발자도구 없이도 보이게 되돌릴 수 있고, 무엇보다
-     "숨겼으니 안전하다"는 착각을 만든다. */
+  /* [data-admin-only]는 마크업에서 항상 정적 hidden과 짝이다(계약서 §3·§8-2 예외, v3.8 — M4-8).
+     JS가 꺼진 방문자에게는 hidden이 그대로 남아 아무것도 보이지 않는다("안전한 실패").
+       관리자   → 그 요소 "자신의" hidden만 뗀다. 자손의 hidden(.editor 안 #btnSave·#editorServer·#catNew 등)은
+                  각자의 주인(editor.js)이 관리하므로 건드리지 않는다.
+       관리자 X → 감추는 게 아니라 DOM에서 제거한다. CSS만으로 숨기면 개발자도구 없이도 보이게 되돌릴 수 있고,
+                  무엇보다 "숨겼으니 안전하다"는 착각을 만든다.
+     body.admin-off는 판정 "뒤"에만 붙인다 — 판정 전에 붙이면 관리자 페이지의 첫 페인트에서 이름이 거짓이 된다(§3). */
   function apply(root) {
     var scope = root || document;
     var admin = isAdmin();
-    if (!admin) {
-      U.qsa('[data-admin-only]', scope).forEach(function (node) {
-        if (node.parentNode) node.parentNode.removeChild(node);
-      });
-    }
+    U.qsa('[data-admin-only]', scope).forEach(function (node) {
+      if (admin) node.removeAttribute('hidden');
+      else if (node.parentNode) node.parentNode.removeChild(node);
+    });
     if (scope === document) {
       document.body.classList.toggle('admin-off', !admin);
     }
