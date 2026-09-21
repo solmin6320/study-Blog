@@ -18,8 +18,13 @@
     Korean explanations live in the docs, not here. (Paths printed at runtime
     may contain Korean; that text comes from the filesystem, not from this file.)
 
+  WHAT IT IS NOT
+    This is the fallback for PCs without Docker. It serves files only: there is
+    no /api/*, so write.html shows 'Export files' instead of 'Save'. With Docker
+    Desktop running, start.bat picks the editor server (docker compose) instead.
+
   USAGE
-    start.bat                 (normal)
+    start.bat                 (normal - picks Docker or this file)
     powershell -NoProfile -ExecutionPolicy Bypass -File start.ps1 -Port 5501
 #>
 param(
@@ -66,8 +71,11 @@ try {
 } catch {
   Write-Host ''
   Write-Host "  [start] Port $Port is not available."
-  Write-Host '          Another preview server is probably still running.'
-  Write-Host '          Close it, or start this one on another port:'
+  Write-Host '          Another server is probably still running on it - either an older'
+  Write-Host '          preview window or the Docker editor server (docker compose).'
+  Write-Host '          If the Docker server is running, use that one instead: it has the'
+  Write-Host '          save API, this preview server does not. Otherwise close the other'
+  Write-Host '          window, or start this one on another port:'
   Write-Host "            powershell -NoProfile -ExecutionPolicy Bypass -File start.ps1 -Port 5501"
   Write-Host ''
   exit 1
@@ -77,6 +85,8 @@ $url = "http://localhost:$Port/index.html"
 Write-Host ''
 Write-Host "  [start] folder  : $Root"
 Write-Host "  [start] address : $url"
+Write-Host '  [start] mode    : preview only - no save API, the editor exports files'
+Write-Host '                    (for the save button run start.bat with Docker Desktop up)'
 Write-Host '  [start] stop    : Ctrl+C, or just close this window'
 Write-Host ''
 

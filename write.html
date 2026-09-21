@@ -80,14 +80,15 @@
     <a class="nav-link" href="index.html">글</a>
     <a class="nav-link" href="index.html#tags">태그</a>
     <a class="nav-link" href="about.html">소개</a>
-    <a class="nav-link" href="write.html" aria-current="page" data-admin-only>쓰기</a>
+    <!-- v3.8(계약서 §3): data-admin-only는 정적 hidden과 짝. admin.js가 관리자면 뗀다 — JS-off 방문자에게는 링크가 없다. -->
+    <a class="nav-link" href="write.html" aria-current="page" data-admin-only hidden>쓰기</a>
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
 </header>
 
 <!-- 사이드바 — 분류별 글 목록. 세 페이지 마크업이 바이트 단위로 같다(사양 B).
-     <header> 뒤·<main> 앞에 두는 이유: Tab 순서가 햄버거 → 사이드바 → 본문이 되어야
-     열자마자 다음 Tab이 사이드바 안으로 들어간다. #sideTree는 ui.js renderSide()가 채운다.
+     문서 순서는 헤더 → 사이드바 → 본문. 열릴 때 포커스는 ui.js focusIntoSide()가 옮긴다(계약서 §3-2).
+     #sideTree는 ui.js renderSide()가 채운다.
      열림·고정 상태는 <body> 클래스(side-open / side-pinned)로, ui.js가 붙인다. -->
 <aside class="side" id="side" aria-label="분류별 글 목록">
   <div class="side-head">
@@ -109,8 +110,8 @@
      이 클래스가 여기서만 기준선을 76rem으로 푼다. write.html의 <main> 외에는 쓰지 않는다. -->
 <main class="site-main editor-page" id="main" tabindex="-1">
 
-  <!-- 배포 도메인(관리자 판정 false)에서는 editor.js가 아래 .editor를 DOM에서 통째로 지우고
-       이 문단의 hidden만 푼다. 에디터는 초기화조차 하지 않는다 — 자동저장·단축키·beforeunload도 붙지 않는다.
+  <!-- 배포 도메인(관리자 판정 false)에서는 admin.js가 아래 .editor(data-admin-only)를 DOM에서 통째로 지우고
+       editor.js는 이 문단의 hidden만 푼다. 에디터는 초기화조차 하지 않는다 — 자동저장·단축키·beforeunload도 붙지 않는다.
        사용자 요구: 배포 버전은 보기만 가능해야 한다. 글은 posts/ 폴더에 넣어 커밋하는 것이 유일한 경로다.
        (판정은 hostname 하나다 — js/admin.js. 쿼리·localStorage로 켜는 길은 없다.) -->
   <div class="editor-visitor" id="editorVisitor" hidden>
@@ -118,18 +119,21 @@
   </div>
 
   <noscript>
-    <!-- 에디터는 전부 자바스크립트다. 꺼져 있으면 빈 입력칸만 남아 이유를 알 수 없다. -->
+    <!-- 에디터는 전부 자바스크립트다. 꺼져 있으면 .editor가 정적 hidden이라 이 안내만 보인다(계약서 §6·§8-2 예외). -->
     <div class="editor-visitor">
       <p><strong>자바스크립트가 꺼져 있어요</strong></p>
-      <p>미리보기 · 임시저장 · 파일 내보내기가 모두 자바스크립트로 동작합니다.
+      <p>미리보기 · 임시저장 · 저장 · 파일 내보내기가 모두 자바스크립트로 동작합니다.
          브라우저 설정에서 자바스크립트를 켜고 새로고침해 주세요.</p>
     </div>
   </noscript>
 
-  <div class="editor">
+  <!-- v3.8 M4-8(사용자 결정 4-B): 정적 hidden + data-admin-only(계약서 §3, §8-2 예외).
+       admin.js apply()가 관리자면 이 요소의 hidden만 떼고(자손 #btnSave 등의 hidden은 editor.js 몫), 아니면 노드째 지운다.
+       JS가 꺼진 방문자에게는 hidden이 남아 폼이 보이지 않는다 — 위 noscript 안내만 남는다. -->
+  <div class="editor" data-admin-only hidden>
     <div class="editor-head">
       <label class="sr-only" for="fTitle">제목</label>
-      <input class="editor-title" id="fTitle" type="text" placeholder="제목" title="제목"
+      <input class="editor-title" id="fTitle" type="text" placeholder="제목"
              autocomplete="off" spellcheck="false" maxlength="120">
 
       <!-- 수정 모드(?id=)에서만 editor.js가 문구를 채우고 hidden을 푼다.
@@ -142,7 +146,7 @@
            editor.js가 "빈 목록 + 새 분류 버튼"만으로 글을 끝까지 쓸 수 있게 만든다. -->
       <div class="cat-picker">
         <label class="sr-only" for="fCategory">분류 (글이 저장될 폴더)</label>
-        <select class="field" id="fCategory" title="분류 — posts/&lt;폴더명&gt;/ 에 저장됩니다"></select>
+        <select class="field" id="fCategory"></select>
         <button class="btn btn-ghost" type="button" id="btnNewCat"
                 aria-expanded="false" aria-controls="catNew">+ 새 분류</button>
       </div>
@@ -159,7 +163,7 @@
 
         <label class="sr-only" for="fNewCatName">새 분류 표시 이름</label>
         <input class="field" id="fNewCatName" type="text" placeholder="표시 이름 (예: 알고리즘)"
-               title="새 분류 표시 이름" autocomplete="off" maxlength="40">
+               autocomplete="off" maxlength="40">
 
         <label class="sr-only" for="fNewCatSlug">새 분류 폴더명 (영문 소문자·숫자·하이픈)</label>
         <!-- inputmode="latin"은 HTML 표준에 없는 값이라 어떤 브라우저도 해석하지 않았다(= 아무 효과 없음).
@@ -168,7 +172,6 @@
              "영문으로 쓰라"는 안내는 키보드 속성이 아니라 .cat-new-hint와 placeholder가 맡는다.
              값 검사는 editor.js의 SLUG_RE가 하고, 틀리면 이유를 토스트로 말해 준다. -->
         <input class="field" id="fNewCatSlug" type="text" placeholder="폴더명 (영문: algorithm)"
-               title="폴더명 — posts/&lt;폴더명&gt;/ 이 됩니다. 영문 소문자·숫자·하이픈만"
                aria-describedby="catNewHint"
                autocomplete="off" spellcheck="false" autocapitalize="none">
 
@@ -217,7 +220,7 @@
            서버 모드가 되면 editor.js가 #btnExport의 aria-keyshortcuts·title의 "(Ctrl+S)"를 뗀다 —
            보이는 버튼 둘이 같은 단축키를 주장하면 스크린리더가 둘 다 읽는다. -->
       <div class="editor-actions">
-        <button class="btn" type="button" id="btnPreviewToggle" title="나란히 · 작성만 · 미리보기만 전환">미리보기</button>
+        <button class="btn" type="button" id="btnPreviewToggle">미리보기</button>
         <button class="btn btn-primary" type="button" id="btnSave" hidden
                 title="저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장</button>
         <button class="btn btn-primary" type="button" id="btnExport"
@@ -231,20 +234,24 @@
 
     <div class="editor-split" id="editorSplit" data-mode="split">
       <div class="editor-pane">
-        <!-- role="toolbar": 버튼 10개를 하나의 탭 스톱으로 묶는다. 안에서는 좌우 화살표로 옮긴다
+        <!-- role="toolbar": 버튼 12개를 하나의 탭 스톱으로 묶는다. 안에서는 좌우 화살표로 옮긴다
              (editor.js의 roving tabindex와 짝이다 — 한쪽만 바꾸면 안내와 동작이 어긋난다).
-             예전에는 버튼마다 탭 스톱이라 제목칸에서 본문까지 Tab을 11번 눌러야 했다. -->
+             예전에는 버튼마다 탭 스톱이라 제목칸에서 본문까지 Tab을 여러 번 눌러야 했다.
+             v3.8(계약서 §6): 순서 고정 — bold italic heading link code codeblock list quote quiz table hr template.
+             title은 단축키 병기(B·I)에만 둔다 — 라벨과 같은 title은 스크린리더가 이름을 두 번 읽는다(§6 title 규칙). -->
         <div class="md-toolbar" id="mdToolbar" role="toolbar" aria-label="마크다운 서식">
           <button class="md-btn" type="button" data-md="bold" aria-label="굵게" title="굵게 (Ctrl+B)" aria-keyshortcuts="Control+B">B</button>
           <button class="md-btn" type="button" data-md="italic" aria-label="기울임" title="기울임 (Ctrl+I)" aria-keyshortcuts="Control+I">I</button>
-          <button class="md-btn" type="button" data-md="heading" aria-label="제목" title="제목">H2</button>
-          <button class="md-btn" type="button" data-md="link" aria-label="링크" title="링크">링크</button>
-          <button class="md-btn" type="button" data-md="code" aria-label="인라인 코드" title="인라인 코드">코드</button>
-          <button class="md-btn" type="button" data-md="codeblock" aria-label="코드 블록" title="코드 블록">코드블록</button>
-          <button class="md-btn" type="button" data-md="list" aria-label="목록" title="목록">목록</button>
-          <button class="md-btn" type="button" data-md="quote" aria-label="인용" title="인용">인용</button>
-          <button class="md-btn" type="button" data-md="table" aria-label="표" title="표">표</button>
-          <button class="md-btn" type="button" data-md="hr" aria-label="구분선" title="구분선">구분선</button>
+          <button class="md-btn" type="button" data-md="heading" aria-label="제목">H2</button>
+          <button class="md-btn" type="button" data-md="link" aria-label="링크">링크</button>
+          <button class="md-btn" type="button" data-md="code" aria-label="인라인 코드">코드</button>
+          <button class="md-btn" type="button" data-md="codeblock" aria-label="코드 블록 (// 로도)">코드블록</button>
+          <button class="md-btn" type="button" data-md="list" aria-label="목록">목록</button>
+          <button class="md-btn" type="button" data-md="quote" aria-label="인용">인용</button>
+          <button class="md-btn" type="button" data-md="quiz" aria-label="퀴즈 블록">퀴즈</button>
+          <button class="md-btn" type="button" data-md="table" aria-label="표">표</button>
+          <button class="md-btn" type="button" data-md="hr" aria-label="구분선">구분선</button>
+          <button class="md-btn" type="button" data-md="template" aria-label="복습 템플릿 넣기">템플릿</button>
         </div>
 
         <label class="sr-only" for="fBody">본문 (마크다운)</label>
@@ -253,11 +260,12 @@
              placeholder는 글을 쓰기 시작하면 사라지므로 세 겹으로 안내한다:
                ① placeholder(빈 화면)  ② 아래 숨은 설명(aria-describedby · 스크린리더)
                ③ 첫 Tab 때 #editorStatus에 뜨는 안내(editor.js의 teachTab) -->
-        <p class="sr-only" id="bodyHint">Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S 파일로 내보내기.</p>
+        <!-- Ctrl+S 문구는 내보내기 모드 기준이다. 서버 모드가 확인되면 editor.js setServerMode()가 "저장"으로 갈아 끼운다(계약서 §6-2). -->
+        <p class="sr-only" id="bodyHint">Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S 파일로 내보내기. 줄 첫머리에 //를 치고 Enter 또는 Space를 누르면 코드 블록이 됩니다.</p>
         <textarea class="editor-area" id="fBody" spellcheck="false" autocomplete="off"
                   aria-describedby="bodyHint"
-                  title="Tab = 들여쓰기 · Esc 다음 Tab = 다음 항목으로 이동"
-                  placeholder="여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S 내보내기."></textarea>
+                  placeholder="여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S 내보내기.
+줄 첫머리에 // 로 코드 블록 (//java 처럼 언어도)."></textarea>
       </div>
 
       <!-- 미리보기는 상세 페이지와 같은 .prose 안에서 그린다. 여기 보이는 모습이 곧 글의 모습이다. -->

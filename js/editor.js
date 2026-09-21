@@ -927,18 +927,29 @@
     var open = '```' + lang + '\n';
     var text = open + '\n```\n';                             // 세 줄 + 다음 줄 내용과 떨어뜨리는 개행
     var caret = lineStart + open.length;
-    fencing = true;
-    try {
-      replaceRange(lineStart, pos, text, caret, caret);
-    } finally {
-      fencing = false;
-    }
+    var typed = value.slice(lineStart, pos);
+
+    /* 바꾸는 일은 이 input 이벤트가 끝난 "다음 태스크"에서 한다. 편집 명령이 진행 중인 동안(예: 브라우저가
+       Enter를 넣는 중, 붙여넣기·execCommand가 일으킨 input) 중첩 execCommand는 거부되고 폴백(setRangeText)으로
+       떨어져 되돌리기 스택이 비는 것을 2026-09-21 헤드리스에서 실측했다. 한 태스크 뒤에는 방금 친 Enter와 펜스 치환이
+       각각 한 단계라 Ctrl+Z 한 번에 `//java` 줄로 돌아온다. 그 사이 값이 바뀌었으면(빠른 연타·IME) 손대지 않는다. */
+    window.setTimeout(function () {
+      if (fencing) return;
+      if (dom.body.value.slice(lineStart, pos) !== typed) return;
+      if (dom.body.selectionStart !== pos || dom.body.selectionEnd !== pos) return;
+      fencing = true;
+      try {
+        replaceRange(lineStart, pos, text, caret, caret);
+      } finally {
+        fencing = false;
+      }
+    }, 0);
     return true;
   }
 
   function onBodyInput(e) {
     if (fencing) return;                                     // execCommand가 일으킨 중첩 input
-    if (maybeFence(e)) return;                               // replaceRange가 onEdit·renderPreview까지 했다
+    maybeFence(e);                                           // 판정만 — 치환은 다음 태스크(위 주석)
     onEdit();
     renderPreview();
   }

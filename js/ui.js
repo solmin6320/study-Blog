@@ -52,7 +52,7 @@
     /* 버튼 내용은 비워 둔다 — 아이콘은 CSS가 :root[data-theme]를 보고 그린다. */
     btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
     btn.setAttribute('aria-label', theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환');
-    btn.setAttribute('title', theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환');
+    /* title은 두지 않는다 — aria-label과 같은 문구의 title은 일부 스크린리더가 이름을 두 번 읽는다(계약서 §6 title 규칙, v3.8). */
   }
 
   function initTheme() {
