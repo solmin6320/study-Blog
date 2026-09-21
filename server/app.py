@@ -26,7 +26,7 @@ from server.posts import (
     to_markdown_file, validate_folder_slug, validate_post_payload,
 )
 
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 ROOT = Path(__file__).resolve().parent.parent
 MAX_BODY = 2 * 1024 * 1024
 # 정적 서빙에서 감추는 첫 경로 조각(폴더)과 루트 파일. docs/api.md §1
@@ -49,6 +49,28 @@ app = FastAPI(title="blog-editor-server", version=SERVER_VERSION,
               docs_url=None, redoc_url=None, openapi_url=None)
 repo = Repo(ROOT)
 LOCK = threading.Lock()   # 쓰기 요청 직렬화(단일 프로세스)
+
+
+# ---------- Host 검사 (DNS 리바인딩 방지) ----------
+# 서버는 127.0.0.1에만 묶이지만, 악성 페이지가 자기 도메인을 127.0.0.1로 풀리게 해 두면 브라우저가
+# Host: evil.example 로 이 서버에 닿을 수 있다. Host가 로컬 이름이 아니면 무조건 400 — 정적·API 모두.
+ALLOWED_HOSTS = {"localhost", "127.0.0.1", "[::1]"}
+
+
+def host_allowed(host: str | None) -> bool:
+    h = (host or "").strip().lower()
+    if h.startswith("["):                       # IPv6 리터럴 [::1]:5500
+        h = h.split("]")[0] + "]"
+    else:
+        h = h.rsplit(":", 1)[0] if ":" in h else h
+    return h in ALLOWED_HOSTS
+
+
+@app.middleware("http")
+async def check_host(request: Request, call_next):
+    if not host_allowed(request.headers.get("host")):
+        return error_response(400, "bad_host", "이 서버는 localhost / 127.0.0.1 로만 접근할 수 있습니다.")
+    return await call_next(request)
 
 
 # ---------- 오류 형식 ----------
@@ -94,36 +116,98 @@ async def read_json_body(request: Request) -> Any:
         raise PostsError(400, "bad_request", "요청 본문이 올바른 JSON이 아닙니다.") from err
 
 
-# ---------- /api/health ----------
+# ---------- git (헬스 ?git=1 · 자동 커밋 B-1) ----------
+
+GIT_BASE = ["git", "-c", "safe.directory=*", "-c", "core.fileMode=false", "-c", "core.autocrlf=true",
+            "--no-optional-locks"]
+AUTO_COMMIT = os.environ.get("BLOG_AUTO_COMMIT", "0").strip() == "1"
+
+
+def run_git(args: list[str], timeout: float = 30) -> subprocess.CompletedProcess:
+    return subprocess.run(GIT_BASE + args, cwd=str(ROOT), capture_output=True, text=True, timeout=timeout)
+
 
 def git_info() -> dict:
-    """{branch, dirty}. git이 없거나 실패하면 .git/HEAD를 읽고 dirty는 null."""
+    """{branch, dirty}. git이 없거나 실패하면 branch는 .git/HEAD에서 읽고 dirty는 null.
+    `git status`는 bind mount에서 수 초가 걸릴 수 있어(M4-1) 헬스 기본 응답에서 뺐다 — `?git=1`일 때만 부른다."""
     branch: str | None = None
     dirty: bool | None = None
-    base = ["git", "-c", "safe.directory=*", "-c", "core.fileMode=false", "-c", "core.autocrlf=true",
-            "--no-optional-locks"]
     try:
-        r = subprocess.run(base + ["rev-parse", "--abbrev-ref", "HEAD"], cwd=str(ROOT),
-                           capture_output=True, text=True, timeout=10)
+        r = run_git(["rev-parse", "--abbrev-ref", "HEAD"], timeout=10)
         if r.returncode == 0 and r.stdout.strip():
             branch = r.stdout.strip()
-        r = subprocess.run(base + ["status", "--porcelain"], cwd=str(ROOT),
-                           capture_output=True, text=True, timeout=30)
+        r = run_git(["status", "--porcelain"])
         if r.returncode == 0:
             dirty = bool(r.stdout.strip())
     except (OSError, subprocess.TimeoutExpired):
         pass
     if branch is None:
-        head = Repo.read_text(ROOT / ".git" / "HEAD") or ""
-        head = head.strip()
+        head = (Repo.read_text(ROOT / ".git" / "HEAD") or "").strip()
         branch = head[len("ref: refs/heads/"):] if head.startswith("ref: refs/heads/") else (head[:12] or None)
     return {"branch": branch, "dirty": dirty}
 
 
+def git_identity() -> tuple[str, str] | None:
+    """커밋 신원: BLOG_GIT_NAME·BLOG_GIT_EMAIL env → 저장소 config(user.name/user.email) → 없으면 None.
+    컨테이너는 호스트의 전역 git config를 보지 못한다. 마운트된 .git/config(저장소 로컬 설정)는 본다."""
+    name = os.environ.get("BLOG_GIT_NAME", "").strip()
+    email = os.environ.get("BLOG_GIT_EMAIL", "").strip()
+    if name and email:
+        return name, email
+    try:
+        if not name:
+            r = run_git(["config", "--get", "user.name"], timeout=10)
+            name = r.stdout.strip() if r.returncode == 0 else ""
+        if not email:
+            r = run_git(["config", "--get", "user.email"], timeout=10)
+            email = r.stdout.strip() if r.returncode == 0 else ""
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return (name, email) if name and email else None
+
+
+def auto_commit(message: str) -> dict:
+    """posts/ 아래 변경만 스테이징해 커밋한다. 푸시는 하지 않는다(사용자 결정 1 — 권장안 A).
+    반환은 api.md §2의 `git` 필드 그대로: {committed: true, hash} 또는 {committed: false, reason}.
+    어떤 실패도 예외로 새지 않는다 — 커밋 실패가 저장 실패가 되어서는 안 된다."""
+    try:
+        ident = git_identity()
+        if ident is None:
+            return {"committed": False,
+                    "reason": "커밋 신원이 없습니다 — .env에 BLOG_GIT_NAME·BLOG_GIT_EMAIL을 적거나 저장소에서 git config user.name/user.email을 설정하세요."}
+        r = run_git(["add", "-A", "--", "posts/"])
+        if r.returncode != 0:
+            return {"committed": False, "reason": f"git add 실패: {(r.stderr or r.stdout).strip()[:200]}"}
+        r = run_git(["diff", "--cached", "--quiet", "--", "posts/"], timeout=10)
+        if r.returncode == 0:
+            return {"committed": False, "reason": "posts/에 커밋할 변경이 없습니다."}
+        env_args = ["-c", f"user.name={ident[0]}", "-c", f"user.email={ident[1]}"]
+        r = subprocess.run(GIT_BASE + env_args + ["commit", "--quiet", "--no-verify", "--only", "-m", message, "--", "posts/"],
+                           cwd=str(ROOT), capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            return {"committed": False, "reason": f"git commit 실패: {(r.stderr or r.stdout).strip()[:200]}"}
+        r = run_git(["rev-parse", "--short", "HEAD"], timeout=10)
+        return {"committed": True, "hash": r.stdout.strip() if r.returncode == 0 else ""}
+    except (OSError, subprocess.TimeoutExpired) as err:
+        return {"committed": False, "reason": f"git 실행 실패: {type(err).__name__}"}
+
+
+def with_git(result: dict, message: str) -> dict:
+    """저장·삭제 응답에 자동 커밋 결과를 붙인다. BLOG_AUTO_COMMIT이 꺼져 있으면 필드 자체가 없다."""
+    if AUTO_COMMIT:
+        result["git"] = auto_commit(message)
+    return result
+
+
+# ---------- /api/health ----------
+
 @app.get("/api/health")
-async def health() -> JSONResponse:
-    info = await run_in_threadpool(git_info)
-    return JSONResponse({"ok": True, "version": SERVER_VERSION, "git": info})
+async def health(request: Request) -> JSONResponse:
+    """기본은 {ok, version}뿐 — 프로세스를 띄우지 않아 항상 빠르다. `?git=1`이면 {branch, dirty}를 더한다(느릴 수 있음)."""
+    payload: dict = {"ok": True, "version": SERVER_VERSION}
+    if request.query_params.get("git") == "1":
+        payload["git"] = await run_in_threadpool(git_info)
+    return JSONResponse(payload, headers={"Cache-Control": "no-store"})
 
 
 # ---------- /api/posts, /api/categories (읽기: 파일 그대로) ----------
@@ -161,24 +245,59 @@ def _find_index_meta(index: dict | None, post_id: str) -> dict | None:
 
 
 def _disk_created(files: list[Path], index_meta: dict | None, post_id: str) -> str:
-    """store.mergeMeta(indexMeta, fileMeta).created — .md의 키가 있으면 파일이, 없으면 index가 답한다."""
+    """store.loadPost와 같은 순서: fileMeta = normalizeMeta(parsed.data, id) → mergeMeta(indexMeta, fileMeta).
+    mergeMeta는 .md에 **키가 있는** 필드는 (정규화된) 파일 값을, 없는 필드는 index 값을 고른 뒤 다시 normalizeMeta한다.
+    파일을 먼저 정규화하는 순서가 중요하다 — `created: ""`처럼 키는 있고 값이 빈 경우 파일 안의 updated·id 날짜가
+    index의 값보다 먼저 답한다(store.js:648). 순서를 바꾸면 같은 입력에 다른 created가 나온다(M4-2 ①)."""
     if not files:
         return index_meta["created"] if index_meta else ""
     parsed = parse_frontmatter(Repo.read_text(files[0]) or "")
-    fm = parsed["data"] if parsed["ok"] else {}
-    merged = {}
+    file_meta = normalize_meta(parsed["data"], post_id) if parsed["ok"] else None
+    merged: dict = {}
     for key in META_KEYS:
-        if parsed["ok"] and key in fm:
-            merged[key] = fm[key]
+        if file_meta is not None and key in parsed["data"]:
+            merged[key] = file_meta[key]
         elif index_meta:
             merged[key] = index_meta.get(key)
-    return normalize_meta(merged, post_id)["created"]
+    return normalize_meta(merged, "")["created"]
 
 
 def _only_one(files: list[Path], post_id: str) -> None:
     if len(files) > 1:
         where = ", ".join(repo.rel(p) for p in files)
         raise PostsError(409, "conflict", f'같은 id "{post_id}"의 글이 여러 폴더에 있습니다: {where}. 하나만 남기고 다시 시도하세요.')
+
+
+def _no_case_variants(post_id: str, folder: Path) -> None:
+    variants = repo.case_variants(post_id, folder)
+    if variants:
+        where = ", ".join(repo.rel(v) for v in variants)
+        raise PostsError(409, "conflict",
+                         f'"{post_id}"와 대소문자만 다른 파일이 있습니다: {where}. GitHub Pages는 대소문자를 구분하므로 '
+                         f"하나로 정리한 뒤 다시 시도하세요.")
+
+
+def _locate(post_id: str, index_meta: dict | None, form_category: str, cats: list | None) -> list[Path]:
+    """store.loadPost(id)가 찾는 방식 그대로: index.json이 분류를 적어 뒀으면 그 폴더(+평면·_uncategorized)만 본다.
+    화면이 못 찾는 글을 서버만 찾아 '저장 성공'하면 상세 화면은 '없습니다'가 된다(M4-2 ②) — 그래서 규칙을 store.js에 맞춘다.
+    대신 화면 밖 폴더에 같은 id가 있으면(이동·수동 편집 잔재) 조용히 두 벌을 만들지 않고 409로 정리를 요구한다.
+    파일 이름의 대소문자만 다른 것도 같은 이유로 409(NTFS는 같은 파일, GitHub Pages는 다른 파일)."""
+    declared = index_meta["category"] if index_meta and index_meta["category"] else ""
+    hint = declared or form_category
+    trusted = repo.trusted_lookup(declared, "", cats)
+    found = repo.find_existing(post_id, hint, cats, trusted)
+    _only_one(found, post_id)
+    if trusted:
+        stray = [p for p in repo.find_existing(post_id, hint, cats, False) if p not in found]
+        if stray:
+            where = ", ".join(repo.rel(p) for p in stray)
+            expected = repo.rel(repo.post_path(post_id, repo.category_slug(declared, cats)))
+            raise PostsError(409, "conflict",
+                             f'index.json은 "{post_id}"가 {expected}에 있다고 하는데 실제 파일은 {where}에 있습니다. '
+                             f"파일을 옮기거나 index.json의 category를 고친 뒤 다시 시도하세요.")
+    for p in repo.candidates(post_id, hint, cats, False):
+        _no_case_variants(post_id, p.parent)
+    return found
 
 
 def save_post(post_id: str, form: dict) -> dict:
@@ -190,9 +309,9 @@ def save_post(post_id: str, form: dict) -> dict:
         target = repo.post_path(post_id, slug)
 
         index_meta = _find_index_meta(index, post_id)
-        hint = index_meta["category"] if index_meta and index_meta["category"] else form["category"]
-        existing = repo.find_existing(post_id, hint, cats)
-        if target.is_file() and target not in existing:
+        existing = _locate(post_id, index_meta, form["category"], cats)
+        _no_case_variants(post_id, target.parent)      # 새 분류 폴더(아직 등록 전)도 검사
+        if repo.exists_exact(target) and target not in existing:
             existing.insert(0, target)
         _only_one(existing, post_id)
 
@@ -202,9 +321,7 @@ def save_post(post_id: str, form: dict) -> dict:
         prev_meta = None
         if prev_id:
             prev_meta = _find_index_meta(index, prev_id)
-            prev_hint = prev_meta["category"] if prev_meta and prev_meta["category"] else form["category"]
-            prev_files = repo.find_existing(prev_id, prev_hint, cats)
-            _only_one(prev_files, prev_id)
+            prev_files = _locate(prev_id, prev_meta, form["category"], cats)
 
         now = now_iso_kst()
         is_new = not existing and index_meta is None and not prev_files and prev_meta is None
@@ -235,7 +352,8 @@ def save_post(post_id: str, form: dict) -> dict:
             current = {"site": index["site"], "posts": [p for p in index["posts"] if p["id"] != prev_id]}
         repo.write_atomic(repo.index_path, build_index_json(meta, current))
 
-        return {"ok": True, "isNew": is_new, "path": repo.rel(target), "removed": removed, "meta": meta}
+        result = {"ok": True, "isNew": is_new, "path": repo.rel(target), "removed": removed, "meta": meta}
+        return with_git(result, f"글: {meta['title']} ({post_id})")
 
 
 def delete_post(post_id: str) -> dict:
@@ -243,8 +361,7 @@ def delete_post(post_id: str) -> dict:
         cats = repo.load_categories()
         index = repo.load_index()
         index_meta = _find_index_meta(index, post_id)
-        files = repo.find_existing(post_id, index_meta["category"] if index_meta else "", cats)
-        _only_one(files, post_id)
+        files = _locate(post_id, index_meta, "", cats)
         if not files and index_meta is None:
             raise PostsError(404, "not_found", f'"{post_id}" 글이 없습니다.')
         removed = []
@@ -253,7 +370,9 @@ def delete_post(post_id: str) -> dict:
             removed.append(repo.rel(p))
         if index is not None and index_meta is not None:
             repo.write_atomic(repo.index_path, build_index_json_without(post_id, index))
-        return {"ok": True, "removed": removed, "fileMissing": not files}
+        title = index_meta["title"] if index_meta else post_id
+        result = {"ok": True, "removed": removed, "fileMissing": not files}
+        return with_git(result, f"글 삭제: {title} ({post_id})")
 
 
 def save_categories(payload: Any) -> dict:

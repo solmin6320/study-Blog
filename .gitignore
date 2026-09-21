@@ -11,4 +11,8 @@ desktop.ini
 # 임시
 *.tmp
 *.bak
+*.bak.*
 ~$*
+
+# 로컬 서버 설정 (docker compose가 읽는다 — BLOG_GIT_NAME 등)
+.env

@@ -15,9 +15,9 @@
 
 | 에이전트 | 역할 | 담당 파일 (소유권) |
 |---|---|---|
-| `pm-integrator` | **전체 총괄** — 검수·분배·우선순위·충돌 조정 + **로컬 에디터 서버** | `docs/meeting-*.md`, `CLAUDE.md`, `server/*`, `Dockerfile`, `docker-compose.yml`, `docs/api.md` |
+| `pm-integrator` | **전체 총괄** — 검수·분배·우선순위·충돌 조정 + **로컬 에디터 서버** | `docs/meeting-*.md`, `docs/HANDOFF.md`, `CLAUDE.md`, `server/*`, `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `docs/api.md`, `.claude/**` |
 | `web-designer` | **웹 구조 총괄** — 정보구조·화면설계·계약서 + 비주얼 | `docs/contract.md`, `css/*` |
-| `frontend-dev` | 코어 뷰·데이터 파이프라인 | `index.html` `post.html`, `js/{config,util,store,markdown,app,post}.js`, `posts/*` |
+| `frontend-dev` | 코어 뷰·데이터 파이프라인 | `index.html` `post.html` `about.html`, `js/{config,util,store,markdown,app,post,about,theme-init}.js`, `posts/*` |
 | `frontend-dev-2` | 에디터·인터랙션·접근성 | `write.html`, `js/{editor,ui,admin}.js`, `start.bat` `start.ps1` |
 
 **소유하지 않은 파일은 읽기만 하고 수정하지 않는다.** 두 에이전트가 같은 파일을 건드리면 서로의 작업을 덮어쓴다.
@@ -37,7 +37,7 @@
 - `/sync` — 다른 세션이 푸시한 작업 받아오기 (fetch → 비교 → stash → pull)
 - `/round-start` — web-designer 선행 → dev 2인 병렬 투입. 프롬프트는 할 일만
 - `/resume-agent` — 한도·필터로 끊긴 에이전트를 새로 띄우지 않고 재개
-- `/fixture` — 글 0편 상태에서 검증용 임시 글 넣고 흔적 없이 지우기 (에이전트가 따름)
+- `/fixture` — 검증용 임시 글을 **에이전트별 샌드박스 사본**(`_tmp-<이름>`)에 넣고 흔적 없이 지우기. 프로젝트 `posts/`에는 아무도 픽스처를 쓰지 않는다
 - `/preview` — start.ps1로 띄워 Browser 도구로 확인, 끝나면 종료
 - `/ship` — 커밋 · 푸시 · Pages 반영 확인
 
@@ -72,18 +72,19 @@
 ## 구조
 
 ```
-index.html / post.html / write.html
-css/  tokens base layout components prose animations   (이 순서로 로드)
-js/   config util store markdown ui admin app post editor
-posts/       index.json + *.md
-docs/        contract.md(계약서), meeting-NN.md(회의록)
-start.bat    로컬 미리보기 (Docker 없는 PC용 폴백 — 저장 API 없음)
+index.html / post.html / about.html / write.html
+css/  tokens base layout components prose            (이 순서로 로드. animations.css는 v3.0에서 삭제)
+js/   theme-init(head에서 먼저) config util store markdown ui admin app post about editor
+posts/       index.json + categories.json + <분류>/*.md   (현재 글 0편)
+docs/        contract.md(계약서), api.md(서버 규약), meeting-NN.md(회의록), HANDOFF.md(인수인계)
+start.bat / start.ps1   로컬 미리보기 (Docker 없는 PC용 폴백 — 저장 API 없음)
 server/      FastAPI 로컬 에디터 서버 (app.py 엔트리, posts.py 파일 규칙) — Dockerfile·docker-compose.yml로 실행. 규약은 docs/api.md
+.claude/     agents/ 4인 정의, skills/ 24개
 ```
 
 ## 글 추가 흐름 (하이브리드)
 
-**Docker가 있으면** `docker compose up` → `write.html`의 "저장"이 `posts/`에 바로 쓴다(`docs/api.md`). 커밋·푸시는 사용자가 `/ship`.
+**Docker가 있으면** `docker compose up` → `write.html`의 "저장"이 `posts/`에 바로 쓰고 **자동으로 커밋**한다(`docs/api.md` §2-1, `BLOG_AUTO_COMMIT`). 푸시는 사용자가 `/ship`.
 **없으면** 아래 내보내기 흐름.
 
 `write.html`에서 작성 → "파일로 내보내기" → `.md`와 `index.json` 다운로드 → `posts/`에 넣고 커밋.

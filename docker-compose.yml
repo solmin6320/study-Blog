@@ -15,3 +15,9 @@ services:
     environment:
       BLOG_BIND: "0.0.0.0"            # 컨테이너 안 바인딩. 밖으로는 위 포트 매핑 하나뿐
       BLOG_PORT: "5500"
+      # B-1 자동 커밋(docs/api.md §2-1): 저장·삭제 성공 뒤 posts/ 만 커밋한다. 푸시는 하지 않는다(/ship). "0"이면 끔.
+      BLOG_AUTO_COMMIT: "${BLOG_AUTO_COMMIT:-1}"
+      # 커밋 신원. 컨테이너는 호스트의 전역 git config를 못 보므로 .env(.gitignore)에 적는다.
+      # 없으면 저장소 로컬 config(git config user.name/user.email) → 그것도 없으면 커밋을 건너뛰고 응답 git.reason에 이유를 적는다.
+      BLOG_GIT_NAME: "${BLOG_GIT_NAME:-}"
+      BLOG_GIT_EMAIL: "${BLOG_GIT_EMAIL:-}"

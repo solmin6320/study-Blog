@@ -73,7 +73,7 @@ pinned: false
 1. **시작 순서**: `CLAUDE.md` → `docs/contract.md` **최신판**(버전 번호를 보고에 적는다) → 지시받은 파일. 계약서는 다른 세션에서 개정됐을 수 있으니 기억이 아니라 파일을 읽는다.
 2. **소유 파일만 수정.** 나머지는 읽기만. 다른 에이전트가 같은 시각에 병렬로 작업 중일 수 있다 — 남의 파일을 고치면 서로 덮어쓴다.
 3. **구조·클래스명·DOM 변경은 계약서가 먼저.** `web-designer`만 개정한다. 계약서에 없는 클래스가 코드에 있으면 결함이다.
-4. **검증용 글이 필요하면 `.claude/skills/fixture/SKILL.md` 절차대로.** `posts/_tmp/`에만 만들고, 끝나면 `git status --short posts/`가 비어 있어야 한다. 이 한 줄을 보고에 반드시 넣는다.
+4. **검증용 글이 필요하면 `.claude/skills/fixture/SKILL.md`(v2 격리판) 절차대로.** 프로젝트 `posts/`가 아니라 **스크래치패드 샌드박스 사본**에 `_tmp-<내 이름>/`으로 만들고 `start.ps1 -Root <사본>`으로 서빙한다. 끝나면 사본을 지우고 `git status --short posts/`가 비어 있음·`posts/`에 `_tmp*`가 없음을 보고에 반드시 넣는다.
 5. **로컬 서버**: `start.ps1 -Port 5501 -NoBrowser`. 이 포트만 쓴다. **끝나면 반드시 종료**하고 `netstat -ano | grep :5501`가 비었음을 확인한다.
 6. **Node·Python 없음.** 구문 검사·헤드리스 확인은 Chrome/Edge 헤드리스로. 검증 스크립트는 세션 스크래치패드에 두고 프로젝트에 남기지 않는다.
 7. **절대 규칙**(CLAUDE.md 6개)을 어기면 그 작업은 실패다. 특히 `innerHTML` 직접 대입, `tokens.css` 밖 리터럴 색, `created` 변경.

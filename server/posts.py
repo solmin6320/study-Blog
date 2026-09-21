@@ -417,9 +417,17 @@ def normalize_category(raw: Any, fallback_order: int) -> dict:
     }
 
 
+def _collate_ko(name: str) -> tuple:
+    """String.prototype.localeCompare(b, 'ko')의 명시 규칙(ICU 근사). 컨테이너에 ko 로케일이 없어 strxfrm을 쓸 수 없다.
+    1차: 대소문자를 접은(casefold) 코드포인트 순 — 공백·구두점 < 숫자 < 라틴 < 한글(음절 코드포인트 = 자모 순).
+    2차: 1차가 같으면 소문자가 대문자보다 먼저(ICU 3차 가중치). 완전히 같으면 안정 정렬.
+    ICU와 갈리는 곳(악센트 무시 등)은 분류 이름에서 사실상 안 나온다. 라운드 7 골든 벡터(M4-13)가 합의 구간을 고정한다."""
+    return (name.casefold(), tuple(0 if ch.islower() else 1 for ch in name))
+
+
 def _by_order_key(c: dict):
-    """store.byOrder — order 오름차순, 같으면 이름(localeCompare 'ko' 대신 코드포인트 순)."""
-    return (c.get("order", 0), str(c.get("name", "")))
+    """store.byOrder — order 오름차순, 같으면 이름을 localeCompare(…, 'ko') 규칙(_collate_ko)으로."""
+    return (c.get("order", 0), _collate_ko(str(c.get("name", ""))))
 
 
 def build_categories_json(items: list[dict]) -> str:
@@ -533,21 +541,53 @@ class Repo:
     def rel(self, path: Path) -> str:
         return path.relative_to(self.root).as_posix()
 
-    def find_existing(self, post_id: str, hint: str, cats: list[dict] | None) -> list[Path]:
-        """store.postCandidates 순서로 실제 존재하는 파일을 전부 모은다(둘 이상이면 호출부가 409)."""
-        candidates: list[Path] = []
+    @staticmethod
+    def exists_exact(path: Path) -> bool:
+        """대소문자까지 같은 파일이 있는가. NTFS는 `foo.md`를 물어도 `Foo.md`를 찾아 주지만 GitHub Pages는 구분한다 —
+        is_file()만 믿으면 `Foo.md`를 `foo`로 덮어쓰고 index에는 `foo`가 남아 공개 사이트에서 404가 난다."""
+        if not path.is_file():
+            return False
+        try:
+            return path.name in os.listdir(path.parent)
+        except OSError:
+            return False
+
+    def case_variants(self, post_id: str, folder: Path) -> list[Path]:
+        """그 폴더에서 이름의 대소문자만 다른 `.md` 목록(정확히 같은 이름은 제외)."""
+        want = f"{post_id}.md"
+        try:
+            names = os.listdir(folder)
+        except OSError:
+            return []
+        return [folder / n for n in names if n != want and n.lower() == want.lower() and (folder / n).is_file()]
+
+    def candidates(self, post_id: str, hint: str, cats: list[dict] | None, trusted: bool = False) -> list[Path]:
+        """store.postCandidates(id, categoryHint, trusted) — 후보 경로 순서 그대로.
+        trusted=True면 등록 분류 전수 탐색을 건너뛴다(index.json이 그 글의 분류를 적어 두었을 때)."""
+        out: list[Path] = []
 
         def push(p: Path) -> None:
-            if p not in candidates:
-                candidates.append(p)
+            if p not in out:
+                out.append(p)
 
         if hint:
             push(self.post_path(post_id, self.category_slug(hint, cats)))
-        for c in cats or []:
-            push(self.post_path(post_id, c["slug"]))
+        if not trusted:
+            for c in cats or []:
+                push(self.post_path(post_id, c["slug"]))
         push(self.posts_dir / f"{post_id}.md")
         push(self.post_path(post_id, FALLBACK_SLUG))
-        return [p for p in candidates if p.is_file()]
+        return out
+
+    def find_existing(self, post_id: str, hint: str, cats: list[dict] | None, trusted: bool = False) -> list[Path]:
+        """store.loadPost가 두드리는 순서로 실제 존재하는 파일을 전부 모은다(둘 이상이면 호출부가 409).
+        대소문자까지 정확히 같은 파일만 '있다'로 친다(exists_exact)."""
+        return [p for p in self.candidates(post_id, hint, cats, trusted) if self.exists_exact(p)]
+
+    def trusted_lookup(self, declared: str, hint: str, cats: list[dict] | None) -> bool:
+        """store.loadPost — `declared`(index.json의 category)가 있고, 힌트가 없거나
+        `categorySlug(hint) === categorySlug(declared)`이면 전수 탐색을 접는다."""
+        return bool(declared) and (not hint or self.category_slug(hint, cats) == self.category_slug(declared, cats))
 
     # ----- 쓰기 -----
 
