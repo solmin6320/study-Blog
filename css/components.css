@@ -392,10 +392,9 @@ body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat 
   vertical-align: 0.1em;
 }
 
-/* 검색·필터로 걸러진 행. display:none이라야 목록에서 실제로 빠진다. */
-.entry.is-hidden { display: none; }
+/* (.entry.is-hidden은 v3.8에서 삭제 — renderList()가 필터마다 전량 재렌더하므로 붙는 일이 없었다. 계약서 §4-4) */
 
-/* ── 콘텐츠 도착 ① — 카드 진입 (v3.4, 계약서 §11-4) ──────────────────────────
+/* ── 콘텐츠 도착 ① — 카드 진입 (v3.4, 계약서 §11-4 · v3.8 첫 렌더에만) ─────────────
    사용자 요청 "임팩트 크지 않고 너무 작지도 않게, 눈에 안 띄게 부드러운 애니메이션, 라이트·다크".
    카드가 목록에 놓일 때 투명 → 불투명 + 3px 아래에서 제자리로. --dur(260ms) + --ease(expo-out):
    첫 80ms에 대부분 움직여 "나타났다"가 아니라 "놓였다"로 읽히고, 꼬리는 길어 끊기지 않는다.
@@ -403,8 +402,11 @@ body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat 
    · stagger 없음 — 300장이면 마지막 카드가 수 초 뒤에 오고, JS로 순번을 붙여야 한다. 동시에 놓인다.
    · 색은 건드리지 않는다(opacity·translate만) → 라이트·다크에서 같은 모션. 합성기가 처리한다.
    · .entry는 app.js/post.js가 만드는 요소라 §8-2("opacity 0 시작은 JS가 만든 요소만")에 맞는다.
-     renderList()가 필터마다 목록을 다시 그리므로 검색·분류 전환 때도 같은 모션이 난다 —
-     "결과가 바뀌었다"는 상태 변화의 신호다(원칙 4). 연관 글 카드(post.html)도 같은 부품이라 같이 논다.
+   · v3.8(M4-10): 목록에서는 "첫 렌더"에만 난다. v3.4는 필터 재렌더마다 나게 두었는데, 실측에서 테마
+     크로스페이드 저점(대비 1:1)에 필터를 누르면 전 카드가 0에서 다시 출발해 화면이 두 번 비었고, 같은
+     결과여도(검색어 한 글자마다) 전 카드가 다시 흔들렸다. app.js가 첫 렌더 300ms 뒤 #postList에
+     data-ready를 붙이면(계약서 §8-1) 그 뒤 새로 놓이는 카드는 아래 규칙으로 즉시 앉는다. 300 = --dur 260 +
+     여유 — 더 이르면 진행 중인 카드가 끝 상태로 "툭" 끊긴다. 연관 글(post.html)은 한 번만 그려져 속성이 없다.
    · backwards: 스타일 계산과 첫 프레임 사이에 원래 상태가 한 프레임 비치지 않게.
    · prefers-reduced-motion은 base.css의 `*` 블록이 1ms·1회로 자른다 → 즉시 끝 상태. */
 @keyframes arrive {
@@ -413,6 +415,9 @@ body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat 
 }
 
 .entry { animation: arrive var(--dur) var(--ease) backwards; }
+
+/* 첫 렌더가 끝난 목록(#postList[data-ready]) 안의 카드는 도착 모션 없이 놓인다(계약서 §4-4·§11-4). */
+.post-list[data-ready] .entry { animation: none; }
 
 /* 빈 상태 / 오류 상태의 내용물(상자는 layout.css). */
 .list-empty p,
@@ -727,8 +732,59 @@ body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat 
   color: var(--c-text-mute);
 }
 
-/* 208px 카드(layout.css)에 --fs-lg(19px)는 한 줄 10자라 제목 대부분이 3줄이 된다. 한 단계 내려 12자. */
-.post-related .entry-title { font-size: var(--fs-md); }
+/* 208px 카드(layout.css)에 --fs-lg(19px)는 한 줄 10자라 제목 대부분이 3줄이 된다. 한 단계 내려 12자.
+   v3.8: 3줄에서 자른다(말줄임). 실측 44자 제목이 5줄이 되어 한 장이 옆 두 장의 두 배 높이였다 — 연관 카드는
+   "추천"이라 세 장이 나란히 서는 것이 제목 꼬리보다 중요하고, 눌러 들어가면 h1로 전체가 보인다. 목록 카드(§4)는
+   자르지 않는다(거기서 제목은 유일한 식별 정보). 접근성 이름은 <a>의 텍스트 전체라 잘리지 않는다.
+   overflow: hidden이 ::after(카드 전체 링크 면적)를 자르지 않는 이유 — ::after의 containing block은
+   position: relative인 .entry(조상)라 이 요소의 overflow 클리핑 대상이 아니다. 계약서 §5-8. */
+.post-related .entry-title {
+  font-size: var(--fs-md);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── 요약 카드 .post-recap (v3.8, 계약서 §5-7-2 — meeting-05 A-1) ─────────────────
+   post.js가 본문에서 "다시 볼 때 이것만" 절(h2 + 블록들)을 "옮겨" .toc 다음·.prose 앞에 끼운다. 정적 마크업 아님.
+   생김새는 .entry·.toc와 같은 상자 어휘(1px 경계선 + 한 단계 밝은 면, 그림자 없음) — 한 페이지에 상자 어휘가 하나다.
+   카드가 본문보다 눈에 띄면 "글이 두 번 시작"(§0-3 ④)이 재발하므로 본문과 "같은 글자, 다른 면"으로만 갈린다.
+   색을 쓰지 않는 이유 — 역할색 셋(계약서 §1-2)에 "요약"은 없고 넷째 색을 만들 값이 없다.
+   아래 여백 --sp-8 = .toc와 같다: 본문 첫 문단과의 거리가 목차 상자 때와 같아야 리듬이 하나다. */
+.post-recap {
+  margin-block-end: var(--sp-8);
+  padding: var(--sp-5) var(--sp-6);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  /* 카드 안 코드 블록·표가 카드를 밀어 넓히지 않게(.code-wrap·.table-wrap이 안에서 스크롤한다). */
+  min-inline-size: 0;
+}
+
+/* 제목은 원문 h2 노드 그대로(id 유지, 클래스 없음). .prose 밖이라 .prose h2의 30px·액센트 밑선은 애초에 안 걸린다.
+   --fs-md 700 본문색 — "이 카드가 무엇인지"만 말하고 본문 h2와 겨루지 않는다. */
+.post-recap > h2 {
+  margin-block: 0 var(--sp-3);
+  font-size: var(--fs-md);
+  line-height: var(--lh-head);
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+/* 안의 .prose는 본문과 같은 규칙(글자·행간·마커·코드). 여백만 압축한다 — 미리보기 .prose와 같은 태도(prose.css §10). */
+.post-recap > .prose { min-inline-size: 0; }
+.post-recap > .prose > :first-child { margin-block-start: 0; }
+.post-recap > .prose > :last-child { margin-block-end: 0; }
+.post-recap > .prose .code-wrap,
+.post-recap > .prose .table-wrap,
+.post-recap > .prose img { margin-block: var(--sp-4); }
+
+/* 좁은 폰: .entry 카드 패딩과 같은 단계로 내린다(layout.css 440 블록의 .entry와 같은 값). 같은 부품은 한 파일 — 여기. */
+@media (max-width: 440px) {
+  .post-recap { padding: var(--sp-4) var(--sp-5); }
+}
 
 /* ============================================================================
    8. 목차 — 본문 위 인라인 박스 (계약서 §5-4)
@@ -750,6 +806,31 @@ body:has(#catIndex > .index-item:nth-child(2):last-child) .post-list .entry-cat 
   letter-spacing: var(--ls-wide);
   color: var(--c-text-mute);
 }
+
+/* v3.8 — #76(계약서 §12-13) 대비: .toc가 <details>, .toc-title이 <summary>가 되면 여기가 받는다. <p>이면 아무 일도 없다.
+   기본 마커(브라우저마다 위치가 제각각) 대신 .prose summary와 같은 CSS 삼각형. 누르는 컨트롤이라 --h-control-sm 높이. */
+summary.toc-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-block-size: var(--h-control-sm);
+  margin-block-end: 0;
+  list-style: none;
+  cursor: pointer;
+}
+summary.toc-title::-webkit-details-marker { display: none; }
+summary.toc-title::before {
+  content: "";
+  flex: none;
+  inline-size: 0;
+  block-size: 0;
+  border-block: 4px solid transparent;
+  border-inline-start: 6px solid currentColor;
+  transition: rotate var(--dur) var(--ease);
+}
+details.toc[open] > summary.toc-title { margin-block-end: var(--sp-2); }
+details.toc[open] > summary.toc-title::before { rotate: 90deg; }
+summary.toc-title:hover { color: var(--c-accent); }
 
 .toc-list {
   display: flex;
@@ -1152,6 +1233,10 @@ select.field {
   border-color: var(--c-border-soft);
   color: var(--c-accent);
 }
+
+/* v3.8(계약서 §6): "템플릿"은 서식 버튼이 아니라 문서 골격을 넣는 버튼이라 줄 끝으로 민다 — 새 클래스 없이 auto 마진.
+   툴바가 감기면(좁은 폭) 자기 줄의 끝으로 간다. "퀴즈"는 인용 옆 서식 버튼 자리에 그대로. */
+.md-btn[data-md="template"] { margin-inline-start: auto; }
 
 /* ── 저장 상태 ────────────────────────────────────────────────────────────
    기본은 "저장됨"(초록 점), .is-dirty는 "내보내지 않음"(경고색).

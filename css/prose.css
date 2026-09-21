@@ -666,13 +666,18 @@
   white-space: nowrap;
 }
 
-/* 사용자가 원시 HTML로 <details>를 쓸 수 있다(DOMPurify html 프로파일 허용). */
+/* ── 접기 = 셀프 퀴즈 카드 (v3.8, 계약서 §5-7-3 — meeting-05 A-4) ───────────────────
+   사용자가 원시 HTML로 <details>를 쓴다(DOMPurify html 프로파일 허용). 새 문법·새 클래스 없음 — 툴바 "퀴즈"가
+   `<details><summary>Q. </summary>` 스니펫을 넣고, summary가 질문·안이 답이다.
+   상자 어휘는 .entry·.toc·.post-recap과 같다(1px --c-border + --c-surface 면, 그림자 없음) — 본문 안에서 "가려진 답"은
+   상자로 읽혀야 하고, 한 페이지에 상자 어휘가 하나여야 한다. v3.7의 옅은 면(62% 혼합)·soft 경계선은 카드로 안 읽혀 올렸다.
+   여닫힘은 네이티브(open 속성) — 인쇄·복사·스크린리더가 그 속성을 그대로 따른다(§7-1 예외의 근거). 열림 애니메이션 없음. */
 .prose details {
   margin-block: var(--sp-6);
-  padding: var(--sp-3) var(--sp-5);
-  border: 1px solid var(--c-border-soft);
+  padding: var(--sp-2) var(--sp-5);
+  border: 1px solid var(--c-border);
   border-radius: var(--r-md);
-  background: color-mix(in oklab, var(--c-surface) 62%, transparent);
+  background: var(--c-surface);
 }
 
 .prose summary {
@@ -685,10 +690,17 @@
   gap: var(--sp-3);
   /* <summary>는 클릭으로 펼치는 컨트롤이다. 본문 안의 작은 컨트롤 토큰을 쓴다. */
   min-block-size: var(--h-control-sm);
+  padding-block: var(--sp-1);
   color: var(--c-text);
+  transition: color var(--dur-fast) var(--ease);
 }
 
 .prose summary::-webkit-details-marker { display: none; }
+
+/* hover·키보드 포커스 = 누를 수 있는 것의 색(--c-accent). 포커스 링 자체는 base.css :focus-visible 전역 규칙 —
+   list-style: none이어도 outline은 요소 상자에 그려진다. */
+.prose summary:hover,
+.prose summary:focus-visible { color: var(--c-accent); }
 
 .prose summary::before {
   content: "";
@@ -697,11 +709,19 @@
   block-size: 0;
   border-block: 5px solid transparent;
   border-inline-start: 7px solid var(--c-accent);
+  /* prefers-reduced-motion은 base.css의 `*` 블록이 1ms로 자른다. */
   transition: rotate var(--dur) var(--ease);
 }
 
 .prose details[open] > summary::before { rotate: 90deg; }
-.prose details[open] > summary { margin-block-end: var(--sp-3); }
+
+/* 열리면 질문과 답 사이에 선 하나 — "여기부터 답"을 색 없이 말한다. 답의 마지막 블록은 아래 여백 0(카드 바닥 빈 띠 방지). */
+.prose details[open] > summary {
+  margin-block-end: var(--sp-3);
+  padding-block-end: var(--sp-2);
+  border-block-end: 1px solid var(--c-border-soft);
+}
+.prose details > :last-child:not(summary) { margin-block-end: var(--sp-2); }
 
 /* ============================================================================
    10. 미리보기 패널 안의 .prose

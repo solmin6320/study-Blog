@@ -22,7 +22,6 @@
      순백을 쓰지 않는 이유는 그대로다 — 장시간 독서에서 눈부심이 덜하고,
      이 블로그에 남은 유일한 "질감"이 이 따뜻한 종이색이다. */
   --c-bg:          #f7f5ef;   /* 페이지 바탕 = 읽기 면 */
-  --c-bg-2:        #efece3;   /* 바탕보다 한 단계 낮은 면(거의 안 쓴다) */
   --c-surface:     #fffdf8;   /* 인풋·모달·토스트처럼 "위에 얹힌" 면 */
   --c-surface-2:   #efeade;   /* 오목한 면(코드 머리띠, 표 헤더, 지우기 버튼) */
   --c-border:      #d9d1c0;   /* 실선 경계 */
@@ -266,7 +265,6 @@
   color-scheme: dark;
 
   --c-bg:          #17160f;
-  --c-bg-2:        #100f0b;
   --c-surface:     #211f18;
   --c-surface-2:   #2a271f;
   --c-border:      #3d392d;
@@ -343,8 +341,9 @@
    왜 이 방식인가 — v3.1은 `* { transition: background-color, border-color, color }`였다.
    240ms일 때는 hover용 --dur-fast(160ms) 부품이 80ms 먼저 끝나도 티가 안 났지만, 1.2초에서는
    링크·버튼·아이콘·인덱스 항목처럼 자기 transition을 가진 것들만 160ms 만에 튀고 바탕은 1초 넘게
-   건너가 "글자 먼저, 바탕 나중"이 된다. 토큰을 보간하면 그 값을 참조하는 모든 요소가 자기
-   transition과 무관하게 같은 프레임에 같은 중간색을 받는다. hover 전환은 그대로 빠르다 —
+   건너가 "글자 먼저, 바탕 나중"이 된다. 토큰을 보간하면 그 값을 참조하는 요소가 같은 중간색을 받는다
+   (v3.8 실측 정정: color/background-color에 --dur-fast transition을 가진 부품은 토큰 변화를 자기 transition으로
+   다시 따라가 100~160ms 뒤쫓는다 — 체감이 작아 그대로 둔다, 계약서 §11). hover 전환은 그대로 빠르다 —
    hover는 "어느 토큰을 쓰는가"가 바뀌는 것이고, 테마는 "토큰의 값"이 바뀌는 것이라 서로 겹치지 않는다.
    · JS 0줄. 첫 페인트에는 걸리지 않는다(theme-init.js가 <link>보다 앞에서 data-theme을 정하므로
      "이전 값"이 없다). 첫 토글부터 · 양방향 · 연타 중에도 현재 중간색에서 이어진다(transition의 본성).
@@ -354,7 +353,6 @@
      떠 있는 것(모달·토스트·오버레이 사이드바)에만 있어 즉시 바뀌어도 보이지 않는다.
    ========================================================================= */
 @property --c-bg          { syntax: "<color>"; inherits: true; initial-value: transparent; }
-@property --c-bg-2        { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-surface     { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-surface-2   { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-border      { syntax: "<color>"; inherits: true; initial-value: transparent; }
