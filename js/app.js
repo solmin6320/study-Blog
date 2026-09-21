@@ -1,5 +1,6 @@
 /* app.js — index.html 전용.
-   카드 그리드(분류 → 제목 → 날짜·태그, 계약서 §4-4) 렌더 + 검색 + 분류/태그 인덱스 + 사이드바 데이터 공급 + URL 상태 동기화.
+   카드 그리드(분류 → 제목 → 날짜·태그, 계약서 §4-4) 렌더 + 검색 + 태그 인덱스 + 사이드바 데이터 공급 + URL 상태 동기화.
+   분류 필터(?cat=)는 유지하되 거는 쪽은 사이드바(ui.js .side-cat-name)다 — 분류 인덱스 행 #catRow는 v3.9에서 폐기됐다(§4-3).
    정렬 컨트롤은 없다. 학습 기록의 순서는 시간순 하나다(계약서 §0-2). */
 (function (window, document) {
   'use strict';
@@ -51,7 +52,7 @@
     return state.posts.filter(function (post) { return slugById[post.id] === state.cat; });
   }
 
-  /* 인덱스에 실제로 그려지는 분류인지. 등록된 분류 + 글만 있는 미등록 분류가 대상이다. */
+  /* 사이드바에 실제로 그려지는 분류인지. 등록된 분류 + 글만 있는 미등록 분류가 대상이다. */
   function catExists(slug) {
     if (slug === '*') return true;
     return store.categoryList(state.posts).some(function (cat) { return cat.slug === slug; });
@@ -175,17 +176,17 @@
          "파일을 넣으세요"는 방문자가 할 수 없는 일이고, 비어 있음이 고장으로 보여도 안 된다. */
       setEmptyMessage('아직 글이 없습니다.',
         admin
-          ? '위 “쓰기”에서 첫 글을 쓰고, 내보낸 파일을 posts/ 폴더에 넣으면 여기에 나타납니다.'
+          ? '위 “쓰기”에서 첫 글을 쓰고 저장하면 여기에 나타납니다.'
           : '첫 글이 올라오면 여기에 표시됩니다.',
         false);
       return;
     }
 
-    /* ?cat= 값이 목록에 없는 slug면 인덱스에 켜진 항목이 하나도 없어 "왜 비었는지"를 알 수 없다.
+    /* ?cat= 값이 목록에 없는 slug면 사이드바에 켜진 항목이 하나도 없어 "왜 비었는지"를 알 수 없다.
        주소를 잘못 받은 것과 글이 아직 없는 것은 사용자가 할 일이 다르므로 문구를 나눈다. */
     if (state.cat !== '*' && !catExists(state.cat)) {
       setEmptyMessage('‘' + state.cat + '’ 라는 분류는 없습니다.',
-        '주소의 ?cat= 값이 분류 목록에 없습니다. 위 분류에서 다시 골라 주세요.', true);
+        '주소의 ?cat= 값이 분류 목록에 없습니다. 왼쪽 분류 메뉴에서 다시 골라 주세요.', true);
       return;
     }
 
@@ -220,58 +221,28 @@
     }
   }
 
-  /* ---------- 인덱스 — 분류 / 태그 (계약서 §4-3) ----------
-     두 축이 같은 부품을 쓴다. 이름은 .index-name 안에 넣고,
-     구분자(·)와 태그의 # 접두사는 CSS가 그린다 — 텍스트로 넣으면 필터 값과 화면 문자열이 어긋난다. */
+  /* ---------- 인덱스 — 태그 (계약서 §4-3) ----------
+     v3.9부터 한 축이다. 분류 인덱스 행(#catRow)은 분류명 = 태그명인 블로그에서 같은 알약 줄이 둘로 보여 폐기됐고,
+     분류 선택은 사이드바(.side-cat-name[aria-current])가 맡는다. 이름은 .index-name 안에 넣고,
+     구분자(·)와 태그의 # 접두사는 CSS가 그린다 — 텍스트로 넣으면 필터 값과 화면 문자열이 어긋난다.
+     .is-empty는 붙이지 않는다 — 태그는 글에서 모으므로 0편 항목이 없고, CSS 규칙도 v3.9에서 지워졌다. */
 
   function indexItem(opts) {
     var btn = U.el('button', {
-      class: 'index-item'
-        + (opts.active ? ' is-active' : '')
-        + (opts.empty ? ' is-empty' : ''),
+      class: 'index-item' + (opts.active ? ' is-active' : ''),
       type: 'button'
     });
-    if (opts.cat !== undefined) {
-      btn.setAttribute('data-cat', opts.cat);
-      /* 분류는 단일 선택이라 aria-current. 비활성 항목에는 "false"가 아니라 속성 자체를 두지 않는다. */
-      if (opts.active) btn.setAttribute('aria-current', 'true');
-    } else {
-      btn.setAttribute('data-tag', opts.tag);
-      /* 태그는 다중 선택이라 aria-pressed. 이쪽은 false도 의미가 있다(누를 수 있고 지금은 꺼짐). */
-      btn.setAttribute('aria-pressed', opts.active ? 'true' : 'false');
-    }
+    btn.setAttribute('data-tag', opts.tag);
+    /* 태그는 다중 선택이라 aria-pressed. false도 의미가 있다(누를 수 있고 지금은 꺼짐). */
+    btn.setAttribute('aria-pressed', opts.active ? 'true' : 'false');
     btn.appendChild(U.el('span', { class: 'index-name', text: opts.name }));
     btn.appendChild(U.el('span', { class: 'index-count', text: String(opts.count) }));
     return btn;
   }
 
-  /* 정렬은 U.sortCats(order → 글 수 → 이름, 계약서 §4-3). 사이드바도 같은 순서를 써야 하므로 util로 뺐다. */
+  /* 정렬은 U.sortCats(order → 글 수 → 이름, 계약서 §3-2). 사이드바가 이 순서로 그린다. */
   function sortedCats() {
     return U.sortCats(store.categoryList(state.posts));
-  }
-
-  /* 글이 0편인 분류도 그린다(.is-empty). 빈 칸이 보여야 "여기에 쓰면 되는구나"를 안다. */
-  function renderCatIndex() {
-    if (!dom.catIndex || !dom.catRow) return;
-    var cats = sortedCats();
-
-    /* 분류가 하나도 없으면 행 전체를 감춘다. "분류  전체 0" 한 줄은 정보가 아니라
-       "여기 뭔가 고장났나?"로 읽힌다 — 글이 0편인 첫 화면에서 특히 그렇다(계약서 §4-3). */
-    U.setHidden(dom.catRow, !cats.length);
-    if (!cats.length) { U.clear(dom.catIndex); return; }
-
-    var frag = document.createDocumentFragment();
-    frag.appendChild(indexItem({
-      cat: '*', name: '전체', count: state.posts.length, active: state.cat === '*'
-    }));
-    cats.forEach(function (cat) {
-      frag.appendChild(indexItem({
-        cat: cat.slug, name: cat.name, count: cat.count,
-        active: state.cat === cat.slug, empty: !cat.count
-      }));
-    });
-    U.clear(dom.catIndex);
-    dom.catIndex.appendChild(frag);
   }
 
   /* 태그는 지금 보고 있는 분류 안의 것만 센다. 분류를 고른 뒤에도 전체 태그가 남아 있으면
@@ -318,7 +289,7 @@
       /* data-tag(필터 값·주소)는 키, 화면 글자는 원문 표기. */
       frag.appendChild(indexItem({
         tag: key, name: counts[key].name, count: counts[key].count,
-        active: state.tags.indexOf(key) !== -1, empty: !counts[key].count
+        active: state.tags.indexOf(key) !== -1
       }));
     });
     U.clear(dom.tagIndex);
@@ -398,10 +369,9 @@
     renderList();
   }
 
-  /* 인덱스 두 축은 서로의 개수에 영향을 준다(분류를 고르면 태그 수가 바뀐다). 항상 같이 그린다.
-     분류가 바뀌는 경로(클릭·뒤로가기·초기화)는 전부 여기를 지나므로 사이드바의 activeCat도 여기서 맞춘다. */
+  /* 분류가 바뀌면 태그 개수가 바뀐다(태그는 보고 있는 분류 안에서만 센다). 분류가 바뀌는 경로(사이드바 링크 = 새 주소 로드·
+     뒤로가기·초기화)는 전부 여기를 지나므로 태그 인덱스와 사이드바의 activeCat을 항상 같이 맞춘다. */
   function renderIndexes() {
-    renderCatIndex();
     renderTagIndex();
     renderSide();
   }
@@ -428,16 +398,7 @@
       dom.search.focus();
     });
 
-    /* 분류는 단일 선택. 켜진 것을 다시 누르면 전체로 돌아온다. */
-    U.on(dom.catIndex, 'click', function (e) {
-      var btn = e.target.closest('.index-item');
-      if (!btn) return;
-      var slug = btn.getAttribute('data-cat');
-      state.cat = (slug === state.cat && slug !== '*') ? '*' : slug;
-      writeUrl(true);
-      renderIndexes();
-      renderList();
-    });
+    /* 분류 클릭 핸들러는 없다 — 사이드바의 분류 링크(index.html?cat=…)가 페이지를 새로 열고 readUrl()이 받는다(계약서 §3-2·§4-3). */
 
     /* 태그는 다중 선택. '*'는 필터 해제다. */
     U.on(dom.tagIndex, 'click', function (e) {
@@ -484,12 +445,12 @@
     document.title = site.title;
   }
 
-  /* 내보내지 않은 초안이 남아 있으면 알려 준다(데이터 유실 방지). */
+  /* 저장하지 않은 초안이 남아 있으면 알려 준다(데이터 유실 방지). */
   function noticeDrafts() {
     if (!Blog.admin.isAdmin()) return;
     var drafts = store.draft.list();
     if (!drafts.length) return;
-    U.toast('내보내지 않은 초안 ' + drafts.length + '개가 남아 있습니다', 'warn');
+    U.toast('저장하지 않은 초안 ' + drafts.length + '개가 남아 있습니다', 'warn');
   }
 
   /* posts/ 안의 파일이 잘못돼 있다는 경고들. 관리자(= 파일을 고칠 수 있는 사람)에게만 띄운다.
@@ -511,7 +472,6 @@
 
   function showLoadError(err) {
     U.setHidden(dom.loading, true);
-    U.setHidden(dom.catRow, true);
     U.setHidden(dom.tagFold, true);
     U.clear(dom.list);
     U.setHidden(dom.empty, false);
@@ -532,8 +492,6 @@
     dom.loading = document.getElementById('listLoading');
     dom.search = document.getElementById('searchInput');
     dom.searchClear = U.qs('.search-clear');
-    dom.catRow = document.getElementById('catRow');
-    dom.catIndex = document.getElementById('catIndex');
     dom.tagFold = document.getElementById('tags');
     dom.tagIndex = document.getElementById('tagIndex');
     /* 손잡이의 개수 칸. #tagIndex 안에도 .index-count가 생기므로 summary로 범위를 좁힌다. */

@@ -1,6 +1,7 @@
-/* editor.js — write.html 전용. 마크다운 작성, 실시간 미리보기, 자동 임시저장,
-   .md + index.json (+ categories.json) 내보내기, ?id= 수정 모드,
-   v3.5: 로컬 에디터 서버(docs/api.md)가 있으면 PUT /api/posts/{id}로 직접 저장.
+/* editor.js — write.html 전용. 마크다운 작성, 실시간 미리보기, 자동 임시저장, ?id= 수정 모드,
+   로컬 에디터 서버(docs/api.md)에 PUT /api/posts/{id}로 저장.
+   v3.9(meeting-06 #2): 저장은 서버 하나뿐이다 — 다운로드로 파일을 내려받던 길은 완전히 없어졌다.
+   서버가 없으면 쓸 수는 있지만 저장할 수 없고, 화면이 그 사실을 말한다(계약서 §6-1).
    이 화면이 "공부한 걸 블로그에 넣는" 유일한 통로다. 실수로 글을 잃는 경로가 없어야 한다.
 
    글은 posts/<분류slug>/<id>.md 에 들어간다(계약서 §9-3).
@@ -19,7 +20,9 @@
      T4-1 저장 직전·직후 autosave debounce 취소(뒤늦게 발화해 방금 지운 초안을 되살리던 것),
      T4-2 새 글 저장 뒤 state.slot = 저장된 id + URL ?id= 갱신(초안이 'new' 슬롯에 고아로 남던 것),
      T4-3 id 변경(rename) 저장 뒤 슬롯도 새 id로(옛 id 슬롯에 고아 초안).
-   그리고 툴바 템플릿·퀴즈(A-11·A-4), 줄 첫머리 `//` 코드 블록 단축 입력(U-1, 계약서 §6-2). */
+   그리고 툴바 템플릿·퀴즈(A-11·A-4), 줄 첫머리 `//` 코드 블록 단축 입력(U-1, 계약서 §6-2).
+   v3.9(meeting-06 #4·#5): 본문 Enter 규칙 ①~⑤(펜스 안 들여쓰기·괄호, 펜스 밖 목록 이어쓰기 — 계약서 §6-2 Enter 규칙 표),
+   한 줄 선택 Tab = 줄 들여쓰기, 저장 뒤 사이드바 즉시 갱신. */
 (function (window, document) {
   'use strict';
 
@@ -41,10 +44,9 @@
   /* posts/ 안에서 이미 뜻이 정해진 이름. 폴더로 쓰면 파일과 헷갈린다. */
   var RESERVED_SLUGS = ['index', 'categories', 'posts'];
 
-  /* 복습 템플릿·퀴즈 스니펫(계약서 §6-2·§5-7-3, meeting-05 접점 표).
-     진실은 config.js의 CFG.recap(frontend-dev 소유)이다. 아직 없으면 접점 표의 문자열 그대로를 쓴다 —
-     두 값이 다르면 post.js의 요약 카드가 템플릿의 h2를 못 알아본다. */
-  var RECAP_TEMPLATE_FALLBACK = '## 핵심\n\n\n## 다시 볼 때 이것만\n- \n\n## 헷갈린 것\n- \n';
+  /* 복습 템플릿의 진실은 config.js의 CFG.recap.template(frontend-dev 소유) 하나다(계약서 §6-2·§5-7-3) —
+     여기 사본을 두지 않는다. 두 값이 갈리면 post.js의 요약 카드가 템플릿의 h2를 못 알아본다(v3.9 #106).
+     퀴즈 스니펫은 §5-7-3의 것. */
   var QUIZ_SNIPPET = '<details>\n<summary>Q. </summary>\n\n답\n\n</details>\n';
 
   /* 줄 첫머리 `//`(+언어) — 계약서 §6-2. 언어는 [a-z0-9+#-]{1,20}. */
@@ -62,12 +64,10 @@
     originalPath: '',     // 실제로 읽어 온 경로. 분류를 바꾸면 "이 파일을 지우라"고 알려 줘야 한다.
     idTouched: false,     // 사용자가 id를 직접 건드렸으면 자동 생성을 멈춘다
     modeTouched: false,   // 보기 모드를 손수 바꿨으면 화면 폭 변화가 덮어쓰지 않는다
-    dirty: false,         // 내보내지 않은 변경
-    exporting: false,     // 내려받기 진행 중. 같은 파일을 두 번 내보내지 못하게 막는다
-    server: false,        // 로컬 에디터 서버(docs/api.md)가 응답했는가. true면 Ctrl+S = 저장
+    dirty: false,         // 저장하지 않은 변경
+    server: false,        // 로컬 에디터 서버(docs/api.md)가 응답했는가. false면 저장 버튼이 disabled, Ctrl+S는 안내 토스트
     saving: false,        // PUT 진행 중. 같은 글을 두 번 보내지 못하게 막는다
-    indexData: null,
-    indexError: null      // index.json을 왜 못 읽었는지. 내보내기 안전장치의 판단 근거가 된다.
+    indexData: null       // index.json 사본 — 사이트명(fillSite)·사이드바(drawSide)가 읽는다. 저장 뒤 force로 다시 받는다
   };
 
   /* 분류 상태. added는 "이번에 새로 만들어서 categories.json에 아직 없는" 슬러그들. */
@@ -226,7 +226,7 @@
     if (!dom.category) return;
     var want = (keep === undefined || keep === null) ? dom.category.value : keep;
     U.clear(dom.category);
-    /* 첫 항목은 "아직 고르지 않음"(value ''). 저장·내보내기는 validate()가 여기서 막고 셀렉트에 포커스를 준다(M4-4).
+    /* 첫 항목은 "아직 고르지 않음"(value ''). 저장은 validate()가 여기서 막고 셀렉트에 포커스를 준다(M4-4).
        placeholder 문구는 라벨이 아니라 다음 행동 안내다 — 이름은 <label for="fCategory">가 맡는다. */
     dom.category.appendChild(U.el('option', { value: '', text: '분류를 고르세요' }));
     cats.list.forEach(function (c) {
@@ -240,7 +240,7 @@
   }
 
   /* categories.json에 없는 값(예: v1의 한글 분류)이라도 조용히 날리지 않는다.
-     보이게 남겨 두고, 내보낼 때 폴더로 쓸 수 없다는 사실을 알려 준다. */
+     보이게 남겨 두고, 저장할 때 폴더로 쓸 수 없다는 사실을 알려 준다. */
   function selectCategory(value) {
     if (!dom.category) return;
     var v = String(value || '').trim();
@@ -330,9 +330,7 @@
     fillCategoryOptions(cat.slug);
     closeNewCat(true);
     onEdit();
-    U.toast(state.server
-      ? '분류를 만들었어요 · 저장할 때 서버에 함께 등록합니다'
-      : '분류를 만들었어요 · 내보낼 때 categories.json도 함께 내려받습니다', 'ok');
+    U.toast('분류를 만들었어요 · 저장할 때 서버에 함께 등록합니다', 'ok');
     return true;
   }
 
@@ -412,14 +410,6 @@
     if (dom.status) dom.status.classList.add('is-dirty');
   }
 
-  /* 오류 토스트는 role="alert"(끼어들어 읽힘). U.toast는 role="status"로 만드므로 여기서 바꾼다 —
-     같은 태스크 안이라 접근성 트리에는 alert로 처음 나타난다. 경고·성공은 status 그대로. */
-  function toastErr(message) {
-    var node = U.toast(message, 'err');
-    if (node) node.setAttribute('role', 'alert');
-    return node;
-  }
-
   /* ---------- 미리보기 ---------- */
 
   var renderPreview = U.debounce(function () {
@@ -450,7 +440,7 @@
       newCats: addedCatObjects(),
       form: form
     });
-    setStatus(ok ? '임시저장됨 · 아직 ' + (state.server ? '서버에 저장하지' : '파일로 내보내지') + ' 않았어요' : '임시저장 실패(브라우저 저장소 차단)', true);
+    setStatus(ok ? '임시저장됨 · 아직 서버에 저장하지 않았어요' : '임시저장 실패(브라우저 저장소 차단)', true);
     return ok;
   }
 
@@ -492,6 +482,7 @@
   function replaceRange(start, end, text, selStart, selEnd) {
     var target = dom.body;
     var applied = false;
+    var value0 = target.value.length;
 
     /* execCommand는 "현재 선택 영역"에 끼워 넣는다. 먼저 바꿀 범위를 선택해 둬야 한다. */
     target.focus();
@@ -499,12 +490,15 @@
 
     if (typeof document.execCommand === 'function') {
       try {
-        applied = document.execCommand('insertText', false, text) === true;
+        /* 빈 문자열은 insertText가 아니라 delete다 — 'insertText'에 ''를 주면 브라우저에 따라 false를 돌려주고
+           폴백(setRangeText)으로 떨어져 되돌리기 스택이 빈다. Enter 규칙 ④의 "목록 끝내기"(접두사만 지운다)가 이 길을 쓴다. */
+        applied = document.execCommand(text === '' ? 'delete' : 'insertText', false, text) === true;
       } catch (err) {
         applied = false;
       }
       /* true를 돌려주고도 실제로는 안 넣는 브라우저가 있다. 결과를 확인하고 아니면 폴백. */
       if (applied && target.value.slice(start, start + text.length) !== text) applied = false;
+      if (applied && text === '' && target.value.length !== value0 - (end - start)) applied = false;
     }
 
     if (!applied) {
@@ -836,13 +830,14 @@
   /* ---------- 템플릿·퀴즈 (v3.8, 계약서 §6-2·§5-7-3) ---------- */
 
   function recapTemplate() {
-    return (CFG.recap && typeof CFG.recap.template === 'string' && CFG.recap.template) || RECAP_TEMPLATE_FALLBACK;
+    return (CFG.recap && typeof CFG.recap.template === 'string') ? CFG.recap.template : '';
   }
 
   /* 본문이 비었으면(공백만) 템플릿 전체로 갈고 커서를 첫 절 아래 빈 줄에, 아니면 커서 위치에 블록으로 끼운다.
      자동 삽입은 하지 않는다 — 빈 템플릿이 그대로 저장되고 초안 비교(sameForm)가 "바뀌었다"고 오판한다(meeting-05 A-11). */
   function insertTemplate() {
     var tpl = recapTemplate();
+    if (!tpl) { U.toast('템플릿이 설정에 없어요(config.js recap.template)', 'warn'); return; }
     var firstBlank = tpl.indexOf('\n') + 1;      // "## 핵심\n" 바로 다음 = 첫 절 아래 빈 줄
     if (dom.body.value.trim() === '') {
       replaceRange(0, dom.body.value.length, tpl, firstBlank, firstBlank);
@@ -957,7 +952,7 @@
   /* ---------- 키보드 ----------
 
      Tab을 조건 없이 가로채면 본문이 키보드 덫이 된다(WCAG 2.1.2 Level A · T3-1).
-     실제로 본문에 들어온 키보드 사용자는 내보내기 버튼조차 누를 수 없었고,
+     실제로 본문에 들어온 키보드 사용자는 저장 버튼조차 누를 수 없었고,
      DOM상 본문 뒤에 있는 미리보기 안의 복사 버튼·표 스크롤 영역에도 닿을 수 없었다.
      그렇다고 Tab을 포기하면 코드·목록 들여쓰기를 쓸 수 없다.
 
@@ -1004,6 +999,96 @@
     hintStatus('Tab은 들여쓰기입니다 · 포커스를 옮기려면 Esc를 누른 뒤 Tab');
   }
 
+  /* ---------- Enter · 닫는 괄호 (v3.9, 계약서 §6-2 "Enter 규칙 표" ①~⑤) ----------
+     기준은 VS Code의 언어 무관 기본 동작(autoIndent: full). 언어별 규칙(`:` 뒤 +1단 등)·자동 닫기 괄호는 넣지 않는다 —
+     마크다운의 [텍스트](url)과 충돌하고 type-over 상태를 textarea에서 추적할 수 없다.
+     실행 경로는 replaceRange(execCommand) — Enter 한 번 = undo 한 단계(setRangeText는 undo 스택을 비운다, 라운드 6 실측).
+     keydown 안에서 preventDefault 뒤 곧바로 실행한다(진행 중인 편집 명령이 없으므로 `//` 규칙처럼 미룰 필요가 없다).
+
+     `//` 규칙과의 배타 — `//java` 줄은 목록 줄이 아니고 펜스 밖이라 여기서 손대지 않는다 → 기본 Enter → input → maybeFence().
+     반대로 ④가 넣은 '\n- '는 input의 inputType이 insertText이고 e.data가 공백·개행 하나가 아니라 isFenceTrigger가 거짓이다. */
+
+  var OPEN_PAIRS = { '{': '}', '(': ')', '[': ']' };
+  var CLOSE_KEYS = ['}', ')', ']'];
+  /* ④ — 접두사 = 표시자 + 공백 한 칸. `- [ ] ` 체크박스·`1)` 변형은 이번엔 다루지 않는다. */
+  var LIST_LINE_RE = /^([ \t]*)([-*+] |\d+\. |> )(.*)$/;
+
+  /* 현재 줄의 before(줄 시작~커서)·after(커서~줄 끝)와 펜스 안 여부. 규칙 표의 정의 그대로. */
+  function lineAtCaret(pos) {
+    var value = dom.body.value;
+    var lineStart = value.lastIndexOf('\n', pos - 1) + 1;
+    var lineEnd = value.indexOf('\n', pos);
+    if (lineEnd === -1) lineEnd = value.length;
+    return {
+      start: lineStart,
+      before: value.slice(lineStart, pos),
+      after: value.slice(pos, lineEnd),
+      fenced: insideFence(value.slice(0, lineStart))
+    };
+  }
+
+  /* Enter — 보조키 없음·선택 없음·조합 아님은 호출부(onBodyKeydown)가 이미 걸렀다. 처리했으면 true. */
+  function onBodyEnter(e) {
+    var pos = dom.body.selectionStart;
+    var line = lineAtCaret(pos);
+    var text, caret;
+
+    if (line.fenced) {
+      /* ③ → ② → ①의 순서로 검사 — 세 규칙은 하나의 분기 트리다(③은 ②를, ②는 ①을 포함한다). */
+      var indent = /^[ \t]*/.exec(line.before)[0];
+      var trimmed = line.before.replace(/[ \t]+$/, '');
+      var close = OPEN_PAIRS[trimmed.charAt(trimmed.length - 1)];
+      if (close && line.after.charAt(0) === close) {
+        /* ③ 괄호 사이 — 닫는 괄호는 after에 그대로 남아 셋째 줄의 indent 뒤에 온다. 커서는 가운데 줄 끝. */
+        text = '\n' + indent + '  ' + '\n' + indent;
+        caret = pos + 1 + indent.length + 2;
+      } else if (close) {
+        /* ② 여는 괄호 뒤 +2 — 언제나 공백 2칸(Tab 키와 같은 값). */
+        text = '\n' + indent + '  ';
+        caret = pos + text.length;
+      } else {
+        /* ① 들여쓰기 유지 — 공백·탭을 그대로 복사한다(붙여 넣은 탭 코드도 줄이 맞는다). */
+        text = '\n' + indent;
+        caret = pos + text.length;
+      }
+      e.preventDefault();
+      replaceRange(pos, pos, text, caret, caret);
+      return true;
+    }
+
+    /* ④ 목록·인용 이어쓰기 — 펜스 밖. */
+    var m = LIST_LINE_RE.exec(line.before);
+    if (!m) return false;
+    e.preventDefault();
+    if (m[3] === '') {
+      /* 항목이 비어 있으면(접두사뿐인 줄) 접두사를 지우고 그 줄을 빈 줄로 만든다 — 줄바꿈은 넣지 않는다(목록 끝내기). */
+      caret = line.start + m[1].length;
+      replaceRange(line.start, pos, m[1], caret, caret);
+      return true;
+    }
+    var prefix = m[2];
+    var num = /^(\d+)\. $/.exec(prefix);
+    if (num) prefix = (parseInt(num[1], 10) + 1) + '. ';      // 순서 목록은 숫자 +1
+    text = '\n' + m[1] + prefix;
+    caret = pos + text.length;
+    replaceRange(pos, pos, text, caret, caret);
+    return true;
+  }
+
+  /* ⑤ 닫는 괄호 내어쓰기 — 펜스 안, before가 공백뿐이고 길이 ≥ 2면 끝 2글자를 떼고 괄호를 넣는다.
+     탭 하나도 "2칸"으로 세지 않는다 — 탭+공백 혼용은 다루지 않는다. 처리했으면 true. */
+  function onBodyCloseBracket(e) {
+    var pos = dom.body.selectionStart;
+    var line = lineAtCaret(pos);
+    if (!line.fenced) return false;
+    if (!/^[ \t]*$/.test(line.before) || line.before.length < 2) return false;
+    e.preventDefault();
+    var next = line.before.slice(0, -2) + e.key;
+    var caret = line.start + next.length;
+    replaceRange(line.start, pos, next, caret, caret);
+    return true;
+  }
+
   function onBodyKeydown(e) {
     /* 한글 조합 중에는 키를 가로채지 않는다.
        조합이 끝나기 전의 Tab/Ctrl+B는 IME가 "조합 확정"으로 쓰는 키일 수 있어서,
@@ -1021,9 +1106,10 @@
       var start = dom.body.selectionStart;
       var end = dom.body.selectionEnd;
       var value = dom.body.value;
-      var multiline = value.slice(start, end).indexOf('\n') !== -1;
 
-      if (!multiline && !e.shiftKey) {
+      /* v3.9 #108: "선택이 있는가"로 가른다. v3.8까지는 "선택에 줄바꿈이 없으면" 선택을 통째로 공백 2칸으로 치환해서
+         한 줄 안에서 단어를 고른 뒤 Tab을 치면 단어가 사라졌다. 선택이 있으면 길이와 무관하게 줄 들여쓰기다. */
+      if (start === end && !e.shiftKey) {
         replaceRange(start, end, '  ');
         /* 안내는 들여쓰기를 넣은 "뒤"에 띄운다. 먼저 띄우면 replaceRange가 부르는
            onEdit()의 "저장 중…"이 곧바로 덮어써서 아무도 보지 못한다. */
@@ -1046,6 +1132,15 @@
     /* 탈출 대기 중에 글자를 치면 "계속 쓰겠다"는 뜻이다. 대기를 풀어 Tab을 들여쓰기로 되돌린다.
        (보조키 자체를 누른 것만으로는 풀지 않는다 — Shift+Tab으로 앞으로 나가는 길을 막게 된다.) */
     if (tabEscape && ['Shift', 'Control', 'Alt', 'Meta'].indexOf(e.key) === -1) setTabEscape(false);
+
+    /* v3.9 Enter 규칙(§6-2) — Tab 처리 뒤·탈출 해제 뒤·Ctrl 검사 앞. 발동 조건: 보조키 전부 없음·선택 없음.
+       Shift+Enter는 언제나 브라우저 기본(줄바꿈 하나) — 자동 들여쓰기·접두사를 원하지 않을 때의 탈출구.
+       여러 줄 선택 상태의 Enter도 기본 동작(선택을 지우고 줄바꿈). */
+    var plain = !(e.shiftKey || e.ctrlKey || e.altKey || e.metaKey);
+    var collapsed = dom.body.selectionStart === dom.body.selectionEnd;
+    if (e.key === 'Enter' && plain && collapsed) { onBodyEnter(e); return; }
+    /* ⑤ — `}` `)`는 US 자판에서 Shift로 나오는 글자라 Shift는 보지 않는다(e.key가 이미 그 글자다). Ctrl·Alt·Meta만 거른다. */
+    if (CLOSE_KEYS.indexOf(e.key) !== -1 && !(e.ctrlKey || e.altKey || e.metaKey) && collapsed) { onBodyCloseBracket(e); return; }
 
     if (!(e.ctrlKey || e.metaKey)) return;
     var key = e.key.toLowerCase();
@@ -1083,7 +1178,7 @@
     else if (wideMq.addListener) wideMq.addListener(onChange);
   }
 
-  /* ---------- 내보내기 ---------- */
+  /* ---------- 저장 전 검증 (id 정리 · 제목·분류·본문 · 폴더명 · 게시일) ---------- */
 
   function normalizeId(raw, title, createdIso) {
     var id = U.slugAscii(raw);
@@ -1115,7 +1210,7 @@
     return true;
   }
 
-  /* 폴더명이 될 수 없는 분류로는 내보내지 않는다.
+  /* 폴더명이 될 수 없는 분류로는 저장하지 않는다.
      posts/블로그/ 같은 경로는 만들 수는 있어도 주소가 깨져 읽히고 되돌리기 어렵다. */
   function ensureUsableCategory(onOk) {
     var cat = chosenCategory();
@@ -1130,7 +1225,7 @@
         + '분류를 고르거나 "+ 새 분류"로 만들어 주세요.',
       actions: [
         {
-          label: '미분류로 내보내기', variant: 'ghost', onClick: function () {
+          label: '미분류로 저장', variant: 'ghost', onClick: function () {
             selectCategory(UNCATEGORIZED);
             onEdit();
             onOk();
@@ -1165,60 +1260,6 @@
     return JSON.stringify(payload, null, 2) + '\n';
   }
 
-  /* 다운로드 트리거가 예외 없이 끝났는지만 알 수 있다.
-     브라우저가 실제로 파일을 저장했는지는 어떤 API로도 확인할 수 없다 —
-     그래서 여기서 true를 돌려받아도 "초안을 지워도 된다"는 뜻은 아니다(M7).
-     최종 확인은 사용자가 내보내기 안내 모달에서 직접 눌러 준다. */
-  function triggerDownload(file) {
-    try {
-      U.download(file.name, file.text, file.mime);
-      return true;
-    } catch (err) {
-      return false;
-    }
-  }
-
-  /* 여러 파일을 한꺼번에 내려받으면 일부 브라우저가 두 번째부터 차단한다. 살짝 띄운다.
-     첫 파일은 사용자 클릭과 같은 흐름에서 즉시 내보낸다(제스처 밖으로 나가면 차단될 수 있다).
-     결과: { ok, failed:[파일명] } — 하나라도 예외가 났으면 ok:false. */
-  function downloadAll(files) {
-    var failed = [];
-    if (!files.length) return Promise.resolve({ ok: false, failed: [] });
-
-    if (!triggerDownload(files[0])) failed.push(files[0].name);
-    var rest = files.slice(1);
-    if (!rest.length) return Promise.resolve({ ok: failed.length === 0, failed: failed });
-
-    return new Promise(function (resolve) {
-      rest.forEach(function (file, i) {
-        window.setTimeout(function () {
-          if (!triggerDownload(file)) failed.push(file.name);
-          if (i === rest.length - 1) resolve({ ok: failed.length === 0, failed: failed });
-        }, 450 * (i + 1));
-      });
-    });
-  }
-
-  /* 내려받는 동안 버튼을 실제로 잠근다(보이기만 하는 시늉이 아니라 disabled).
-     여러 파일을 450ms 간격으로 내보내는 중에 한 번 더 누르면 같은 파일이 두 벌 내려가고,
-     사용자는 어느 쪽을 posts/에 넣어야 하는지 알 수 없게 된다.
-     끝나면 포커스를 버튼에 돌려준다 — disabled가 되는 순간 포커스는 body로 튕기고,
-     그대로 두면 키보드 사용자는 안내 모달이 닫힌 뒤 문서 맨 앞으로 되돌아간다. */
-  function setExporting(on) {
-    state.exporting = on;
-    if (!dom.exportBtn) return;
-    dom.exportBtn.disabled = on;
-    /* 내려받는 동안 서버 저장도 잠근다 — 같은 글이 두 경로로 동시에 나가면 어느 쪽이 최신인지 알 수 없다. */
-    if (dom.saveBtn) dom.saveBtn.disabled = on || state.saving;
-    if (!on && document.activeElement === document.body) dom.exportBtn.focus();
-  }
-
-  function exportFiles() {
-    if (state.exporting) return;
-    if (!validate(readForm())) return;
-    ensureUsableCategory(function () { ensureCreated(doExport); });
-  }
-
   /* CLAUDE.md 규약 4: created는 불변이다.
      수정 모드인데 원본 게시일이 비어 있다는 건 "정보가 없다"는 뜻이지 "오늘 쓴 글"이 아니다.
      조용히 오늘 날짜를 찍으면 목록 정렬과 게시일 표시가 통째로 어긋나고,
@@ -1229,10 +1270,10 @@
     var now = U.nowIsoKst();
     var confirmed = false;
     /* M4-3: 예전에는 "지금 시각" 버튼이 onOk()를 부르고 return false로 모달을 열어 둔 채
-       다음 모달(내보내기 안내)이 대신 닫아 주길 기대했다. 서버 저장 경로에는 다음 모달이 없어
+       다음 모달이 대신 닫아 주길 기대했다. 저장 경로에는 다음 모달이 없어
        확인창이 영구히 남고 배경이 inert로 잠겼다. 이제는 모달이 닫힌 뒤(onClose) 이어 간다 —
-       표 대화상자와 같은 방식이고, 내보내기 경로의 다음 모달은 닫힌 뒤에 열리므로 함께 닫힐 일이 없다.
-       onClose는 같은 클릭 흐름 안에서 동기로 불리므로 다운로드 제스처도 유지된다. */
+       표 대화상자와 같은 방식이다.
+       onClose는 같은 클릭 흐름 안에서 동기로 불린다. */
     Blog.ui.modal({
       title: '이 글의 원래 게시일 정보가 없습니다',
       bodyNodes: [
@@ -1248,8 +1289,8 @@
     });
   }
 
-  /* 내보내기와 서버 저장이 같은 메타를 쓴다. 두 경로가 frontmatter를 따로 조립하면
-     한쪽만 고쳤을 때 "내보낸 글"과 "저장한 글"이 다른 파일이 된다. 여기 한 곳에서만 만든다. */
+  /* PUT에 실을 메타(8개)는 여기 한 곳에서만 만든다 — 조립하는 곳이 둘이면 한쪽만 고쳤을 때
+     "화면의 글"과 "저장된 글"이 달라진다. created 규칙(불변)도 여기서 지킨다. */
   function buildMeta(createdOverride) {
     var form = readForm();
     var now = U.nowIsoKst();
@@ -1275,263 +1316,43 @@
       tags: form.tags,
       /* frontmatter의 category는 표시 이름이 아니라 slug(= 폴더명)다. 계약서 §9-3. */
       category: form.category,
-      /* color는 내보내지 않는다(§9-2 폐기). 기존 파일에 남아 있는 키는 그대로 둬도 무해하다. */
+      /* color는 보내지 않는다(§9-2 폐기). 기존 파일에 남아 있는 키는 그대로 둬도 무해하다. */
       pinned: form.pinned
     };
     return { form: form, meta: meta };
   }
 
-  function doExport(createdOverride) {
-    var built = buildMeta(createdOverride);
-    var form = built.form;
-    var meta = built.meta;
-
-    var mdText = store.toMarkdownFile(meta, form.body);
-    var needCats = cats.added.length > 0;
-
-    /* 목록 파일을 "못 읽은" 채로 새로 만들면 기존 내용이 이 글 하나로 덮어써진다.
-       파일이 아직 없는 경우(notfound)는 처음 만드는 게 맞지만,
-       읽기 실패(file/network/parse)는 "내용이 있는데 못 읽은" 상태다. 그때는 먼저 물어본다. */
-    var risky = [];
-    if (!state.indexData && state.indexError && state.indexError.code !== 'notfound') {
-      risky.push({ file: 'posts/index.json', why: state.indexError.message || '' });
-    }
-    if (needCats && !cats.loaded && cats.error && cats.error.code !== 'notfound') {
-      risky.push({ file: 'posts/categories.json', why: cats.error.message || '' });
-    }
-
-    if (risky.length) {
-      confirmOverwriteRisk(meta, mdText, needCats, risky);
-      return;
-    }
-    finishExport(meta, mdText, { index: true, cats: needCats });
-  }
-
-  /* 수정하면서 id를 바꿨으면 예전 id의 목록 항목을 빼고 다시 만든다.
-     그대로 두면 index.json에 지워질 파일을 가리키는 항목이 남는다.
-     store가 캐시한 객체를 건드리지 않도록 새 객체를 만들어 넘긴다. */
-  function indexSourceFor(meta) {
-    var source = state.indexData;
-    if (!source) return null;
-    if (state.mode !== 'edit' || !state.originalId || state.originalId === meta.id) return source;
-    return {
-      site: source.site,
-      posts: source.posts.filter(function (p) { return p.id !== state.originalId; })
-    };
-  }
-
-  function finishExport(meta, mdText, opts) {
-    var files = [{ name: meta.id + '.md', text: mdText, mime: 'text/markdown' }];
-
-    if (opts.index) {
-      files.push({
-        name: 'index.json',
-        text: store.buildIndexJson(meta, indexSourceFor(meta)),
-        mime: 'application/json'
-      });
-    }
-    if (opts.cats) {
-      files.push({ name: 'categories.json', text: buildCategoriesJson(), mime: 'application/json' });
-    }
-
-    setStatus('내려받는 중…');
-    setExporting(true);
-
-    /* 초안은 여기서 지우지 않는다(M7).
-       다운로드는 팝업 차단·저장 위치 취소·확장 프로그램으로 조용히 막힐 수 있는데,
-       브라우저는 그 사실을 알려 주지 않는다. "트리거가 예외 없이 끝났다"까지만 확인하고,
-       임시저장본을 실제로 비우는 건 사용자가 파일을 확인한 뒤 직접 누른다. */
-    downloadAll(files).then(function (res) {
-      setExporting(false);
-      if (!res.ok) {
-        setStatus('내보내기에 실패했어요 · 임시저장본은 그대로 있습니다', true);
-        showDownloadFailed(meta, mdText, opts, res.failed);
-        return;
-      }
-      setStatus(opts.index
-        ? '내려받았습니다 · 파일을 확인한 뒤 임시저장본을 비울 수 있어요'
-        : '본문 .md만 내보냈습니다 · index.json은 직접 고쳐야 해요', true);
-      showExportGuide(meta, opts);
-    });
-  }
-
-  /* 다운로드 트리거 자체가 실패한 경우. 초안은 절대 건드리지 않는다. */
-  function showDownloadFailed(meta, mdText, opts, failed) {
-    Blog.ui.modal({
-      title: '파일을 내려받지 못했어요',
-      bodyNodes: [
-        U.el('p', { text: '내려받지 못한 파일: ' + (failed.length ? failed.join(', ') : '알 수 없음') }),
-        U.el('p', { text: '브라우저의 다운로드 차단(여러 파일 자동 다운로드 허용 안 함)이 가장 흔한 원인입니다. 주소창의 차단 아이콘에서 허용한 뒤 다시 시도해 주세요.' }),
-        U.el('p', { text: '작성한 내용은 그대로 남아 있고 임시저장본도 지우지 않았습니다.' })
-      ],
-      actions: [
-        { label: '닫기', variant: 'ghost' },
-        {
-          label: '다시 시도', variant: 'primary', onClick: function () {
-            finishExport(meta, mdText, opts);
-            return false;
-          }
-        }
-      ]
-    });
-  }
-
-  function confirmOverwriteRisk(meta, mdText, needCats, risky) {
-    var nodes = [U.el('p', { text: '아래 파일을 불러오지 못한 상태입니다. 지금 새로 만들면 기존 내용이 덮어써집니다.' })];
-    var list = U.el('ul');
-    risky.forEach(function (item) {
-      list.appendChild(U.el('li', { text: item.file + (item.why ? ' — ' + item.why : '') }));
-    });
-    nodes.push(list);
-
-    Blog.ui.modal({
-      title: '기존 목록 파일을 읽지 못했어요',
-      bodyNodes: nodes,
-      /* onClick이 false를 돌려주면 ui.modal은 닫기를 건너뛴다.
-         finishExport는 내려받기가 끝난 뒤 안내 모달을 띄우고, 그 모달이 열릴 때
-         이 모달은 자동으로 닫힌다(ui.modal이 먼저 closeModal을 부른다).
-         여기서 또 닫으면 그때 열려 있을 안내 모달이 같이 닫혀 버린다. */
-      actions: [
-        {
-          label: '.md만 내려받기', variant: 'primary', onClick: function () {
-            finishExport(meta, mdText, { index: false, cats: false });
-            return false;
-          }
-        },
-        {
-          label: '그래도 전부 내려받기', variant: 'danger', onClick: function () {
-            finishExport(meta, mdText, { index: true, cats: needCats });
-            return false;
-          }
-        }
-      ]
-    });
-  }
-
-  /* 사용자가 폴더를 못 찾으면 글은 영영 안 보인다. 경로를 글자 그대로 보여 주고 복사까지 시켜 준다. */
-  function showExportGuide(meta, opts) {
-    var newPath = postPathOf(meta.id, meta.category);
-    var oldPath = state.mode === 'edit'
-      ? (state.originalPath || (state.originalId ? postPathOf(state.originalId, state.originalCategory) : ''))
-      : '';
-    var moved = Boolean(oldPath) && oldPath !== newPath;
-
-    var steps = U.el('ol');
-    var lines = [
-      'posts/' + meta.category + '/ 폴더가 없으면 먼저 만듭니다.',
-      '내려받은 ' + meta.id + '.md 를 ' + newPath + ' 로 옮깁니다.',
-      opts.index
-        ? '내려받은 index.json 으로 posts/index.json 을 덮어씁니다.'
-        : 'posts/index.json 의 posts 배열에 이 글 항목을 직접 추가합니다(목록을 못 읽어 만들지 못했습니다).'
-    ];
-    if (opts.cats) {
-      lines.push('내려받은 categories.json 으로 posts/categories.json 을 덮어씁니다(새 분류가 들어 있습니다).');
-    }
-    if (moved) {
-      lines.push('예전 파일 ' + oldPath + ' 은(는) 직접 지웁니다 — 지우지 않으면 같은 글이 두 곳에 남습니다.');
-    }
-    lines.push('git add posts && git commit -m "' + meta.title + '" 후 push 하면 공개됩니다.');
-    lines.forEach(function (text) { steps.appendChild(U.el('li', { text: text })); });
-
-    var nodes = [
-      U.el('p', {
-        text: opts.index
-          ? '저장 위치는 ' + newPath + ' 입니다. 아래 순서대로 넣어 주세요.'
-          : '본문 파일만 내려받았어요. 저장 위치는 ' + newPath + ' 입니다.'
-      }),
-      steps
-    ];
-
-    if (moved) {
-      nodes.push(U.el('p', {
-        text: '분류 또는 id가 바뀌어 파일이 다른 폴더로 갑니다: ' + oldPath + ' -> ' + newPath
-      }));
-    }
-
-    /* 초안을 비우는 건 되돌릴 수 없다. 그래서 "다운로드 폴더에서 실제로 봤다"를 사람이 확인해 준다.
-       확인 전까지는 임시저장본과 .is-dirty 경고가 그대로 남는다(M7). */
-    nodes.push(U.el('p', {
-      text: opts.index
-        ? '다운로드 폴더에서 파일 ' + (opts.cats ? 3 : 2) + '개를 확인하셨으면 "내려받기 확인"을 눌러 주세요. 그때 임시저장본을 비웁니다.'
-        : '목록 파일을 만들지 못했으니 아직 끝난 게 아닙니다. 임시저장본은 그대로 둡니다.'
-    }));
-
-    var actions = [
-      {
-        label: '경로 복사', variant: 'ghost', onClick: function () {
-          U.copyText(newPath).then(function () {
-            U.toast('경로를 복사했습니다: ' + newPath, 'ok');
-          }).catch(function () {
-            U.toast('복사에 실패했어요. 경로: ' + newPath, 'warn');
-          });
-          return false;   // 경로를 확인하는 중이니 모달은 열어 둔다
-        }
-      }
-    ];
-
-    if (opts.index) {
-      actions.push({ label: '아직 확인 못 했어요', variant: 'ghost' });
-      actions.push({
-        label: '내려받기 확인 · 초안 비우기', variant: 'primary', onClick: function () {
-          store.draft.clear(state.slot);
-          setStatus('내보냈습니다 · posts/' + meta.category + '/ 에 넣고 커밋하세요', false);
-          U.toast('임시저장본을 비웠습니다', 'ok');
-        }
-      });
-    } else {
-      actions.push({ label: '계속 쓰기', variant: 'primary' });
-    }
-
-    Blog.ui.modal({
-      title: '내보내기 완료',
-      bodyNodes: nodes,
-      actions: actions
-    });
-  }
-
-  /* ---------- 로컬 에디터 서버 (docs/api.md §4, 계약서 §6-1) ----------
-     PM이 만든 서버(Docker, 5500)가 켜져 있으면 에디터가 .md와 index.json을 직접 쓴다.
-     없으면(start.bat) 지금까지처럼 내보내기뿐이다. 두 모드를 가르는 건 GET /api/health 하나이고,
-     화면 상태는 #btnSave·#editorServer의 hidden 둘이 전부다(클래스·data-·body 상태 없음).
-     내보내기는 서버 모드에서도 폴백으로 살아 있다 — 서버가 도중에 죽어도 글을 잃는 길이 없어야 한다. */
+  /* ---------- 로컬 에디터 서버 (docs/api.md §4, 계약서 §6-1 — v3.9 저장 단일 모드) ----------
+     저장은 PM이 만든 서버(Docker, 5500)의 PUT /api/posts/{id} 하나뿐이다. 다운로드로 파일을 내려받는 길은 v3.9에서
+     완전히 없어졌다(사용자 판정: "Ctrl+S 했을 때 파일 자동 저장(다운로드 방식 없애)").
+     서버가 없으면 글을 쓸 수는 있지만 저장할 수 없고, 화면이 그 사실을 말한다 — 상태는 셋(확인 중 / 연결됨 / 서버 없음),
+     손잡이는 #btnSave의 disabled · #editorServer의 hidden과 .is-off · #btnRetry의 hidden이 전부다(body 클래스·data- 없음).
+     초안은 localStorage 임시저장이 붙들고 있고 beforeunload가 경고하므로, 서버가 없어도 글을 잃는 길은 없다. */
 
   var HEALTH_TIMEOUT_MS = 2000;
+  /* §6-1 표의 문구 — #editorServer와 Ctrl+S 토스트가 같은 문자열을 쓴다(두 자리가 다른 말을 하면 안 된다). */
+  var SERVER_ON_TEXT = '로컬 서버 연결됨';
+  var SERVER_OFF_TEXT = '서버 없음 · start.bat(Docker) 실행 후 저장';
 
-  /* 서버 모드 ↔ 내보내기 모드. 켜고 끄는 곳이 여기 하나라 되돌릴 때 빠뜨리는 속성이 없다.
-     보이는 버튼 둘이 같은 단축키(Ctrl+S)를 주장하면 스크린리더가 둘 다 읽으므로
-     서버 모드에서는 내보내기 버튼의 단축키 표기를 뗀다(계약서 §6-1). 복귀하면 되돌린다. */
+  /* 연결됨 ↔ 서버 없음. 켜고 끄는 곳이 여기 하나라 되돌릴 때 빠뜨리는 속성이 없다.
+     "확인 중"은 마크업 초기값(#btnSave disabled · #editorServer hidden · #btnRetry hidden)이라 JS가 만들지 않는다 —
+     판정(≤2초) 전에는 아무 말도 하지 않는다. */
   function setServerMode(on) {
     state.server = Boolean(on);
-    if (dom.saveBtn) U.setHidden(dom.saveBtn, !state.server);
-    if (dom.server) U.setHidden(dom.server, !state.server);
-    if (dom.exportBtn) {
-      if (state.server) {
-        dom.exportBtn.removeAttribute('aria-keyshortcuts');
-        dom.exportBtn.removeAttribute('title');   // 단축키가 없는 버튼은 title도 없다(계약서 §6 title 규칙)
-      } else {
-        dom.exportBtn.setAttribute('aria-keyshortcuts', 'Control+S');
-        dom.exportBtn.setAttribute('title', '파일로 내보내기 (Ctrl+S)');
-      }
+    if (dom.saveBtn) dom.saveBtn.disabled = !state.server || state.saving;
+    if (dom.server) {
+      U.setHidden(dom.server, false);
+      dom.server.classList.toggle('is-off', !state.server);
+      dom.server.textContent = state.server ? SERVER_ON_TEXT : SERVER_OFF_TEXT;
     }
-    /* Ctrl+S가 무엇을 하는지 말하는 자리 셋(placeholder · 숨은 설명 · 상태줄 안내)도 따라간다.
-       placeholder·bodyHint의 다른 문장은 그대로 두고 "내보내기"라는 낱말만 바꾼다. */
-    var verb = state.server ? '저장' : '내보내기';
-    if (dom.body) {
-      dom.body.setAttribute('placeholder',
-        '여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S ' + verb + '.\n'
-        + '줄 첫머리에 // 로 코드 블록 (//java 처럼 언어도).');
-    }
-    if (dom.bodyHint) {
-      dom.bodyHint.textContent = 'Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. '
-        + 'Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S ' + (state.server ? '저장' : '파일로 내보내기') + '. '
-        + '줄 첫머리에 //를 치고 Enter 또는 Space를 누르면 코드 블록이 됩니다.';
-    }
+    if (dom.retry) U.setHidden(dom.retry, state.server);
   }
 
-  /* 실패는 전부 "조용히 내보내기 모드"다(api.md §4-1). start.ps1은 /api/health에 텍스트 404를 주고,
-     file://은 fetch 자체가 던진다 — 어느 쪽이든 사용자에게 알릴 오류가 아니라 평소 상태다. */
+  /* 실패는 전부 "서버 없음"이다(api.md §4-1). start.ps1은 /api/health에 텍스트 404를 주고,
+     file://은 fetch 자체가 던진다 — 어느 쪽이든 콘솔에 남길 오류가 아니라 평소 상태다.
+     자동 재시도(폴링)는 없다 — 사용자가 원할 때 #btnRetry를 누른다(§6-1 "하지 않는 것"). */
   function detectServer() {
-    if (typeof window.fetch !== 'function') return Promise.resolve(false);
+    if (typeof window.fetch !== 'function') { setServerMode(false); return Promise.resolve(false); }
     var ctrl = (typeof window.AbortController === 'function') ? new window.AbortController() : null;
     var timer = window.setTimeout(function () { if (ctrl) ctrl.abort(); }, HEALTH_TIMEOUT_MS);
     var opts = { cache: 'no-store' };
@@ -1548,6 +1369,20 @@
         setServerMode(ok);
         return ok;
       });
+  }
+
+  /* "다시 연결" — Docker를 뒤늦게 켠 사용자가 새로고침으로 초안을 흔들지 않고 서버를 다시 찾는 길.
+     실행 중에는 disabled. 결과에 따라 버튼이 숨거나(연결됨) 남는다(서버 없음). disabled·hidden이 되는 순간
+     포커스는 body로 튕기므로, 튕겼을 때만 저장 버튼(연결됨) 또는 이 버튼(서버 없음)으로 돌려준다. */
+  function retryServer() {
+    if (!dom.retry || dom.retry.disabled) return;
+    dom.retry.disabled = true;
+    detectServer().then(function (ok) {
+      dom.retry.disabled = false;
+      if (document.activeElement !== document.body) return;
+      if (ok && dom.saveBtn) dom.saveBtn.focus();
+      else dom.retry.focus();
+    });
   }
 
   /* 응답 본문을 JSON으로 읽는다. 서버가 아닌 것(프록시·다른 정적 서버)이 HTML을 돌려줘도
@@ -1572,20 +1407,21 @@
     return msg;
   }
 
+  /* 저장 중에는 저장 버튼을 실제로 잠근다(보이기만 하는 시늉이 아니라 disabled) — 같은 글을 두 번 보내지 않는다.
+     끝나면 연결됨일 때만 푼다(서버 없음이면 disabled가 그 상태의 손잡이다).
+     disabled가 되는 순간 포커스는 body로 튕기므로, 끝나고 풀릴 때 튕겨 있었으면 버튼으로 돌려준다. */
   function setSaving(on) {
     state.saving = on;
-    /* 저장 중에는 내보내기도 잠근다(meeting-05 dev-2 #8). PUT이 끝나기 전에 내려받은 .md는 곧 옛 파일이 된다. */
-    if (dom.exportBtn) dom.exportBtn.disabled = on || state.exporting;
     if (!dom.saveBtn) return;
-    dom.saveBtn.disabled = on;
-    /* disabled가 되는 순간 포커스는 body로 튕긴다(setExporting과 같은 이유). 끝나면 돌려준다. */
-    if (!on && document.activeElement === document.body && !dom.saveBtn.hasAttribute('hidden')) dom.saveBtn.focus();
+    dom.saveBtn.disabled = on || !state.server;
+    if (!on && state.server && document.activeElement === document.body) dom.saveBtn.focus();
   }
 
   function saveToServer() {
-    if (!state.server) { exportFiles(); return; }
-    if (state.saving || state.exporting) return;
-    /* 검증·분류·게시일 확인은 내보내기와 정확히 같은 순서다(api.md §4-3). */
+    /* disabled 버튼은 클릭이 나지 않지만, 키(Ctrl+S)와 프로그램 호출은 여기까지 온다. 같은 안내를 한다(§6-1). */
+    if (!state.server) { U.toast(SERVER_OFF_TEXT, 'warn'); return; }
+    if (state.saving) return;
+    /* 검증 → 분류 → 게시일 확인 순서(api.md §4-3). */
     if (!validate(readForm())) return;
     ensureUsableCategory(function () { ensureCreated(doSave); });
   }
@@ -1610,7 +1446,7 @@
 
     /* T4-1: 타이핑 뒤 800ms 안에 Ctrl+S를 누르면 debounce가 아직 대기 중이다. 그대로 두면 PUT이
        끝나 초안을 지운 "뒤에" 발화해 방금 지운 초안을 되살리고 dirty를 다시 켠다.
-       내보내기 경로(flushDraft)와 같이 — 대기 중인 것을 취소하고, 지금 상태를 초안에 확정해 둔다.
+       대기 중인 것을 취소하고, 지금 상태를 초안에 확정해 둔다.
        확정해 두는 이유: 저장이 거절되거나 서버가 죽으면 "임시저장본은 그대로"라는 상태줄이 참이어야 한다. */
     flushDraft();
 
@@ -1633,21 +1469,23 @@
     }).then(function (res) {
       return readJson(res).then(function (json) {
         if (!res.ok) throw mkErr('api', apiErrorMessage(res, json, '저장'));
-        if (!json || !json.ok || !json.meta) throw mkErr('api', '서버 응답을 읽을 수 없습니다 · 내보내기로 저장하세요');
+        if (!json || !json.ok || !json.meta) throw mkErr('api', '서버 응답을 읽을 수 없습니다 · 서버 로그를 확인해 주세요');
         onSaved(json, needCats, sent);
       });
     }).catch(function (err) {
-      setSaving(false);
       if (err && err.code === 'api') {
-        /* 서버가 거절했다. 초안·dirty는 그대로 — 사용자가 고쳐서 다시 누른다. */
-        toastErr(err.message);
+        /* 서버가 거절했다(4xx/5xx). 초안·dirty는 그대로 — 사용자가 고쳐서 다시 누른다. */
+        setSaving(false);
+        U.toast(err.message, 'err');
         setStatus('저장하지 못했어요 · 임시저장본은 그대로 있습니다', true);
         return;
       }
-      /* 네트워크 실패 = 서버가 사라졌다. 모드가 내보내기로 돌아간 것이 화면에서 보여야 한다(계약서 §6-1). */
+      /* 네트워크 실패 = 서버가 사라졌다. 서버 없음 상태로 전환한다(§6-1) — 저장 버튼이 잠기고 #btnRetry가 나타난다.
+         setServerMode를 setSaving보다 먼저 — 순서가 반대면 setSaving이 버튼에 포커스를 줬다가 곧바로 disabled로 튕긴다. */
       setServerMode(false);
-      toastErr('서버가 꺼졌습니다 — 내보내기로 저장하세요');
-      setStatus('서버 연결이 끊겼어요 · 파일로 내보내기를 눌러 저장하세요', true);
+      setSaving(false);
+      U.toast('서버가 꺼졌습니다 — start.bat(Docker)를 실행한 뒤 다시 연결', 'err');
+      setStatus('서버 연결이 끊겼어요 · 임시저장본은 그대로 있습니다', true);
     });
   }
 
@@ -1660,7 +1498,7 @@
     return '';
   }
 
-  /* 200 — 디스크 저장이 확인됐다. 내보내기(M7)와 달리 초안을 지워도 된다.
+  /* 200 — 디스크 저장이 확인됐다. 초안을 지워도 된다.
      응답의 meta가 실제로 쓴 값이므로 화면 상태는 응답으로 덮는다(created를 클라이언트가 계산하지 않는다).
      sentForm은 PUT에 실은 폼 스냅샷 — 저장 중에 더 친 글자가 있는지 이것과 비교한다. */
   function onSaved(json, savedCats, sentForm) {
@@ -1707,11 +1545,21 @@
       saveDraftNow();
     }
 
-    /* 내보내기 폴백이 쓰는 목록 사본을 서버가 쓴 최신으로 맞춘다. 실패해도 저장은 이미 끝났다. */
-    promised(function () { return store.loadIndex(true); }).then(function (data) {
-      state.indexData = data;
-      state.indexError = null;
-    }).catch(function () { /* 다음 내보내기 때 기존 사본으로 판단한다 */ });
+    refreshSideAfterSave();
+  }
+
+  /* v3.9(§6-1 저장 피드백, meeting-06 "그 밖에"): 서버가 쓴 최신 index.json·categories.json을 다시 받아 사이드바를 다시 그린다 —
+     새 글·새 분류가 새로고침 없이 사이드바에 나타난다. 둘 다 force로 받는다(store가 캐시한 약속은 저장 전 것이다).
+     어느 쪽이 실패해도 저장 결과는 그대로다 — 실패는 삼키고 남은 것으로 그린다. */
+  function refreshSideAfterSave() {
+    var indexJob = promised(function () { return store.loadIndex(true); })
+      .then(function (data) { state.indexData = data; })
+      .catch(function () { /* 기존 사본으로 그린다 */ });
+    var catJob = promised(function () { return store.loadCategories(true); })
+      .catch(function () { /* 분류 목록은 store가 되살린다 */ });
+    Promise.all([indexJob, catJob]).then(function () {
+      drawSide(state.indexData);
+    });
   }
 
   /* ---------- 불러오기 ---------- */
@@ -1720,10 +1568,10 @@
     if (!dom.modeBadge) return;
     U.setHidden(dom.modeBadge, false);
     /* 게시일이 없는 글은 "오늘로 찍겠다"고 조용히 정하지 않는다(규약 4).
-       내보낼 때 ensureCreated()가 물어본다는 사실을 미리 알려 둔다. */
+       저장할 때 ensureCreated()가 물어본다는 사실을 미리 알려 둔다. */
     dom.modeBadge.textContent = meta.created
       ? '수정 모드 · 게시일 ' + U.fmtKo(meta.created) + ' 유지 · 원본 ' + path
-      : '수정 모드 · 이 글에는 게시일 정보가 없어요(내보낼 때 확인합니다) · 원본 ' + path;
+      : '수정 모드 · 이 글에는 게시일 정보가 없어요(저장할 때 확인합니다) · 원본 ' + path;
     document.title = '수정: ' + meta.title;
   }
 
@@ -1795,7 +1643,7 @@
             var form = draft.data.form;
             writeForm(form, form.body);
             /* T4-2: 슬롯 메타(mode·originalId·created·원본 경로)도 되살린다. 디스크에 있는 글의 초안을
-               "새 글"로 불러오면 내보내기가 created=now를 찍고(규약 4 위반) 다른 id로 한 벌 더 만든다.
+               "새 글"로 불러오면 저장이 created=now를 찍고(규약 4 위반) 다른 id로 한 벌 더 만든다.
                created는 디스크 값이 있으면 그것이 진실이다 — 초안의 값은 비어 있을 때만 채운다. */
             if (draft.data.mode === 'edit' && state.mode !== 'edit') {
               state.mode = 'edit';
@@ -1811,7 +1659,7 @@
             state.idTouched = true;
             renderPreview();
             markDirty();
-            setStatus('임시저장본을 불러왔습니다 · 아직 ' + (state.server ? '저장하지' : '내보내지') + ' 않았어요', true);
+            setStatus('임시저장본을 불러왔습니다 · 아직 저장하지 않았어요', true);
           }
         }
       ]
@@ -2106,23 +1954,24 @@
       setViewMode(MODES[(MODES.indexOf(current) + 1) % MODES.length]);
     });
 
-    U.on(dom.exportBtn, 'click', exportFiles);
-    /* 저장 버튼은 서버 모드에서만 보인다(hidden). saveToServer()는 서버 모드가 아니면 내보내기로 넘긴다. */
+    /* 저장 버튼은 항상 보이고 "눌릴 수 있는지"(disabled)만 서버 상태가 정한다(계약서 §6-1). disabled면 클릭 이벤트가 나지 않는다. */
     U.on(dom.saveBtn, 'click', saveToServer);
+    U.on(dom.retry, 'click', retryServer);
 
-    /* Ctrl+S는 브라우저 "페이지 저장"을 가로챈다 — 서버 모드면 저장, 아니면 내보내기(계약서 §6-1).
-       단, 모달이 떠 있는 동안에는 아무것도 하지 않는다 — 내보내기 안내 모달 위에서 또 누르면
-       같은 파일이 두 벌 내려가고, 확인창의 질문(덮어쓸까요?)을 건너뛴 셈이 된다.
+    /* Ctrl+S는 브라우저 "페이지 저장"을 가로챈다 — 막지 않으면 사용자는 .html을 내려받고 글은 저장되지 않는다.
+       연결됨 → 저장. 서버 없음·확인 중 → preventDefault + 토스트(#editorServer와 같은 문자열, §6-1).
+       disabled 버튼은 클릭 이벤트가 나지 않지만 키는 여기 keydown에서 잡는다.
+       모달이 떠 있는 동안에는 아무것도 하지 않는다 — 확인창의 질문(게시일 확인 등)을 건너뛴 셈이 되기 때문.
        브라우저의 "페이지 저장"만은 그대로 막는다(눌린 사실을 없던 일로 만드는 편이 헷갈리지 않는다). */
     U.on(document, 'keydown', function (e) {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return;
       e.preventDefault();
       if (document.body.classList.contains('modal-open')) return;
-      if (state.server) saveToServer();
-      else exportFiles();
+      if (!state.server) { U.toast(SERVER_OFF_TEXT, 'warn'); return; }
+      saveToServer();
     });
 
-    /* 내보내지 않은 변경이 있으면 떠나기 전에 물어본다.
+    /* 저장하지 않은 변경이 있으면 떠나기 전에 물어본다.
        묻기 전에 먼저 초안을 확정해 둔다 — 여기서 저장하지 않으면 debounce(800ms)가
        기다리던 마지막 입력이 그대로 사라진다(M6). */
     U.on(window, 'beforeunload', function (e) {
@@ -2150,7 +1999,7 @@
       U.toast('분류 목록을 불러오지 못했어요(' + cats.error.code + '). "+ 새 분류"로 만들 수 있습니다.', 'warn');
       return;
     }
-    U.toast('분류가 아직 없어요. "+ 새 분류"로 만들면 내보낼 때 categories.json도 함께 내려받습니다.', 'warn');
+    U.toast('분류가 아직 없어요. "+ 새 분류"로 만들면 저장할 때 categories.json에도 함께 등록됩니다.', 'warn');
   }
 
   /* ---------- 사이드바(v3.2) ----------
@@ -2158,7 +2007,7 @@
      (쓰기 화면이라 현재 글·현재 분류가 없다 → activeId/activeCat 모두 null).
      분류 순서는 app.js byIndexOrder와 같은 규칙(order → 글 수 내림차순 → 이름). 규칙이 갈리면
      같은 사이드바가 페이지마다 다른 순서로 보인다.
-     에디터의 본업(작성·내보내기)과 무관하므로 무엇이 실패하든 여기서 삼킨다 —
+     에디터의 본업(작성·저장)과 무관하므로 무엇이 실패하든 여기서 삼킨다 —
      ui.js가 옛 버전이라 renderSide가 없어도, 트리 그리기가 던져도 에디터는 그대로 돌아야 한다. */
   function bySideOrder(a, b) {
     if (a.order !== b.order) return a.order - b.order;
@@ -2230,10 +2079,10 @@
     dom.toolbar = document.getElementById('mdToolbar');
     dom.status = document.getElementById('editorStatus');
     dom.previewToggle = document.getElementById('btnPreviewToggle');
-    dom.exportBtn = document.getElementById('btnExport');
-    /* v3.5(계약서 §12-11 #69): 서버 모드의 저장 버튼과 연결 표시. 둘 다 hidden으로 시작한다. */
+    /* v3.9(계약서 §6-1): 저장 버튼은 항상 보이고 disabled로 시작, 서버 표시·다시 연결은 hidden으로 시작 — 판정 전 "확인 중". */
     dom.saveBtn = document.getElementById('btnSave');
     dom.server = document.getElementById('editorServer');
+    dom.retry = document.getElementById('btnRetry');
     dom.bodyHint = document.getElementById('bodyHint');
     dom.modeBadge = document.getElementById('editorMode');
     dom.visitorNote = document.getElementById('editorVisitor');
@@ -2259,18 +2108,15 @@
     watchWidth();
 
     /* 로컬 에디터 서버 감지(docs/api.md §4-1). 글 로드와 독립이라 기다리지 않는다 —
-       2초 안에 답이 없으면 내보내기 모드 그대로이고, 답이 오면 그때 저장 버튼이 나타난다. */
+       2초 안에 답이 없으면 "서버 없음"(저장 버튼 disabled + 안내 + 다시 연결), 답이 오면 "연결됨"(disabled 해제). */
     detectServer();
 
-    /* index.json은 내보내기에서 다시 쓰므로 미리 받아 둔다. 실패해도 작성은 가능해야 한다.
-       다만 "왜 실패했는지"는 기억해 둔다 — 내보낼 때 목록을 덮어쓸지 판단해야 하기 때문.
+    /* index.json은 사이트명·사이드바가 읽으므로 미리 받아 둔다. 실패해도 작성은 가능해야 한다.
        loadCategories()는 절대 reject하지 않으므로 Promise.all이 중간에 끊기지 않는다. */
     var indexJob = promised(function () { return store.loadIndex(); }).then(function (data) {
       state.indexData = data;
-      state.indexError = null;
-    }).catch(function (err) {
+    }).catch(function () {
       state.indexData = null;
-      state.indexError = err || mkErr('network', 'posts/index.json 을 불러오지 못했습니다.');
     });
 
     Promise.all([indexJob, loadCategories()]).then(function () {

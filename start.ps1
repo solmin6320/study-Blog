@@ -20,8 +20,9 @@
 
   WHAT IT IS NOT
     This is the fallback for PCs without Docker. It serves files only: there is
-    no /api/*, so write.html shows 'Export files' instead of 'Save'. With Docker
-    Desktop running, start.bat picks the editor server (docker compose) instead.
+    no /api/*, so write.html cannot save here (the Save button stays disabled
+    and says the server is missing). With Docker Desktop running, start.bat
+    picks the editor server (docker compose) instead - that one can save.
 
   USAGE
     start.bat                 (normal - picks Docker or this file)
@@ -74,7 +75,7 @@ try {
   Write-Host '          Another server is probably still running on it - either an older'
   Write-Host '          preview window or the Docker editor server (docker compose).'
   Write-Host '          If the Docker server is running, use that one instead: it has the'
-  Write-Host '          save API, this preview server does not. Otherwise close the other'
+  Write-Host '          save API, this preview server cannot save. Otherwise close the other'
   Write-Host '          window, or start this one on another port:'
   Write-Host "            powershell -NoProfile -ExecutionPolicy Bypass -File start.ps1 -Port 5501"
   Write-Host ''
@@ -85,8 +86,8 @@ $url = "http://localhost:$Port/index.html"
 Write-Host ''
 Write-Host "  [start] folder  : $Root"
 Write-Host "  [start] address : $url"
-Write-Host '  [start] mode    : preview only - no save API, the editor exports files'
-Write-Host '                    (for the save button run start.bat with Docker Desktop up)'
+Write-Host '  [start] mode    : preview only - no save API, write.html cannot save here'
+Write-Host '                    (to enable Save, run start.bat with Docker Desktop up)'
 Write-Host '  [start] stop    : Ctrl+C, or just close this window'
 Write-Host ''
 

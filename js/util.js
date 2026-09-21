@@ -1,4 +1,4 @@
-/* util.js — DOM 헬퍼, 날짜 포맷, debounce, escape, 클립보드, 다운로드, 토스트.
+/* util.js — DOM 헬퍼, 날짜 포맷, debounce, escape, 클립보드, 토스트.
    여기 있는 함수는 페이지 종속성이 없어야 한다(어느 페이지에서든 동작). */
 (function (window, document) {
   'use strict';
@@ -20,7 +20,7 @@
   /* URL을 받는 속성. 이 속성에 스크립트 스킴이 들어가면 클릭 한 번이 곧 코드 실행이다.
      호출부는 전부 'post.html?id=' 같은 고정 접두사 뒤에 encodeURIComponent로 값을 붙이므로
      정상 경로에서는 걸릴 일이 없다 — 이 검사는 그 약속이 깨졌을 때를 위한 마지막 그물이다.
-     blob:은 다운로드(download)가 쓰므로 막지 않는다. */
+     blob:은 막지 않는다 — 코드 실행 스킴이 아니고, 검사 대상(href·src)에 넣는 쪽도 이 코드베이스에 없다. */
   var URL_ATTRS = ['href', 'src', 'action', 'formaction', 'xlink:href'];
   var BAD_SCHEME_RE = /^(?:javascript|vbscript|data):/i;
 
@@ -274,7 +274,7 @@
     return da.getTime() === db.getTime();
   }
 
-  /* KST 고정 오프셋 ISO 8601. 에디터가 내보내는 created/updated는 항상 이 형식이다. */
+  /* KST 고정 오프셋 ISO 8601. 에디터가 저장하는 created/updated는 항상 이 형식이다. */
   function nowIsoKst() {
     var now = new Date();
     var kst = new Date(now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60000);
@@ -342,7 +342,7 @@
     else window.history.replaceState({ q: search }, '', url);
   }
 
-  /* ---------- 클립보드 / 다운로드 ---------- */
+  /* ---------- 클립보드 ---------- */
 
   function copyText(text) {
     if (navigator.clipboard && window.isSecureContext) {
@@ -368,19 +368,12 @@
     });
   }
 
-  function download(filename, text, mime) {
-    var blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = el('a', { href: url, download: filename });
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    /* 즉시 revoke하면 일부 브라우저에서 저장이 취소된다. */
-    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-  }
+  /* download()는 v3.9에서 지웠다 — 에디터의 "파일로 내보내기"가 폐지돼 호출처가 없다(계약서 §6-1, #97). */
 
   /* ---------- 토스트 ----------
-     #toastArea는 세 페이지 공통 셸에 있다. 없으면 만들어 쓴다(스크립트가 죽지 않게). */
+     #toastArea는 세 페이지 공통 셸에 있다. 없으면 만들어 쓴다(스크립트가 죽지 않게).
+     role은 토스트 요소 자신에게 — 오류는 alert(끼어들어 읽힘), 나머지는 status(차례를 기다림).
+     #toastArea의 aria-live="polite"와 같은 뜻을 두 번 말하지 않으려면 컨테이너가 아니라 항목에 둔다(계약서 §7, #98). */
 
   var TOAST_MS = 2600;
 
@@ -397,7 +390,7 @@
     var area = toastArea();
     var node = el('div', {
       class: 'toast' + (kind ? ' is-' + kind : ''),
-      role: 'status',
+      role: kind === 'err' ? 'alert' : 'status',
       text: String(message)
     });
     area.appendChild(node);
@@ -422,6 +415,6 @@
     nowIsoKst: nowIsoKst, todayStampKst: todayStampKst,
     debounce: debounce, rafThrottle: rafThrottle,
     getQuery: getQuery, setQuery: setQuery,
-    copyText: copyText, download: download, toast: toast
+    copyText: copyText, toast: toast
   };
 })(window, document);

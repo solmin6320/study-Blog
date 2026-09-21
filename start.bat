@@ -8,8 +8,8 @@ rem
 rem  Two ways to run this blog locally:
 rem    1. Docker editor server (server/, docs/api.md): write.html "Save" writes
 rem       posts/ directly and auto-commits. Port 5500.
-rem    2. start.ps1 preview server: static files only, NO save API - the editor
-rem       falls back to "Export files". Port 5500 as well.
+rem    2. start.ps1 preview server: static files only, NO save API - write.html
+rem       cannot save (Save button disabled, "server missing"). Port 5500 as well.
 rem
 rem  This file picks for you: if the Docker daemon answers "docker info" within
 rem  5 seconds, it runs "docker compose up -d" and opens the browser. Otherwise
@@ -38,7 +38,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -File
 if errorlevel 1 (
     echo.
     echo  [start.bat] Docker is installed but the daemon is not running - using the preview server.
-    echo              Start Docker Desktop and run start.bat again to get the save button.
+    echo              Start Docker Desktop and run start.bat again to enable saving.
     goto :preview
 )
 

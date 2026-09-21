@@ -13,7 +13,7 @@
 <script src="js/theme-init.js"></script>
 
 <title>새 글 쓰기 · 메모 블로그</title>
-<meta name="description" content="마크다운으로 글을 쓰고 .md와 index.json 파일로 내보내는 작성 도구.">
+<meta name="description" content="마크다운으로 글을 쓰고 로컬 에디터 서버에 저장하는 작성 도구.">
 <meta name="color-scheme" content="light dark">
 <!-- 작성 도구는 검색 결과에 뜰 이유가 없다(공개돼도 무해하지만 색인은 불필요). -->
 <meta name="robots" content="noindex, nofollow">
@@ -74,12 +74,11 @@
   <button class="icon-btn side-toggle" id="sideToggle" type="button"
           aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
-  <!-- index.html / post.html / about.html과 항목을 맞춘다(계약서 §3-3, 4항목). 페이지마다 메뉴가 달라 보이면 안 된다.
+  <!-- index.html / post.html과 항목을 맞춘다(계약서 §3-3, v3.9 3항목 — 글·태그·쓰기). 페이지마다 메뉴가 달라 보이면 안 된다.
        현재 페이지 표시는 aria-current="page" 하나다 — .is-active는 v3.4에서 폐기됐다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
     <a class="nav-link" href="index.html">글</a>
     <a class="nav-link" href="index.html#tags">태그</a>
-    <a class="nav-link" href="about.html">소개</a>
     <!-- v3.8(계약서 §3): data-admin-only는 정적 hidden과 짝. admin.js가 관리자면 뗀다 — JS-off 방문자에게는 링크가 없다. -->
     <a class="nav-link" href="write.html" aria-current="page" data-admin-only hidden>쓰기</a>
   </nav>
@@ -122,7 +121,7 @@
     <!-- 에디터는 전부 자바스크립트다. 꺼져 있으면 .editor가 정적 hidden이라 이 안내만 보인다(계약서 §6·§8-2 예외). -->
     <div class="editor-visitor">
       <p><strong>자바스크립트가 꺼져 있어요</strong></p>
-      <p>미리보기 · 임시저장 · 저장 · 파일 내보내기가 모두 자바스크립트로 동작합니다.
+      <p>미리보기 · 임시저장 · 저장이 모두 자바스크립트로 동작합니다.
          브라우저 설정에서 자바스크립트를 켜고 새로고침해 주세요.</p>
     </div>
   </noscript>
@@ -213,22 +212,20 @@
         </label>
       </div>
 
-      <!-- 계약서 §6-1(v3.5): 미리보기 → 저장 → 내보내기 → 서버 표시. DOM 순서 고정 —
-           CSS의 `#btnSave:not([hidden]) ~ #btnExport` 격하 규칙이 형제 순서에 걸려 있다.
-           #btnSave·#editorServer는 hidden으로 시작하고, editor.js가 GET /api/health(docs/api.md)로
-           로컬 에디터 서버를 확인했을 때만 hidden을 뗀다. 상태는 hidden 둘이 전부다(클래스·data- 없음).
-           서버 모드가 되면 editor.js가 #btnExport의 aria-keyshortcuts·title의 "(Ctrl+S)"를 뗀다 —
-           보이는 버튼 둘이 같은 단축키를 주장하면 스크린리더가 둘 다 읽는다. -->
+      <!-- 계약서 §6-1(v3.9 저장 단일 모드): 미리보기 → 저장(항상 보임, 서버 없으면 disabled) → 서버 표시 → 다시 연결. DOM 순서 고정.
+           #btnSave는 disabled로 시작하고 editor.js가 GET /api/health(docs/api.md) 성공 때 푼다.
+           #editorServer·#btnRetry는 hidden으로 시작 — 판정(≤2초) 전에는 아무 말도 하지 않는다("확인 중").
+           서버 없음이면 #editorServer에 .is-off + 문구 "서버 없음 · start.bat(Docker) 실행 후 저장", #btnRetry가 보인다.
+           상태의 손잡이는 disabled · hidden · .is-off 셋이 전부다(body 클래스·data- 없음). #btnRetry는 단축키가 없으니 title도 없다. -->
       <div class="editor-actions">
         <button class="btn" type="button" id="btnPreviewToggle">미리보기</button>
-        <button class="btn btn-primary" type="button" id="btnSave" hidden
+        <button class="btn btn-primary" type="button" id="btnSave" disabled
                 title="저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장</button>
-        <button class="btn btn-primary" type="button" id="btnExport"
-                title="파일로 내보내기 (Ctrl+S)" aria-keyshortcuts="Control+S">파일로 내보내기</button>
         <span class="editor-server" id="editorServer" hidden>로컬 서버 연결됨</span>
+        <button class="btn btn-ghost" type="button" id="btnRetry" hidden>다시 연결</button>
       </div>
 
-      <!-- 내보내지 않은 변경이 있으면 editor.js가 .is-dirty를 붙인다. -->
+      <!-- 저장하지 않은 변경이 있으면 editor.js가 .is-dirty를 붙인다. -->
       <p class="editor-status" id="editorStatus" role="status" aria-live="polite">준비 중…</p>
     </div>
 
@@ -260,11 +257,11 @@
              placeholder는 글을 쓰기 시작하면 사라지므로 세 겹으로 안내한다:
                ① placeholder(빈 화면)  ② 아래 숨은 설명(aria-describedby · 스크린리더)
                ③ 첫 Tab 때 #editorStatus에 뜨는 안내(editor.js의 teachTab) -->
-        <!-- Ctrl+S 문구는 내보내기 모드 기준이다. 서버 모드가 확인되면 editor.js setServerMode()가 "저장"으로 갈아 끼운다(계약서 §6-2). -->
-        <p class="sr-only" id="bodyHint">Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S 파일로 내보내기. 줄 첫머리에 //를 치고 Enter 또는 Space를 누르면 코드 블록이 됩니다.</p>
+        <!-- v3.9(계약서 §6-1·§6-2): "Ctrl+S 저장"은 고정 문구다 — 모드별 갈아 끼우기 없음. 마지막 문장은 Enter 규칙(§6-2 "Shift+Enter가 탈출구다") 그대로. -->
+        <p class="sr-only" id="bodyHint">Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S 저장. 줄 첫머리에 //를 치고 Enter 또는 Space를 누르면 코드 블록이 됩니다. 코드 블록 안에서 Enter는 들여쓰기를 이어 가고, 목록 줄에서 Enter는 다음 항목을 만듭니다. 그냥 줄만 바꾸려면 Shift+Enter.</p>
         <textarea class="editor-area" id="fBody" spellcheck="false" autocomplete="off"
                   aria-describedby="bodyHint"
-                  placeholder="여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S 내보내기.
+                  placeholder="여기에 마크다운으로 씁니다. Tab은 들여쓰기(빠져나가려면 Esc 누른 뒤 Tab), Ctrl+B 굵게, Ctrl+S 저장.
 줄 첫머리에 // 로 코드 블록 (//java 처럼 언어도)."></textarea>
       </div>
 

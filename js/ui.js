@@ -73,7 +73,7 @@
 
   /* ---------- 인트로 전등 (v3.6, 계약서 §3-5) ----------
      시간표는 전부 CSS animation-delay다(layout.css §10). JS는 시간을 세지 않는다 —
-     .intro 자신의 animationend(3160ms)를 받아 hidden을 붙이고 sessionStorage에 "봤다"고 적는다.
+     .intro 자신의 animationend(v3.9: 2250ms — --hold-intro 500)를 받아 hidden을 붙이고 sessionStorage에 "봤다"고 적는다.
      다음 로드에서는 theme-init.js가 첫 페인트 전에 html[data-intro="done"]을 붙여 막을 없앤다.
 
      여기서 data-intro를 붙이지 않는다 — 첫 방문에서 붙이면 본문 진입 애니메이션(intro-arrive)이
@@ -226,8 +226,8 @@
       role: 'dialog',
       'aria-modal': 'true',
       'aria-labelledby': titleId,
-      /* 제목만 이름으로 주면 본문이 낭독되지 않는다. 내보내기 안내 모달의 본문은
-         "파일을 어디에 넣어야 하는가"가 적힌 유일한 곳이라, 안 읽히면 절차가 통째로 사라진다.
+      /* 제목만 이름으로 주면 본문이 낭독되지 않는다. 표 대화상자·게시일 확인·임시저장본 모달의 본문은
+         "무엇을 결정하는가"가 적힌 유일한 곳이라, 안 읽히면 질문이 통째로 사라진다.
          내용이 있을 때만 연결한다(빈 영역을 가리키면 오히려 침묵한다). */
       'aria-describedby': body.firstChild ? bodyId : null
     }, [panel]);
@@ -603,7 +603,7 @@
     });
   }
 
-  /* v3.0에서 사라진 export: initHeader / reveal / countUp.
+  /* v3.0에서 사라진 공개 함수: initHeader / reveal / countUp.
      다른 파일에서 이 이름을 부르면 TypeError가 난다 — 부르는 쪽에서 지운다(§12 #18·#19). */
   Blog.ui = {
     initShell: initShell,
