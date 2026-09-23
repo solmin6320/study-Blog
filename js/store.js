@@ -708,6 +708,10 @@
   function draftKey(id) { return DRAFT_PREFIX + (id || 'new'); }
 
   var draft = {
+    /* 실제 localStorage 키를 밖에 알려 준다(§3-2). 에디터가 storage 이벤트의 e.key로
+       "다른 탭이 이 글의 초안을 바꿨다"를 가려내려면 키를 계산할 수 있어야 하고,
+       'blogDraft:'를 에디터가 따로 조립하면 접두가 바뀔 때 한쪽만 고쳐진다. */
+    key: draftKey,
     save: function (id, payload) {
       var ls = safeLocal();
       if (!ls) return false;

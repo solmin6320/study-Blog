@@ -34,12 +34,15 @@
 
     debounce: { search: 180, preview: 120, draft: 800 },
 
+    /* 계약서 §3-2 "저장 키 표"가 이 객체 전체의 목록이다 — 표에 없는 키를 여기 만들지 않는다.
+       admin 키는 v4.3에서 지웠다. 관리자 판정은 hostname 하나라(admin.js) 읽는 곳이 없었고,
+       남겨 두면 "localStorage로 켜는 스위치가 있다"로 읽힌다. */
     storageKeys: {
       /* theme 키는 FOUC 방지용으로 js/theme-init.js에도 문자열이 박혀 있다
          (그 파일은 config.js보다 먼저 실행되므로 여기를 참조할 수 없다).
          여기를 바꾸면 theme-init.js도 같이 바꿔야 한다. */
       theme: 'blogTheme',
-      admin: 'blogAdmin',
+      /* 접두다. 실제 키는 Blog.store.draft.key(id) = 'blogDraft:' + (id || 'new') — 조립은 store.js 한 곳에서. */
       draft: 'blogDraft',
       /* 사이드바 상태 {"pinned":bool,"closed":[slug…]}. theme처럼 theme-init.js에도 문자열이 박혀 있다 —
          고정 도킹은 첫 페인트 전에 알아야 레이아웃이 튀지 않기 때문이다. 바꾸면 그 파일도 같이 바꾼다. */
@@ -52,7 +55,10 @@
       list: 'blogList',
       /* "목록" 링크로 돌아간다는 한 번짜리 표식(값 = 방금 읽은 글 id, §4-6 ③). post.js가 쓰고 app.js가 읽자마자 지운다.
          계약서는 키 이름만 정했다 — 두 파일이 문자열을 따로 박지 않도록 여기 둔다. */
-      listReturn: 'blogListReturn'
+      listReturn: 'blogListReturn',
+      /* 코드 블록 언어 기억(§3-2 저장 키 표 · §6-2 "코드 블록 언어 기억"). editor.js가 읽고 쓴다.
+         값은 v4.2의 editor.js 상수와 같다 — 이미 기억된 언어가 그대로 읽힌다. */
+      codeLang: 'blogCodeLang'
     },
 
     /* CDN 고정 버전. HTML의 <script src>와 반드시 일치시킨다(표시·점검용).

@@ -524,6 +524,19 @@
     U.toast('이 글의 ' + keys.join(', ') + ' 값이 index.json과 다릅니다. 목록에는 옛 값이 보입니다', 'warn');
   }
 
+  /* 깨진 frontmatter 경고(§5-6 v4.3). 방문자는 고칠 수 없는 내부 사정이라 듣지 않는다 — 보안이 아니라 소음 제거다.
+     문구가 둘인 이유: index.json에도 없는 글이면 "index.json의 제목과 날짜로 표시"가 거짓이 된다(제목이 비어 나온다). */
+  var FRONTMATTER_WARN = {
+    indexed: 'frontmatter를 읽지 못해 index.json의 제목과 날짜로 표시합니다. 파일 맨 위 --- 블록을 확인해 주세요',
+    orphan: 'frontmatter를 읽지 못했고 index.json에도 이 글이 없어 제목과 날짜를 알 수 없습니다. 파일 맨 위 --- 블록을 확인해 주세요'
+  };
+
+  function noticeBrokenFrontmatter(post) {
+    if (post.frontmatterOk) return;
+    if (!Blog.admin.isAdmin()) return;
+    U.toast(store.findMeta(post.id) ? FRONTMATTER_WARN.indexed : FRONTMATTER_WARN.orphan, 'warn');
+  }
+
   /* ---------- 사이드바 (사양 B) ----------
      트리는 ui.js가 그린다. 여기서는 글 전체·정렬된 분류(U.sortCats — 목록 인덱스와 같은 순서)·현재 글 id를 넘긴다.
      activeCat은 없다 — 상세 화면은 어느 분류의 "필터"가 걸린 상태가 아니다. 현재 글에만 aria-current가 붙는다. */
@@ -555,9 +568,7 @@
   function render(post) {
     var meta = post.meta;
 
-    if (!post.frontmatterOk) {
-      U.toast('frontmatter를 읽지 못해 목록 정보로 표시합니다', 'warn');
-    }
+    noticeBrokenFrontmatter(post);
 
     fillHead(meta);
 

@@ -97,6 +97,17 @@
     diff: 'Diff', plaintext: 'text', text: 'text'
   });
 
+  /* 코드 언어의 화면 표기(§5-7 · §6-2). 머리띠와 에디터가 같은 규칙을 쓰도록 한 곳에 둔다.
+     v4.0(M3): 강제 대문자 금지. 이름표에 있는 언어는 고유 표기(Java · SQL — 고유명사의 대소문자는 장식이 아니다),
+     없는 언어는 받은 그대로, 언어가 없으면 text. KOTLIN·TEXT 같은 ALL-CAPS 데이터 라벨은 FD 클리셰⑤다.
+     이름표 조회만 소문자로 한다 — 글쓴이는 ```Java처럼 대문자로 친다(§0-4 H1). */
+  function langLabel(lang) {
+    var raw = String(lang === null || lang === undefined ? '' : lang);
+    var key = raw.trim().toLowerCase();
+    if (!key) return 'text';
+    return LANG_LABEL[key] || raw;
+  }
+
   function langOf(codeEl) {
     var found = '';
     String(codeEl.className || '').split(/\s+/).forEach(function (cls) {
@@ -127,9 +138,8 @@
       var wrap = U.el('div', { class: 'code-wrap' });
       pre.parentNode.insertBefore(wrap, pre);
 
-      /* v4.0(M3, 계약서 §5-7): 강제 대문자 금지. 이름표에 있는 언어는 고유 표기(Java · SQL — 고유명사의 대소문자는 장식이 아니다),
-         없는 언어는 적힌 그대로(kotlin), 언어가 없으면 text. KOTLIN·TEXT 같은 ALL-CAPS 데이터 라벨은 FD 클리셰⑤다. */
-      var label = lang ? (LANG_LABEL[lang] || lang) : 'text';
+      /* 표기 규칙은 langLabel 하나다. langOf가 소문자로 넘기므로 이름표 밖 언어는 v4.2와 같게 소문자로 보인다. */
+      var label = langLabel(lang);
       wrap.appendChild(U.el('span', { class: 'code-lang', 'aria-hidden': 'true', text: label }));
 
       var button = U.el('button', {
@@ -356,7 +366,300 @@
     return U.qsa('.toc-item', navEl);
   }
 
+  /* ---------- 펜스 코드 블록의 범위 (계약서 §6-2 "코드 블록 안 = codeRanges") ----------
+     에디터의 입력 규칙(짝 · Enter · Ctrl+/ · // · 툴바 코드 블록 · 언어 기억)이 "여기가 코드 안인가"를 묻는 단 하나의 답이다.
+     기준은 렌더러다 — 글쓴이가 미리보기와 상세 화면에서 코드로 보는 줄에서만 코드 규칙이 켜져야 한다.
+     그런데 marked를 부르지 않는다: CDN이 막혀도 에디터 입력은 살아야 하고, 키 하나마다 lexer 전체를 돌릴 수는 없다.
+     그래서 CommonMark 블록 구조 가운데 펜스 판정에 영향을 주는 것만 따라간다 —
+       컨테이너(인용 · 목록 항목): 끝나면 그 안의 펜스도 닫힌다
+       문단: 게으른 이어짐(컨테이너 표시 없는 줄이 문단을 잇는다)과 "목록이 문단을 끊을 수 있나"를 가르는 데만 쓴다
+       HTML 블록: 그 안의 ``` 줄은 펜스가 아니다
+       4칸 들여쓰기: 들여쓴 코드든 문단 이어짐이든 그 줄의 ```는 펜스가 아니다(들여쓴 코드 자체는 범위에 넣지 않는다 — §6-2)
+     제목·표·강조는 "문단을 끝내는가"만 본다. 결과는 marked 12.0.2 lexer의 펜스 code 토큰과 대조해 합격시켰다(계약 합격 표). */
+
+  /* marked 12의 lexer는 줄 머리 탭을 공백 4칸으로 펴고 나서 판정한다. 기준이 marked라 같은 폭을 쓴다(CommonMark의 탭 정지와 조금 다르다). */
+  var TAB_COLS = 4;
+
+  var FENCE_OPEN_RE = /^(`{3,}|~{3,})([\s\S]*)$/;
+  var FENCE_CLOSE_RE = /^(`{3,}|~{3,})[ \t]*$/;
+  var BLANK_RE = /^[ \t]*$/;
+  var THEMATIC_RE = /^(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+  var LIST_MARKER_RE = /^(?:[-+*]|(\d{1,9})[.)])(?=[ \t]|$)/;
+  var ATX_RE = /^#{1,6}(?:[ \t]|$)/;
+  var SETEXT_RE = /^(?:=+|-+)[ \t]*$/;
+
+  /* HTML 블록의 시작 조건(CommonMark 종류 1 · 2 · 6 · 7). 끝 조건이 종류마다 달라 end로 돌려준다.
+     3~5(<? · <!X · <![CDATA[)는 학습 메모에 나오지 않아 따라가지 않는다 — 그 안의 ```는 펜스로 잡힌다(받아들인다). */
+  var HTML_RAW_RE = /^<(?:pre|script|style|textarea)(?:[ \t>]|$)/i;
+  var HTML_RAW_END_RE = /<\/(?:pre|script|style|textarea)>/i;
+  var HTML_BLOCK_TAGS = 'address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|' +
+    'fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|' +
+    'nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul';
+  var HTML_BLOCK_RE = new RegExp('^</?(?:' + HTML_BLOCK_TAGS + ')(?:[ \\t>]|/>|$)', 'i');
+  var HTML_TAG_LINE_RE = /^(?:<[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][\w.:-]*(?:[ \t]*=[ \t]*(?:[^ \t"'=<>`]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*$/;
+
+  /* i부터 공백·탭이 몇 칸인가. pad는 앞 컨테이너가 탭을 반만 먹고 남긴 가상 칸이다. */
+  function indentAt(text, i, end, pad) {
+    var cols = pad;
+    while (i < end) {
+      var ch = text.charCodeAt(i);
+      if (ch === 32) cols += 1;
+      else if (ch === 9) cols += TAB_COLS;
+      else break;
+      i += 1;
+    }
+    return { cols: cols, next: i };
+  }
+
+  /* 커서(cur = {i, pad})를 want칸 앞으로. 탭이 넘치면 남는 칸을 pad로 들고 간다. */
+  function skipCols(text, cur, end, want) {
+    var have = cur.pad;
+    var i = cur.i;
+    while (have < want && i < end) {
+      var ch = text.charCodeAt(i);
+      if (ch === 32) have += 1;
+      else if (ch === 9) have += TAB_COLS;
+      else break;
+      i += 1;
+    }
+    cur.i = i;
+    cur.pad = Math.max(0, have - want);
+  }
+
+  /* 인용 표시 '>'와 그 뒤 공백 하나(marked처럼 탭 하나도)를 먹는다. */
+  function skipQuoteMarker(text, cur, markerAt, end) {
+    cur.i = markerAt + 1;
+    cur.pad = 0;
+    if (cur.i < end) {
+      var ch = text.charCodeAt(cur.i);
+      if (ch === 32 || ch === 9) cur.i += 1;
+    }
+  }
+
+  /* 펜스를 여는 줄이면 {ch, len, lang}. 백틱 펜스의 정보 문자열에 백틱이 있으면 펜스가 아니라 인라인 코드다(합격 표 6행). */
+  function fenceOpenOf(content) {
+    var m = FENCE_OPEN_RE.exec(content);
+    if (!m) return null;
+    var info = m[2];
+    if (m[1].charAt(0) === '`' && info.indexOf('`') !== -1) return null;
+    var trimmed = info.trim();
+    return { ch: m[1].charAt(0), len: m[1].length, lang: trimmed ? trimmed.split(/\s+/)[0] : '' };
+  }
+
+  /* HTML 블록을 여는 줄이면 끝 조건('raw' | 'comment' | 'blank'). 종류 7(태그 하나뿐인 줄)은 문단을 끊지 못한다. */
+  function htmlStartOf(content, paraOpen) {
+    if (HTML_RAW_RE.test(content)) return 'raw';
+    if (content.indexOf('<!--') === 0) return 'comment';
+    if (HTML_BLOCK_RE.test(content)) return 'blank';
+    if (!paraOpen && HTML_TAG_LINE_RE.test(content)) return 'blank';
+    return null;
+  }
+
+  function htmlEndsOn(end, content) {
+    if (end === 'raw') return HTML_RAW_END_RE.test(content);
+    if (end === 'comment') return content.indexOf('-->') !== -1;
+    return BLANK_RE.test(content);
+  }
+
+  /* 문단이 열려 있을 때 목록 표시가 새 목록을 시작할 수 있나 — 빈 항목과 1이 아닌 번호는 문단을 끊지 못한다. */
+  function listCanInterrupt(m, emptyItem) {
+    return !emptyItem && (m[1] === undefined || m[1] === '1');
+  }
+
+  /* 게으른 이어짐이 아닌 줄(= 새 블록을 여는 줄)인가. 컨테이너 표시가 빠진 줄에서만 묻는다. */
+  function opensBlock(content) {
+    if (BLANK_RE.test(content) || content.charAt(0) === '>') return true;
+    if (fenceOpenOf(content) || ATX_RE.test(content) || THEMATIC_RE.test(content)) return true;
+    if (htmlStartOf(content, true)) return true;
+    var m = LIST_MARKER_RE.exec(content);
+    return Boolean(m) && listCanInterrupt(m, BLANK_RE.test(content.slice(m[0].length)));
+  }
+
+  /* 열린 컨테이너를 바깥부터 몇 개 이어 가는지 센다. cur는 이어진 컨테이너의 표시 뒤로 옮겨진다. */
+  function matchContainers(text, cur, end, stack) {
+    var n = 0;
+    for (; n < stack.length; n += 1) {
+      var sp = indentAt(text, cur.i, end, cur.pad);
+      if (stack[n].quote) {
+        if (sp.cols > 3 || sp.next >= end || text.charAt(sp.next) !== '>') break;
+        skipQuoteMarker(text, cur, sp.next, end);
+      } else if (sp.next >= end) {
+        /* 빈 줄은 목록 항목을 끝내지 않는다 — 느슨한 목록(§0-4 H3)과 항목 안 펜스 위의 빈 줄(합격 표 7행) */
+        cur.i = end;
+        cur.pad = 0;
+      } else if (sp.cols >= stack[n].item) {
+        skipCols(text, cur, end, stack[n].item);
+      } else {
+        break;
+      }
+    }
+    return n;
+  }
+
+  /* 이 줄에서 새로 열리는 컨테이너를 stack에 쌓는다. 무엇이든 열었으면 true. */
+  function openContainers(text, cur, end, stack, paraOpen) {
+    var opened = false;
+    for (;;) {
+      var sp = indentAt(text, cur.i, end, cur.pad);
+      if (sp.cols >= 4) break;
+      var content = text.slice(sp.next, end);
+      if (content.charAt(0) === '>') {
+        skipQuoteMarker(text, cur, sp.next, end);
+        stack.push({ quote: true });
+        opened = true;
+        continue;
+      }
+      if (THEMATIC_RE.test(content)) break;      // "- - -"는 목록이 아니라 구분선
+      var m = LIST_MARKER_RE.exec(content);
+      if (!m) break;
+      var markEnd = sp.next + m[0].length;
+      var after = indentAt(text, markEnd, end, 0);
+      var emptyItem = after.next >= end;
+      if (paraOpen && !opened && !listCanInterrupt(m, emptyItem)) break;
+      /* 항목 내용의 들여쓰기 = 표시 앞 칸 + 표시 + 뒤 공백(1~4). 비었거나 5칸 이상이면 공백 하나로 친다(그 뒤는 들여쓴 코드). */
+      var gap = (emptyItem || after.cols >= 5) ? 1 : after.cols;
+      stack.push({ item: sp.cols + m[0].length + gap });
+      if (emptyItem) {
+        cur.i = end;
+        cur.pad = 0;
+      } else if (after.cols >= 5) {
+        cur.i = markEnd;
+        cur.pad = 0;
+        skipCols(text, cur, end, 1);
+      } else {
+        cur.i = after.next;
+        cur.pad = 0;
+      }
+      opened = true;
+    }
+    return opened;
+  }
+
+  function freezeRange(open, bodyStart, bodyEnd, close, lang) {
+    return Object.freeze({ open: open, bodyStart: bodyStart, bodyEnd: bodyEnd, close: close, lang: lang });
+  }
+
+  /* 컨테이너가 끝나 닫는 펜스 없이 끝난 블록의 끝 = 마지막으로 블록에 속한 줄의 끝(\r\n이면 \r 앞).
+     그 줄의 시작이 아니라 끝인 이유: close === bodyEnd(닫히지 않은 블록)에서 codeAt은 pos === bodyEnd를 안으로 치는데,
+     다음 줄의 시작을 bodyEnd로 두면 컨테이너 밖 줄의 첫 자리가 코드가 된다. */
+  function lineEndBefore(text, ls) {
+    var e = ls - 1;
+    return (e > 0 && text.charCodeAt(e - 1) === 13) ? e - 1 : e;
+  }
+
+  function scanCodeRanges(text) {
+    var ranges = [];
+    var stack = [];          // 열린 컨테이너: { quote: true } | { item: 내용 들여쓰기 칸 수 }
+    var fence = null;        // 열린 펜스: { open, bodyStart, ch, len, lang, depth }
+    var html = null;         // 열린 HTML 블록: { end, depth }
+    var paraOpen = false;
+    var len = text.length;
+    var ls = 0;
+
+    for (;;) {
+      var nl = text.indexOf('\n', ls);
+      var le = nl === -1 ? len : nl;
+      var ce = (le > ls && text.charCodeAt(le - 1) === 13) ? le - 1 : le;   // 줄 내용의 끝(\r 앞)
+      var cur = { i: ls, pad: 0 };
+      var matched = matchContainers(text, cur, ce, stack);
+
+      if (fence && matched < fence.depth) {
+        var end = lineEndBefore(text, ls);
+        /* 빈 블록이면 bodyStart(다음 줄 시작)가 end보다 뒤에 남는다 — 코드 자리가 하나도 없다는 뜻이다(codeAt은 늘 null). */
+        ranges.push(freezeRange(fence.open, fence.bodyStart, end, end, fence.lang));
+        fence = null;
+      }
+      if (html && matched < html.depth) html = null;
+
+      if (fence) {
+        var fsp = indentAt(text, cur.i, ce, cur.pad);
+        var fm = fsp.cols <= 3 ? FENCE_CLOSE_RE.exec(text.slice(fsp.next, ce)) : null;
+        if (fm && fm[1].charAt(0) === fence.ch && fm[1].length >= fence.len) {
+          ranges.push(freezeRange(fence.open, fence.bodyStart, ls, ce, fence.lang));
+          fence = null;
+        }
+      } else if (html) {
+        if (htmlEndsOn(html.end, text.slice(cur.i, ce))) {
+          html = null;
+          paraOpen = false;
+        }
+      } else {
+        scanBlockLine();
+      }
+
+      if (nl === -1) break;
+      ls = nl + 1;
+    }
+
+    if (fence) ranges.push(freezeRange(fence.open, fence.bodyStart, len, len, fence.lang));
+    return ranges;
+
+    /* 펜스·HTML 블록 밖의 한 줄. 위 루프의 지역 변수(ls · le · ce · cur · matched)를 그대로 쓴다. */
+    function scanBlockLine() {
+      if (matched < stack.length) {
+        var probe = indentAt(text, cur.i, ce, cur.pad);
+        if (paraOpen && (probe.cols >= 4 || !opensBlock(text.slice(probe.next, ce)))) return;   // 게으른 이어짐
+        stack.length = matched;
+        paraOpen = false;
+      }
+      if (openContainers(text, cur, ce, stack, paraOpen)) paraOpen = false;
+
+      var sp = indentAt(text, cur.i, ce, cur.pad);
+      var content = text.slice(sp.next, ce);
+      if (BLANK_RE.test(content)) { paraOpen = false; return; }
+      if (sp.cols >= 4) return;                  // 들여쓴 코드이거나 문단 이어짐 — 어느 쪽이든 펜스가 아니다
+
+      var f = fenceOpenOf(content);
+      if (f) {
+        fence = { open: ls, bodyStart: le < len ? le + 1 : len, ch: f.ch, len: f.len, lang: f.lang, depth: stack.length };
+        paraOpen = false;
+        return;
+      }
+      var h = htmlStartOf(content, paraOpen);
+      if (h) {
+        /* 종류 1·2는 시작 줄에서 바로 끝날 수 있다(<!-- 한 줄 -->). 종류 6·7의 끝은 빈 줄이라 시작 줄에서는 안 끝난다. */
+        html = (h !== 'blank' && htmlEndsOn(h, content)) ? null : { end: h, depth: stack.length };
+        paraOpen = false;
+        return;
+      }
+      if (ATX_RE.test(content) || THEMATIC_RE.test(content) || (paraOpen && SETEXT_RE.test(content))) {
+        paraOpen = false;
+        return;
+      }
+      paraOpen = true;
+    }
+  }
+
+  /* 같은 글이면 직전 결과를 그대로 준다(메모 1칸). 에디터는 키 하나에 여러 규칙이 같은 글을 묻는다.
+     돌려주는 배열과 원소는 얼려 둔다 — 여러 호출부가 같은 객체를 나눠 가지므로 한 곳이 고치면 다른 곳의 답이 바뀐다. */
+  var memoText = null;
+  var memoRanges = Object.freeze([]);
+
+  function codeRanges(text) {
+    var s = String(text === null || text === undefined ? '' : text);
+    if (s !== memoText) {
+      memoRanges = Object.freeze(scanCodeRanges(s));
+      memoText = s;
+    }
+    return memoRanges;
+  }
+
+  /* pos가 코드 줄 위면 그 블록, 아니면 null. 여는·닫는 펜스 줄은 코드가 아니다.
+     닫히지 않은 블록은 끝 자리(bodyEnd)도 안이다 — 문서 끝에서 이어 치는 글자가 코드이기 때문이다. */
+  function codeAt(text, pos) {
+    var ranges = codeRanges(text);
+    for (var k = 0; k < ranges.length; k += 1) {
+      var r = ranges[k];
+      if (r.bodyStart > pos) break;
+      if (pos < r.bodyEnd || (r.close === r.bodyEnd && pos === r.bodyEnd)) return r;
+    }
+    return null;
+  }
+
   Blog.markdown = {
+    codeRanges: codeRanges,
+    codeAt: codeAt,
+    langLabel: langLabel,
     configure: configure,
     libsReady: libsReady,
     renderFragment: renderFragment,
