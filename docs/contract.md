@@ -1,8 +1,50 @@
-# 마크업 계약서 v3.9
+# 마크업 계약서 v4.1
 
 디자이너(CSS)와 개발자(HTML/JS)가 동시에 작업하기 위한 **단일 진실 공급원**.
 여기 없는 클래스를 임의로 만들지 않는다. 필요하면 이 문서를 먼저 갱신한다.
 
+> **v4.1 (2026-09-23) — 두 스킬 감사(`ui-ux-pro-max` Quick Reference §1~§9 웹 해당분 + `frontend-design`) + 에디터 재설계.**
+> 사용자 원문: *"/ui-ux-pro-max | /frontend-design 이 2개의 스킬 기준으로 수정해"* ·
+> *"게시글 작성 부분을 더 더 가독성과 구조, 편의성, 코드나 글 작성을 고도화 해줘(가독성, UI/UX, 디자인, 정리 부분으로)"*.
+> v4.0이 고친 것(원칙 7 어휘 · 굵기 2단 · 카드 표면 · 결과 줄 · 인트로 건너뛰기)은 재론하지 않는다. 사용자가 확정한 축(카드 그리드 ·
+> 가운데 머리말 · 종이색 배경 · 인트로 전구 · 태그 인덱스 폐기)도 그대로다. 새 외부 의존성·웹폰트 없음.
+> **축은 둘이다.** ① **바닥 품질** — 헤드리스 실측(360/768/1024/1440 × 라이트/다크)에서 나온 누르는 면적 · 비텍스트 대비 · 포커스 가시성 ·
+> hover에만 기대는 드러냄 · 퇴장 모션 · 뒤로가기 상태 · 오류 복구. ② **에디터(write.html) 재설계** — 화면을 "무엇을 쓰는가 / 지금 상태 / 쓴다"
+> 세 덩어리로 다시 나누고, 저장 줄을 sticky 작업 줄로, 보기 전환을 세 칸 스위치로, 검증 오류를 칸 아래로 옮긴다.
+> 바뀐 절만 읽으려면: **§1-2(원칙 7 예외 둘째 — 외부 링크 `↗`)** · **§2(`--c-border-strong` · `--z-bar` 신설, `--sh-focus` · `--ff-mono` 값, 파생 `--editor-bar-h`, `@property` 41)** ·
+> §3-2(`Blog.ui.isSideOverlay()` 등재 — frontend-dev-2 이행 반영) · **§3-3(`.nav-link` 누르는 면적)** · **§4 · §4-4 끝 "빈 상태 / 로딩"(불러오기 실패의 `다시 시도`)** ·
+> **§4-4(한 장 규칙 조건 축소 · 누름 반응)** · **§4-4-1(신설 — 검색 지우기의 누르는 면적)** · **§4-6(신설 — 목록 상태 보존: 뒤로가기·`목록` 링크)** ·
+> **§5(`.back-link` 목적지)** · **§5-6(`.post-error`의 `다시 시도`)** · §5-7(복사 버튼 상시 · 외부 링크 `↗` · h1 강등·이미지 lazy 등재) ·
+> §5-7-2(재수집 · 별칭 — frontend-dev 이행 반영) · **§6-0(신설 — 재설계: 세 덩어리 · 마크업 전체 · 오류 규칙 · 작업 줄의 JS · 하지 않는 것)** ·
+> §6(§6-0 끝 "§6 공통 규칙" — `.field-group` 넷 · 1024 미만 `split` 없음 · 압축은 `split`에서만 · `title` 셋) ·
+> **§6-1(작업 줄의 저장 무리 · 연결됨 표시 숨김 · 삭제 자리 · 폼 잠금 · placeholder 한 문장 · 복구 모달 "결정 보류")** ·
+> §7(부품 등록 · 폐기) · §8(`aria-invalid` · `aria-pressed` · `aria-busy`) · **§8-1(토스트 시간 종류별)** · **§11(퇴장 = `--dur-fast` 규칙)** · §11-1 · §11-2 · §11-3 ·
+> §12-16(#122-127 이행 기록) · **§12-17(작업 #129-147)** · §13.
+> **이행 상태: 완료(2026-09-23).** §12-17 #129-147 전부 ✔ — CSS(#129-132) · frontend-dev(#133-137) · frontend-dev-2(#138-147). 이행 중 담당자가
+> 내린 판단은 해당 절에 등재했다(§4-6 "이행 판단" · §6-0 "작업 줄의 JS"·"오류 규칙" · §6-1 끝 "결정 보류의 구현" · §8-1). 이행 뒤 실측에서 나온
+> CSS 결함 둘(작업 줄 높이 · 분류 줄 꺾임)은 §6-0 "작업 줄의 폭 규칙" · §12-17 #148-149로 고쳤다. 마크업·클래스·JS 할 일의 변화는 없다.
+
+> **v4.0 (2026-09-22) — 라운드 7 통합 회의(`docs/meeting-07.md`) 확정 결함 반영. 사용자 원문: *"그냥 싹다 고쳐"*.**
+> 이번 개정의 축은 하나다 — **"문제는 그리드가 아니라 그 위에 얹힌 어휘다"**(회의록 공통 결론).
+> 4개 보고서가 독립적으로 같은 곳을 짚은 것들(소문 라벨·가운뎃점·화살표·대문자 라벨·미로드 폰트)을
+> **어휘 규칙**으로 못 박고, 접근성 치명 셋(C1·C4·C5)에 마크업 자리를 만들어 준다.
+> 바뀐 절만 읽으려면: **§1-2(원칙 2 = 굵기 2단 축 · 원칙 7 신설 "생성물 기본값 금지")** ·
+> **§2(`--ff-sans` 정직화 M5 · `--fw-text`/`--fw-bold` 신설 M6 · `--ls-wide` 사용처 둘로 제한 M1)** ·
+> **§3(셸 — `.intro` 마크업에 건너뛰기 버튼 C4 · 푸터 보조 줄 축소 M2)** · §3-1(첫 Tab 정지점) ·
+> **§3-5(인트로 — 건너뛰기·`inert` 규칙 C4)** · **§4(`#postList`의 `aria-live` 폐지 → `.list-status` 신설 C1 · 검색 placeholder M2)** ·
+> **§4-2(`.page-head` 정렬 축 결정 M13 — 근거 명시)** · **§4-4(카드 표면 재설계 M4 · `data-cats` 전환 · 카드 1장 그리드 M15 · 라벨 어휘)** ·
+> §5(`.back-link` 문구·화살표) · **§5-2(`summary === title` 억제 M9 · 날짜 줄 `·` 폐지)** · §5-5(이전/다음 화살표 폐지) ·
+> **§5-7(코드 언어 라벨 원문 표기 M3)** · §5-7-1(주석 이탤릭 폐지 m7) · **§6(write.html sr-only h1 C5 · 저장 상태 어휘 M11)** ·
+> §7(`.list-status` `.intro-skip` 등록) · §8(`#postList[data-cats]` · `inert`) · **§11-2(`--h-control-xs` 오기 정정 M14)** ·
+> §11-1 · **§12-16(개발자 작업 #109-128)** · §13.
+> **v4.0 추가 판정 (2026-09-23) — 사용자 원문: *"홈 화면에 게시글 바로 위에 존재하는 태그 카테고리 지워"*.**
+> `<details id="tags">`(태그 접기 손잡이)와 그 부품 전부(`.index-*` · `#tagIndex`)를 폐기한다. 앵커를 잃은 헤더 `태그` 링크도 함께 뺀다(§3-3 — 내비 2항목).
+> `?tags=` 필터 자체는 산다(상세의 태그 링크 §5-3이 여전히 건다). 걸린 필터를 **보여 주고 푸는** 일은 새 결과 줄 `.list-bar`(§4-5)가 맡는다 —
+> v4.0이 C1 때문에 만들던 `.list-status` 옆에 `전체 글 보기` 버튼 하나를 붙였다.
+> **이행 상태(2026-09-23)**: 이 개정의 CSS·마크업·JS 몫은 같은 날 한 세션에서 이행됐다(§12-16의 ✔ 표시). ✔가 없는 항목은 남은 일이다.
+> **보류(이번 라운드 범위 밖)**: 웹폰트 자체 호스팅(사용자 미승인 — M5는 대안 B로 처리) ·
+> 요구사항#10 배경(현행 유지) · `posts/index.json`의 `created` 정정(사용자 승인 대기, m1).
+>
 > **v3.9 (2026-09-21) — 라운드 7 통합 회의(`docs/meeting-06.md`) 사용자 6건 판정 → web-designer 지시 1~7.**
 > 사용자 원문: *"전등 너무 빨라 살짝만 줄여(0.2초)" / "Ctrl+S 했을 때 파일 자동 저장(다운로드 방식 없애)" / "태그 리스트 불필요하게
 > 2개(하나 삭제)" / "코드 블록 IDE 편의성 대폭 증가(엔터 시 IDE처럼 여백·계층)" / "코드 작성 부분과 실제 IDE 부분을 참고해서 더 나은 점
@@ -222,6 +264,20 @@
 5. **~~단색 배경 금지~~ (폐기)** — 사용자 판정으로 배경은 `--c-bg` 단색이다.
    질감은 배경 레이어가 아니라 **따뜻한 종이색 자체**가 낸다.
 6. 본문 타이포는 양보하지 않는다: **17px 이상 / 행간 1.75 / 줄길이 `--w-prose`.**
+   **v4.0 — 굵기 축은 2단(400 / 700)뿐이다.** 근거는 §2 `--fw-*`: 우리는 웹폰트를 싣지 않고(§2 `--ff-sans`),
+   한글 폴백(Malgun Gothic·Apple SD Gothic Neo)은 굵기가 사실상 둘이다. 600·750·800을 적으면 라틴 글자는
+   그 굵기로, 한글은 700으로 떨어져 **한 줄 안에서 두 스크립트의 굵기가 갈린다**. 위계는 굵기가 아니라
+   **크기 · 색 · 여백**이 만든다(이 셋은 두 스크립트에서 똑같이 작동한다).
+7. **화면 어휘에서 "생성물 기본값"을 뺀다 (v4.0 신설).** 아래 셋은 코드에 있으면 결함이다 —
+   4개 감사 보고서가 독립적으로 같은 것을 지적했고(meeting-07 M1·M2·M3), 전부 "정보를 더하지 않는 장식"이다.
+
+   | 금지 | 대신 | 예외(이름이 붙은 것만) |
+   |---|---|---|
+   | 자간 넓힌 소문(小文) 라벨 — `--fs-xs` + 700 + `--ls-wide` + 뮤트 | 라벨은 **크기와 색**으로만 라벨이 된다. `--ls-wide`는 §2가 정한 **둘**에만 | `.entry-group-label`(연도) · `.code-lang`(언어) — 둘 다 라틴·숫자 **토큰**이지 읽는 글이 아니다 |
+   | 메타를 잇는 가운뎃점 `·` | 라벨 문자열(`게시`/`수정`)과 **여백**이, 문장 안에서는 쉼표·마침표가 경계를 말한다 | ~~`.index-item + .index-item::before`~~ — 태그 인덱스와 함께 폐기(2026-09-23, §4-3). **지금은 예외가 없다.** 문서 제목(`<title>`)의 구분자는 화면 어휘가 아니라 탭 표기라 대상 밖 |
+   | 링크 끝·라벨의 화살표 `→` `←` | 문자열과 배치가 방향을 말한다(`이전`은 왼쪽, `다음`은 오른쪽) | `.back-link` — **계층을 거슬러 나가는** 유일한 링크. 그마저 마크업 문자가 아니라 CSS가 그린다(§5). **v4.1 둘째: `.prose a[target="_blank"]::after`의 `↗`** — 지우면 "이 링크는 사이트를 떠나 새 창을 연다"를 잃는다(판별법 통과). CSS 대체 텍스트로 스크린리더에는 "(새 창)"으로 읽힌다(§5-7) |
+
+   판별법: **"이 기호를 지우면 읽는 사람이 무엇을 잃는가?"** 아무것도 잃지 않으면 그것은 어휘가 아니라 소음이다.
 
 ---
 
@@ -229,14 +285,17 @@
 
 ```
 색  : --c-bg --c-surface --c-surface-2 --c-border --c-border-soft        (--c-bg-2는 v3.8 삭제)
+      --c-border-strong   (v4.1 — 입력칸·스위치 트랙 등 "컨트롤의 윤곽" 전용. 비텍스트 대비 3:1)
       --c-text --c-text-dim --c-text-mute
       --c-accent --c-accent-soft --c-meta --c-tag          (역할색 셋 — §1-2 원칙 2)
       --c-danger --c-warn --c-ok
 보조색: --c-on-accent --c-focus --c-scrim --c-shadow-rgb --c-selection
+      --c-glow   (v4.0 M12 — 인트로 전구의 "빛" 한 곳 전용. 역할색이 아니다 — 글자·UI에 쓰면 결함)
 코드: --code-bg --code-border --code-text --hl-*(하이라이팅 17종)
 타이포: --ff-sans --ff-mono
       --fs-xs --fs-sm --fs-md --fs-lg --fs-xl --fs-2xl --fs-3xl --fs-prose
       --lh-tight --lh-head --lh-body --lh-code(v3.9) --ls-tight --ls-wide
+      --fw-text --fw-bold(v4.0 — 굵기 축은 이 둘뿐이다)
 간격: --sp-1 ~ --sp-12  (4px 배수)
 반경: --r-sm --r-md --r-lg --r-full
 그림자: --sh-pop (떠 있는 것 전용 — 모달 패널·토스트)
@@ -247,8 +306,18 @@
       --dur-intro-exit(600) --dur-intro-out(600)                          ← 인트로 전용(§3-5, v3.7 재편)
 치수: --h-control --h-control-sm --h-control-xs --h-nav --w-modal --w-toast
 레이아웃: --w-prose(45rem) --w-page(72rem, v3.2 부활) --w-side(260px, v3.2) --gutter
-z-index: --z-scrim(40) --z-side(50) --z-modal(60) --z-toast(80) --z-intro(90, v3.6)
+z-index: --z-bar(30, v4.1) --z-scrim(40) --z-side(50) --z-modal(60) --z-toast(80) --z-intro(90, v3.6)
 ```
+
+**v4.1 — 토큰 둘 신설 · 값 둘 변경 · 파생 변수 하나.**
+
+| 토큰 | 값 (라이트 / 다크) | 왜 |
+|---|---|---|
+| **`--c-border-strong`** (신설) | `#908876` / `#746d5a` — 실측 `--c-bg` 3.2 / 3.5:1 · `--c-surface` 3.5 / 3.2:1 | **UX-§1 `color-contrast` · WCAG 1.4.11(비텍스트 대비 3:1).** `--c-border`(#d9d1c0)는 바탕 대비 1.4:1이라 빈 검색창·입력칸·꺼진 스위치의 윤곽이 "있는 듯 없는 듯"했다. 글자로 이름을 대지 않는 윤곽은 그 자체가 "여기에 입력한다 / 이것은 스위치다"라는 정보라 3:1이 바닥이다. **쓰는 곳은 넷뿐**: `.search-input`·`.field`(`select.field` 포함)의 테두리 · `.editor-title`의 아랫선 · `.switch-ui`의 꺼진 트랙 · `.view-btn[aria-pressed="true"]`의 테두리. 카드·구분선·버튼 테두리는 `--c-border` 그대로다 — 그것들은 구획이지 입력의 윤곽이 아니고, 버튼은 글자가 이름을 댄다. `@property` 등록·`base.css` 전환 목록에 추가(등록 합계 **41** — `--c-*` 21 · `--code-*` 3 · `--hl-*` 17. v4.0 본문의 "39"는 `--c-glow`를 세지 않은 오기였다) |
+| **`--z-bar`** (신설) | `30` | 에디터 작업 줄(`.editor-bar`, sticky — §6). 스크림(40)·사이드바(50)·모달(60)이 그 위를 덮어야 한다 |
+| `--sh-focus` (값) | `0 0 0 --ring-w accent 20%` → **`0 0 0 1px accent, 0 0 0 calc(--ring-w + 1px) accent 22%`** | **UX-§1 `focus-appearance`.** v4.0의 인풋 포커스는 "1px 테두리 색 변화 + 바탕 대비 1.3:1인 번짐"이 전부였다. 실선 1px을 한 겹 더해 테두리와 합쳐 **2px 액센트(5.8:1)** 가 포커스를 말하고, 번짐은 그 바깥의 여운이다. 테두리 두께를 바꾸지 않으므로 칸이 튀지 않는다 |
+| `--ff-mono` (값) | 목록 끝 `monospace` 앞에 **`"Apple SD Gothic Neo", "Malgun Gothic"`** | 라틴 고정폭 글꼴(Consolas 등)에는 한글이 없어 한글이 generic `monospace`까지 떨어졌고, Windows 한국어 환경에서 그것은 굴림체·돋움체(2칸 고정폭)였다 — 에디터 본문과 코드 주석의 한글이 **"여 기 에 마 크 다 운"처럼 글자마다 벌어졌다**(v4.0 실측, write.html). D2Coding·Noto Sans Mono CJK가 있으면 그것을, 없으면 본문과 같은 한글 글꼴을 쓴다. 코드 들여쓰기는 라틴 공백이 맞추므로 잃는 것이 없다. 웹폰트가 아니다(설치된 글꼴 이름) |
+| `--editor-bar-h` (파생 변수, 토큰 아님 — `--col-w`와 같은 지위) | `calc(--h-control + --sp-3 × 2)` (`layout.css` §8, `.editor`에 둔다) | 작업 줄의 높이. 분할 창이 "화면 − 작업 줄"을 채우는 식이 읽는다(§6). coarse에서 `--h-control`이 44로 오르며 따라간다 |
 
 **v3.7 — 코드 토큰(`--code-*` 3 · `--hl-*` 17)의 값이 IntelliJ IDEA로 바뀌었다.** 이름·개수·`@property` 등록은 그대로다.
 라이트 = IntelliJ Light(`themes/Light.xml`), 다크 = Darcula(`DefaultColorSchemesManager.xml`) — 값·출처·AA 보정은 §5-7-1 표.
@@ -282,11 +351,33 @@ z-index: --z-scrim(40) --z-side(50) --z-modal(60) --z-toast(80) --z-intro(90, v3
 |---|---|---|
 | `--lh-code` | `1.7` | **textarea(`.editor-area`)와 미리보기·상세의 코드 블록(`.prose pre code`)이 같은 행간을 읽는다.** v3.8까지 둘은 `1.7`과 `1.72`로 따로 적혀 있었고 글자 크기도 `--fs-sm`(13~15px)과 `--fs-prose × .92`(15.6~17.5px)로 달라, 나란히 보기에서 같은 코드가 왼쪽에서는 18줄·오른쪽에서는 15줄 높이였다 — 줄을 세며 오가는 눈이 매번 다시 맞춘다. 1.7인 이유: 본문 1.75보다 살짝 촘촘해야 "코드 = 한 덩어리"로 읽히고, 1.6 아래로는 한글 주석의 받침이 아랫줄과 닿는다. IntelliJ 기본(1.2)을 따르지 않는 이유 — IDE는 100줄을 한 화면에 넣는 도구이고 블로그 코드 블록은 10줄을 읽히는 인용이다. 글자 크기는 토큰이 아니라 식이다: `.editor-area { font-size: calc(var(--fs-prose) * .92) }` = `.prose pre code`의 `0.92em`(`.prose`가 `--fs-prose`) — 같은 값이 두 곳에 있되 출처는 `--fs-prose` 하나 |
 
+**v4.0 — 타이포 토큰 셋이 바뀐다(meeting-07 M5·M6·M1). 웹폰트는 싣지 않는다(사용자 미승인 — 회의록 "사용자 결정" 1의 대안 B).**
+
+| 토큰 | v3.9 | v4.0 | 왜 |
+|---|---|---|---|
+| `--ff-sans` | `"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", …` | `system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif` | **M5 — 1순위 두 이름이 어디서도 로드되지 않았다.** `@font-face` 0건이고 CSP(`font-src 'self'`)가 외부 폰트를 막는다. 즉 방문자는 **OS 기본 폰트**를 보고 있었는데 스택은 다른 폰트를 보고 있다고 적어 두었다 — 설계 의도가 거짓말인 상태다. 지우는 이유가 "없어서"만은 아니다: 이름을 남겨 두면 **Pretendard가 설치된 사람만 다른 화면을 본다**(UX-§4 consistency). 우리는 모든 방문자가 같은 것을 보는 쪽을 고른다. `system-ui`가 1순위인 이유 — 폰트 매칭은 글자 단위라 라틴은 OS 기본(SF Pro / Segoe UI)이, 한글은 그다음 한글 글꼴이 맡는다. `BlinkMacSystemFont`는 `system-ui`가 덮어 뺐다 |
+| **`--fw-text`** (신설) | — | `400` | **M6 — 굵기 축 2단.** 본문·메타·필드 라벨·비활성 내비·태그·개수. "읽는 글"의 굵기 |
+| **`--fw-bold`** (신설) | — | `700` | 제목(h1~h6·카드 제목·글 제목)·강조(`strong`)·버튼·**지금 상태인 것**(`aria-current`·`.is-active`)·구역 이름 라벨·배지. "구조와 상태"의 굵기 |
+| `--ls-wide` | 값 `0.06em`, 쓰는 곳 **11** | 값 그대로, 쓰는 곳 **2** | **M1 — FD 클리셰⑤(트래킹 아이라벨).** 한글은 글자마다 같은 em 상자라 자간을 벌리면 **단어가 흩어질 뿐** 판독에 기여하지 않는다. 자간 확장이 값을 하는 곳은 라틴·숫자 **토큰** 둘뿐이다: `.entry-group-label`(`2026` — `tabular-nums`와 짝) · `.code-lang`(`java`). 그 밖의 선언은 결함이다 |
+
+**`font-weight`에 `400`·`700` 말고 다른 숫자를 적으면 결함이다.** `600`은 라틴에서 Semibold를, 한글에서 Bold를 고르므로 "제목 한 줄 안에서 두 굵기"가 된다(`base.css`의 `font-synthesis-weight: none` 때문에 합성으로도 메워지지 않는다). 리터럴 `400`/`700` 대신 토큰을 쓰는 이유는 **grep 한 번으로 축이 지켜졌는지 보이게 하려는 것**이다 — `css/*`에서 `font-weight:\s*[0-9]`를 찾아 `var(--fw-`가 아닌 것이 나오면 그 줄이 곧 결함이다.
+
+**v4.0 굵기 지도 (이 표가 곧 검증 목록이다)**
+
+| `--fw-bold`(700) | `--fw-text`(400) |
+|---|---|
+| `h1~h6`(base) · `.prose h1~h6` · `.page-title` · `.post-title` · `.entry-title` · `.editor-title` · `.brand` · `.modal-head > h2` | 본문 `.prose` · `.prose a` · `.entry-cat` · `.entry-date` · `.entry-tag` · `.tag` |
+| `.prose strong/b` · `.prose li::marker` · `.prose thead th` · `.hljs-section` `.hljs-strong` | `.nav-link`(비활성) · `.index-item`(비선택) · `.index-count` · `.post-nav-label` · `.field-label` |
+| `.btn` · `.md-btn` · `.code-copy` · `.sr-only:focus`(스킵 링크) | `.back-link` · `.code-lang` · `.footer-note` · `.footer-meta` · `.editor-status` · `.editor-server` · `.switch` |
+| 상태: `.nav-link[aria-current]` · `.index-item.is-active` · `.side-cat-name` · `.side-post[aria-current]` · `.side-toc-item[aria-current]` | 비상태: `.side-post` · `.side-toc-item` · `.side-cat-count` · `.side-cat.is-empty .side-cat-name` |
+| 구역 이름: `.toc-title` · `.post-related-title` · `.side-title` · `.index-fold-summary` · `.entry-group-label` · `.post-related .entry-title` | |
+| 배지·알약: `.entry.is-pinned .entry-title::before` · `.side-post.is-pinned::before` · `.editor-mode` · `.post-cat` | |
+
 `tab-size`는 둘 다 **4**다(v3.8까지 2). 자바·C 계열의 관행이고 사용자 글이 자바다. 에디터의 Tab 키는 여전히 **공백 2칸**을 넣는다(§6-2) —
 `tab-size`는 탭 문자를 몇 칸으로 그리느냐이지 Tab 키가 무엇을 넣느냐가 아니다. 붙여 넣은 코드의 탭 문자가 IDE에서 본 폭으로 보이게 하는 값이다.
 
-**v3.4 — 색 토큰은 `@property`로 등록된다.** `tokens.css` 끝에서 `--c-*`(**19** — v3.8에 `--c-bg-2` 삭제) · `--code-*`(3) · `--hl-*`(17)을
-`syntax: "<color>"`로 등록한다(합계 **39**). 목적은 하나 — 테마 토글 때 **토큰 값 자체가 보간**되게 하는 것(§11).
+**v3.4 — 색 토큰은 `@property`로 등록된다.** `tokens.css` 끝에서 `--c-*`(~~19~~ **21** — v3.8에 `--c-bg-2` 삭제, v4.0 `--c-glow`, v4.1 `--c-border-strong`) · `--code-*`(3) · `--hl-*`(17)을
+`syntax: "<color>"`로 등록한다(합계 ~~39~~ **41**). 목적은 하나 — 테마 토글 때 **토큰 값 자체가 보간**되게 하는 것(§11).
 새 색 토큰을 만들면 그 블록에도 한 줄 추가한다(빠지면 그 색만 즉시 튄다). `--c-shadow-rgb`(숫자 셋)와
 `--sh-*`(합성값)는 `<color>`가 아니라 등록하지 않는다.
 
@@ -348,8 +439,13 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
 ## 3. 공통 셸 (세 페이지 모두 동일 — v3.9에서 about.html 삭제, index · post · write)
 
 ```html
-<!-- v3.6: index.html에만, <body>의 첫 자식. 다른 두 페이지에는 없다(§3-5) -->
-<div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>
+<!-- v3.6: index.html에만, <body>의 첫 자식. 다른 두 페이지에는 없다(§3-5)
+     v4.0(C4): 막 안에 건너뛰기 버튼이 생겼다 — 포커스 가능한 자식이 있으므로 막에서 aria-hidden을 뗀다.
+     장식인 전구가 대신 aria-hidden을 갖는다. 버튼은 막의 "마지막" 자식이다(첫 Tab = 건너뛰기) -->
+<div class="intro" id="intro">
+  <div class="intro-bulb" aria-hidden="true"></div>
+  <button class="intro-skip" id="introSkip" type="button">건너뛰기</button>
+</div>
 
 <a class="sr-only" href="#main">본문 바로가기</a>
 
@@ -361,9 +457,9 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
   <!-- v3.9: 3항목(v3.4의 "소개"는 about.html과 함께 삭제 — §3-3). 현재 페이지에만 aria-current="page"(정적으로 적는다 — 아래 예는 index.html)
        v3.8: 관리자 전용은 data-admin-only + hidden 짝. admin.js가 관리자면 hidden을 떼고, 아니면 노드를 지운다(§8-2 예외).
        내비에 <li>는 없다 — 링크 <a>가 직접 자식이고 hidden도 <a>에 붙는다(meeting-05 접점 표의 "li"는 이 <a>를 말한다) -->
+  <!-- v4.0(2026-09-23): 2항목. "태그"(index.html#tags)는 앵커 대상 <details id="tags">와 함께 폐기(§3-3·§4-3) -->
   <nav class="site-nav" aria-label="주요 메뉴">
     <a class="nav-link" href="index.html" aria-current="page">글</a>
-    <a class="nav-link" href="index.html#tags">태그</a>
     <a class="nav-link" href="write.html" data-admin-only hidden>쓰기</a>
   </nav>
   <!-- v3.9: title 없음. 이름은 aria-label, 상태는 aria-pressed — 툴팁으로 같은 말을 한 번 더 하지 않는다(§6 title 규칙과 같은 근거) -->
@@ -377,9 +473,12 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
 
 <main class="site-main" id="main" tabindex="-1">…</main>
 
+<!-- v4.0(M2): 보조 줄은 연도 하나다. "메모 블로그 · 2026"의 사이트 이름은 헤더 브랜드(index에서는 h1)가
+     이미 말하는 것이고, 그 중복이 가운뎃점을 필요하게 만들었다 — 구분자를 지우는 대신 중복을 지운다.
+     .footer-note 문장은 요구사항 #16 원문(© 포함) 그대로다 — 손대지 않는다(§10) -->
 <footer class="site-footer">
   <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
-  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+  <p class="footer-meta"><span data-year>2026</span></p>
 </footer>
 
 <div class="toast-area" id="toastArea" aria-live="polite"></div>
@@ -438,7 +537,7 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
 
 | 규칙 | 이유 |
 |---|---|
-| **`body`의 첫 자식** — v3.6: index.html에서는 **`.intro` 다음, 즉 둘째** | 첫 Tab에서 나와야 "건너뛰기"다. 규칙의 뜻은 "포커스 가능한 것 중 첫째"이고, `.intro`는 포커스 가능한 것이 없는 `aria-hidden` 막이라 Tab 순서·접근성 트리 어디에도 없다. 막이 스킵 링크보다 앞에 오는 이유는 §3-5(첫 페인트) |
+| **`body`의 첫 자식** — v3.6: index.html에서는 **`.intro` 다음, 즉 둘째** | 첫 Tab에서 나와야 "건너뛰기"다. 규칙의 뜻은 "포커스 가능한 것 중 첫째"였고, 막이 스킵 링크보다 앞에 오는 이유는 §3-5(첫 페인트)다. **v4.0(C4) 정정** — 막 안에 `#introSkip`이 생겼으므로 인트로가 떠 있는 동안의 첫 Tab 정지점은 **건너뛰기 버튼**이고, 그때 스킵 링크를 포함한 나머지 `body` 자식은 `inert`다(§3-5). 인트로가 끝나거나 없는 화면에서는 v3.6 그대로 스킵 링크가 첫째다 — 순서가 두 상태로 갈리는 것이 아니라, **막이 떠 있는 동안에는 막 안의 것 하나만 있는 것**이다 |
 | **대상은 세 페이지 모두 `#main`** | 렌더 전 빈 컨테이너로 뛰어내리지 않게 |
 | **`<main>`에 `tabindex="-1"` 필수** | 없으면 스크롤만 되고 포커스는 헤더에 남는다 |
 | 전용 클래스 없이 `.sr-only` | `:focus`와 `:focus-visible` **둘 다**에서 드러나도록 CSS가 잡혀 있다 |
@@ -532,11 +631,19 @@ v3.0은 "1200px 상자 안의 720px 본문은 채워야 할 빈칸으로 보인�
 - 슬라이드 `--dur`(260ms) + `--ease`. `prefers-reduced-motion`이면 즉시(base.css의 `*` 블록이 자른다 — 별도 규칙 없음).
 - API: `Blog.ui.renderSide({ posts, cats, activeId, activeCat })` / `Blog.ui.initSide()` — frontend-dev-2 구현,
   호출은 app.js(index) · post.js(글 로드 후) · editor.js(index 로드 후, try/catch).
+  **v4.1 등재(frontend-dev-2 이행, meeting-07 m8)**: `Blog.ui.isSideOverlay()` — 사이드바가 **오버레이로** 열려 있으면 `true`(도킹·닫힘은 `false`).
+  에디터 본문의 Esc가 이 값을 보고 비켜선다(오버레이를 닫는 Esc와 "Tab 탈출" Esc가 한 키에 둘 다 걸리던 결함). `Blog.ui.prefersReducedMotion`은 삭제됐다(쓰는 곳 0).
 
-### 3-3. `.site-nav` (v3.4 4항목 → **v3.9 3항목**)
+### 3-3. `.site-nav` (v3.4 4항목 → v3.9 3항목 → **v4.0 2항목**)
 
 > **v3.4 사용자 요청(원문): "메뉴 2개 더 추가 (메모 블로그, 글 옆에) — 실제 학습 블로그 구조 참고".**
 > **v3.9 사용자 판정(원문): "소개 부분 카테고리 지워".** — `소개`와 `about.html`을 통째로 뺀다(meeting-06 #6, 전원 일치).
+> **v4.0 사용자 판정(원문, 2026-09-23): "홈 화면에 게시글 바로 위에 존재하는 태그 카테고리 지워".** — 앵커 대상 `<details id="tags">`가
+> 사라지므로 `태그`(`index.html#tags`)는 **아무 데도 데려가지 않는 링크**가 된다. 같이 뺀다. 아래 표의 `태그` 행과 "`태그`의 동작" 항목은
+> 이력으로만 남는다. 태그로 좁히는 길은 상세의 태그 링크(§5-3 `?tags=`) 하나이고, 걸린 필터는 `.list-bar`(§4-5)가 보여 주고 푼다.
+>
+> **항목은 세 페이지 동일: `글` `쓰기`(`쓰기`는 `data-admin-only` + `hidden`).** 방문자에게는 `글` 하나다 — 헤더가 "링크 하나 + 테마 버튼"이
+> 되는 것은 결함이 아니다. 실측 7곳 중 til.simonwillison·overreacted·danluu가 그 이하다. 360px 검산은 한 항목만큼 여유가 는다.
 
 **실측 7곳의 상단 메뉴** — jvns.ca `FAVORITES · TIL · ZINES · ABOUT · TALKS · PROJECTS` /
 ansohxxn `Home · Category` / velog 개인 `글 · 시리즈 · 소개` / wayhome25 검색·메뉴 아이콘만 /
@@ -547,26 +654,32 @@ til.simonwillison `My blog` 하나 / overreacted `by [아바타]` / danluu 없�
 | 후보 | 목적지 | 결정 | 왜 |
 |---|---|---|---|
 | 분류 | `index.html#cat`(인덱스 앵커) | **안 넣는다** | 바로 왼쪽의 **햄버거가 이미 분류다** — 사이드바(§3-2)의 정체가 "분류별 글 목록"이고 세 페이지 어디서나 열린다. 헤더에 같은 곳으로 가는 문이 둘 있는 것은 v3.0이 "새 메모" 버튼을 지운 이유 그대로다(§0-2). 실측에서 가장 흔한 항목이지만 그 사이트들엔 사이드바가 없다. **v3.9: `#catRow`(§4-3)까지 같은 근거로 사라져 분류로 가는 문은 햄버거 하나다** |
-| **태그** | `index.html#tags` | **넣는다** | 태그로 가는 길이 지금은 index.html의 접힌 손잡이(§4-3)와 post.html의 태그 링크뿐이다. 접힌 손잡이는 "있는 줄 알아야" 여는 것이라, 상세를 읽던 사람이 "이 주제 다른 글"을 찾는 경로가 헤더에 없었다. 새 HTML 없이 앵커 + JS 한 줄(`open`)로 끝난다 |
+| ~~태그~~ | ~~`index.html#tags`~~ | **v3.4 넣음 → v4.0 삭제**(앵커 대상 폐기) | (v3.4 근거) 태그로 가는 길이 지금은 index.html의 접힌 손잡이(§4-3)와 post.html의 태그 링크뿐이다. 접힌 손잡이는 "있는 줄 알아야" 여는 것이라, 상세를 읽던 사람이 "이 주제 다른 글"을 찾는 경로가 헤더에 없었다. 새 HTML 없이 앵커 + JS 한 줄(`open`)로 끝난다 |
 | ~~소개~~ | ~~`about.html`~~ | **v3.4 넣음 → v3.9 삭제** | v3.4의 근거는 "사이트가 자기를 설명하는 문장이 살 곳"이었다. 사용자가 그 페이지를 원하지 않는다고 판정했고, 빈 골격인 채로 다섯 라운드를 지나 한 문장도 채워지지 않았다 — 원칙 1의 물음("없으면 글을 못 읽거나 못 찾는가?")에 "아니다"가 실측으로 증명된 셈이다. HTML 하나·JS 하나·내비 항목 하나·`aria-current` 규칙 한 줄이 함께 사라진다 |
 
-- 항목은 세 페이지가 동일하다: **`글` `태그` `쓰기`**(`쓰기`는 `data-admin-only` + `hidden`).
+- ~~항목은 세 페이지가 동일하다: `글` `태그` `쓰기`~~ → **v4.0: `글` `쓰기`**(`쓰기`는 `data-admin-only` + `hidden`).
 - **현재 페이지 표시는 `aria-current="page"`다.** `.nav-link.is-active`는 폐기 — 사이드바와 같은 규칙
   "ARIA 속성이 곧 상태"(§8). 정적 HTML에 적는다: index.html → `글`, write.html → `쓰기`,
   **post.html → 없음**(글 한 편은 목록이 아니다 — 돌아가는 길은 `← 목록`이 맡는다). `태그`는 `index.html`을
   가리키지만 문서가 아니라 문서 안의 위치라 어느 페이지에서도 `page`를 받지 않는다.
   `ui.js` `initShell()`은 `href === location.pathname` 일반식이라 **항목이 줄어도 코드 변경이 없다**(meeting-06 #6).
-- **`태그`의 동작** — `href="index.html#tags"`. 앵커 대상은 태그 인덱스의 `<details id="tags">`(§4, v3.4에
+- ~~**`태그`의 동작**~~ (v4.0 폐기 — 이력) — `href="index.html#tags"`. 앵커 대상은 태그 인덱스의 `<details id="tags">`(§4, v3.4에
   `#tagFold`에서 개명). `app.js`가 로드 시와 `hashchange`에서 `location.hash === '#tags'`이면 `<details>`에
   `open`을 붙인다(`?tags=` 필터가 있을 때 여는 규칙과 같은 자리). 스크롤은 브라우저 앵커 이동에 맡긴다 —
   대상이 첫 화면 안(제목·검색 바로 아래 — v3.9에서 `#catRow`가 빠져 더 위다)이라 JS가 `hidden`을 떼기 전에 앵커 이동이 일어나도
   잃는 것이 없다. 태그가 0개면(`hidden`) 열 것이 없다 — 그대로 둔다.
 - **`글`의 동작(v3.9)** — `href="index.html"`(쿼리 없음). `?cat=` `?tags=` 필터가 걸린 목록에서 이 링크가 곧 **"전체 보기"** 다 —
-  `#catRow`의 `전체` 버튼이 사라진 뒤 필터를 푸는 보이는 길은 이것과 `.list-empty`의 `조건 초기화`뿐이다(§4-3). 브랜드도 같은 곳으로
+  `#catRow`의 `전체` 버튼이 사라진 뒤 필터를 푸는 보이는 길은 이것과 `.list-empty`의 `조건 초기화`뿐이다(§4-3).
+  **v4.0: 셋째 길 `.list-reset`(`전체 글 보기`)이 결과 줄에 생겼고, `.list-empty`의 버튼도 같은 이름 `전체 글 보기`로 바뀐다(§4-5 — 같은 동작은 같은 이름).** 브랜드도 같은 곳으로
   가지만 index.html에서는 시각적으로 숨어 있다(§3). **그래서 §12-13 #77(`글` 삭제)은 사용자 확인과 별개로 보류다** — 지우려면 사이드바에
   "전체" 항목을 먼저 만들어야 한다.
 - `.nav-link`는 알약 배경 없이 **글자만**이다(hover·활성에서 색과 굵기로만 구분).
   알약 = 누를 수 있는 덩어리는 §4-3의 인덱스와 어휘가 겹친다. 헤더에는 링크만 둔다.
+- **v4.1 — 누르는 면적(UX-§1 `web-target-size` · §2 `touch-target-size`).** 실측: `글`의 링크 상자가 **13×36px** — 방문자가 보는 헤더 링크가
+  이것 하나인데 WCAG 2.2 최소(24×24)에도 못 미쳤다. 글자 자리(= 칼럼 왼쪽 선, §3)는 그대로 두고 **투명한 `::after`로 누르는 면적만** 넓힌다:
+  `position: absolute; inset-block: 0; 가운데; inline-size: max(100%, --h-nav)` → fine 36×36 · coarse 44×44. 마크업 변화 없음.
+  이웃 `쓰기`와 겹치는 폭은 fine 0.5px · coarse ≈8px이고 겹친 자리는 DOM 뒤의 링크가 받는다(`쓰기`는 관리자에게만 있다). `.nav-link`의 `::after`는
+  이 용도로 예약된다 — 다른 장식을 붙이지 않는다.
 
 **440px 소거 표 — v3.4 신설 → v3.9 폐기.** 내비가 셋이면 360px 검산이 소거 없이 통과한다.
 
@@ -586,7 +699,7 @@ v3.4가 이 페이지를 만든 근거("사이트가 자기를 설명하는 문�
 `ui.js` `initShell()`의 현재 페이지 판정은 `href === location.pathname` 일반식이라 코드 변경이 없다.
 v3.4 마크업·`about.js` 명세는 §13 v3.4 항목(이력)에만 남는다.
 
-### 3-5. 인트로 전등 `.intro` (v3.6 신설 · **v3.7 전면 개정** · v3.9 정지 0.2초 연장 — index.html만)
+### 3-5. 인트로 전등 `.intro` (v3.6 신설 · **v3.7 전면 개정** · v3.9 정지 0.2초 연장 · **v4.0 건너뛰기 + `inert`** — index.html만)
 
 > **v3.6 요청(원문): "이 사이트 접속할 때 전등 그림이 먼저 나오면서(디자인 담당 에이전트가 직접 그림) 전등이
 > 2초 뒤 켜지고 그 다음으로 자연스럽게 메모 블로그가 렌더링 되게. 다크·라이트 바꾸는데 이상한 전등 깜빡이는
@@ -598,19 +711,23 @@ v3.4 마크업·`about.js` 명세는 §13 v3.4 항목(이력)에만 남는다.
 ~~0.3초~~ **0.5초(v3.9)** → 위로 울렁이며 떠난다 → 전구가 화면 절반을 지날 때 막이 걷히고 블로그가 10px 올라오며 드러난다.** 총 ~~2.05초~~ **2.25초**.
 세션당 한 번, index.html에서만. 무한 루프·깜빡임·재생 버튼 없음. 테마 토글과는 **아무 관계가 없다**.
 
-**마크업 — v3.6 그대로. `<body>`의 첫 자식. 스킵 링크보다 앞이다(§3-1).**
+**마크업 — v4.0에서 자식이 둘이 됐다(C4). `<body>`의 첫 자식이라는 것은 그대로다(§3-1).**
 
 ```html
-<div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>
+<div class="intro" id="intro">
+  <div class="intro-bulb" aria-hidden="true"></div>
+  <button class="intro-skip" id="introSkip" type="button">건너뛰기</button>
+</div>
 ```
 
 | 규칙 | 내용 |
 |---|---|
 | 어디에 | **index.html만.** post.html·write.html에는 넣지 않는다 — "사이트에 접속할 때"이지 "페이지를 열 때"가 아니다 |
 | 왜 첫 자식인가 | 막은 **첫 페인트부터** 있어야 한다(CSS는 `<head>`에서 로드됐고 파서는 위에서 아래로 그린다). 맨 뒤에 두면 느린 연결에서 헤더가 먼저 찍힌 뒤 막이 덮는다 |
-| `aria-hidden="true"` | 장식이다. 스크린리더는 막을 모른 채 곧바로 본문을 읽는다. 안에 포커스 가능한 것이 없어 Tab 순서도 그대로다 |
-| 안에 글자 없음 | 워드마크를 넣지 않는다. 글자가 있으면 로딩 스플래시가 된다 |
+| `aria-hidden`의 자리 | **v4.0: 막이 아니라 전구에 붙는다.** v3.6~3.9는 막 전체가 `aria-hidden="true"`였는데, 포커스 가능한 자식(`#introSkip`)을 `aria-hidden` 안에 두면 **스크린리더에는 없는데 Tab은 닿는 버튼**이 된다(ARIA 금지 조합). 장식은 전구뿐이므로 속성을 거기로 내린다. 막 자신은 이름 없는 `<div>`라 접근성 트리에서 아무 말도 하지 않는다 |
+| 안에 글자 없음 → **버튼 하나** | 워드마크는 여전히 없다(글자가 있으면 로딩 스플래시가 된다). 예외는 건너뛰기 버튼 하나이고, 그것은 장식이 아니라 **탈출구**다 |
 | 전구 그림 | v3.6 그대로 **CSS 그라디언트**(`components.css` §16, 96×140). 꺼짐 = 선 `color-mix(--c-border 50%, --c-text-mute)` + 면 `--c-surface-2` / 켜짐 = 면·선 `--c-meta` + 필라멘트 `--c-bg` + `drop-shadow` 글로우 두 겹 |
+| **켜짐의 색 (v4.0 — meeting-07 M12)** | **새 토큰 `--c-glow`**(라이트 `#f5c04a` / 다크 `#f3c35a`). 켜진 유리 면 = 라이트 `color-mix(--c-glow 72%, --c-surface)` · 다크 `--c-glow` 그대로. 선 = `--c-meta`(그대로). 필라멘트 = 라이트 `color-mix(--c-meta 55%, --c-glow)`(달궈진 주황 선) · 다크 `--c-bg`(그대로). 글로우 두 겹은 `--c-meta`가 아니라 **`--c-glow`**에서 만든다(라이트 알파 70/40%, 다크 55/30%) | 실측 결함: 라이트에서 켜진 전구가 `--c-meta`(글자 대비용으로 어둡게 잡은 황토)를 35% 밝힌 **바탕보다 어두운 갈색 원판**이었다 — 켜졌는데 꺼진 것보다 어둡다. 빛은 주변보다 밝거나 적어도 **채도가 높아야** 빛으로 읽힌다. 바탕이 거의 흰 종이색이라 명도로는 이길 수 없으므로 채도(따뜻한 노랑)와 글로우로 이긴다. 인트로는 FD의 "대담함은 한 곳에"가 이 사이트에서 쓰인 **유일한 자리**라 그 한 곳은 제대로 빛나야 한다. 역할색 셋(§1-2)에 넣지 않는 이유 — 이 색은 의미(시간·주제·누름)가 아니라 **물리(빛)** 를 그린다 |
 | 켜짐의 구현 | `::before`(꺼짐)·`::after`(켜짐) 크로스페이드 — v3.6 그대로. **v3.7: 글로우가 함께 움직인다** — `::after`의 `filter`가 작고 진한 점(4/10px)에서 정지 상태(18/56px)로 150ms에 퍼진다. 이것이 "띵"이다: 밝기는 첫 35%(≈50ms)에 다 오르고 빛의 번짐이 그 뒤를 따른다 |
 | **막의 `overflow: hidden`** (v3.7) | 전구가 화면 아래·위 밖에서 드나드므로 막 밖으로 나간 부분이 스크롤바를 만들지 않게 |
 
@@ -640,6 +757,23 @@ v3.4 마크업·`about.js` 명세는 §13 v3.4 항목(이력)에만 남는다.
 - 막이 떠 있는 동안 본문은 이미 렌더돼 있다(`app.js`는 막 뒤에서 평소대로 일한다). 데이터가 2초 안에 못 오면 `.list-loading`
   한 줄이 드러난다 — 막이 로딩 스피너 역할을 겸하지 않는다.
 - `.side`는 진입 대상이 아니다 — v3.6과 같다.
+
+**건너뛰기와 `inert` (v4.0 신설 — meeting-07 C4). 이 절이 없으면 인트로는 접근성 차단이다.**
+
+> **무엇이 문제였나(실측 근거, `css/layout.css:765-794` · `js/ui.js` 건너뛰기 핸들러 0건)** — 첫 방문 2.25초 동안
+> ① 헤더·본문·푸터가 `opacity: 0`인데 **Tab은 그 안으로 들어간다**(막은 마우스만 `pointer-events`로 잡는다) →
+> 포커스가 보이지 않는 곳에 앉는다(WCAG 2.2 AA `2.4.11 Focus Not Obscured`). ② 그 2.25초를 **끝낼 방법이 없다**
+> (UX-§7 `no-blocking-animation`·`interruptible`). 애니메이션은 사용자가 멈출 수 있어야 한다.
+
+| 규칙 | 내용 | 왜 |
+|---|---|---|
+| **`#introSkip`** | `.intro`의 **마지막 자식**, `.btn-ghost`가 아니라 전용 부품 `.intro-skip`(막 위에 홀로 놓이므로 버튼 어휘를 하나 더 만들지 않고 "작은 글자 + 밑줄 없는 링크"로 그린다 — `components.css` §16). 문구 `건너뛰기`. 자리는 막의 **오른쪽 아래**(`--sp-6` 안쪽), 색 `--c-text-mute` | 전구는 화면 한가운데를 세로로 가로지른다(§3-5 시간표) — 버튼이 그 경로에 있으면 전구가 글자 위를 지난다. 오른쪽 아래는 "지금 보는 것을 멈추는 손잡이"의 관례 자리(영상 스킵)이고 전구의 궤적 밖이다 |
+| **모션 없음** | 버튼은 0ms부터 그 자리에 있다. 페이드인하지 않는다 | 850ms에 나타나게 하면 그 전 850ms 동안 **보이지 않는데 포커스는 받는 버튼**이 되어 고치려던 결함이 그대로 재발한다. 막이 걷힐 때는 막의 `opacity`를 따라 함께 사라진다(자식이므로 규칙 0줄) |
+| **`inert`** | `ui.js` `initIntro()`가 막을 띄우는 동안 **`body`의 다른 모든 자식**(스킵 링크·헤더·사이드바·스크림·메인·푸터·토스트 영역)에 `inert`를 붙이고, `finish()`에서 전부 뗀다. `.intro` 자신에게는 붙이지 않는다 | `inert`는 "포커스·클릭·접근성 트리에서 통째로 빠짐"을 한 속성으로 말한다. `tabindex="-1"`을 일일이 돌리는 것과 달리 **되돌릴 때 원래 값을 기억할 필요가 없다**. 결과: 인트로 중 Tab 정지점은 `#introSkip` 하나 |
+| **끝내는 세 가지 길** | ① `#introSkip` 클릭/Enter/Space ② **Esc**(`document` 수준 `keydown`, 인트로가 떠 있는 동안만) ③ 그냥 기다리기(2.25초, `animationend`) — 셋 다 같은 `finish()`로 모인다 | 키보드 사용자에게 Esc는 "지금 덮고 있는 것을 치운다"의 표준이다. 막을 클릭해서 끝내는 길은 만들지 않는다 — 보이지 않는 손잡이다 |
+| **`finish()`가 하는 일(순서 고정)** | `intro.hidden = true` → `inert` 해제 → `html[data-intro="done"]` 부착 → `sessionStorage['blogIntro'] = '1'`(try/catch) → **포커스를 `#main`으로**(`main.focus()`, 스킵 링크의 착지점과 같은 자리) | 버튼을 눌러 없앤 뒤 포커스가 `<body>`에 떨어지면 다음 Tab이 페이지 맨 앞으로 되돌아간다. **`data-intro="done"`을 여기서 붙이는 것이 v3.6에서 바뀐 점**(그전엔 `theme-init.js`만 붙였다) — 건너뛰기로 끝냈을 때 `.intro`의 진행 중인 animation과 골격 셋의 `intro-arrive`(opacity 0 → 1)를 **즉시** 끄기 위해서다. 이 속성이 없으면 버튼을 눌러도 본문은 제 시각(1650ms)까지 투명하다 |
+| **JS가 실패하면** | `inert`도 건너뛰기도 없다 = **v3.9와 똑같은 화면**이고, 막은 CSS가 2250ms에 스스로 걷는다(§8-2). 퇴행이 아니라 향상의 부재다 | 접근성 보강을 CSS로는 표현할 수 없다(`inert`는 속성, 포커스 이동은 명령이다). 그래서 실패 시의 바닥이 "지금 상태"여야 한다 |
+| **`prefers-reduced-motion`** | 인트로가 통째로 `display: none`이라 버튼도 없다. `initIntro()`는 v3.9 그대로 `display === 'none'`을 보고 즉시 `finish()` — 이때는 **포커스를 옮기지 않는다**(사용자가 아무것도 시작하지 않았다) | 페이지를 열자마자 포커스가 `#main`으로 튀면 스크린리더가 헤더를 건너뛴다 |
 
 **§8-2와의 관계 — v3.6 그대로.** 골격 셋의 opacity 0 시작은 CSS animation이 1로 만드는 것이라 위반이 아니다.
 `html:not([data-intro="done"]) body:has(> .intro) > …`에만 걸리고, JS가 통째로 실패해도 2.25초 뒤 막은 걷히고 본문은 1이 된다.
@@ -688,34 +822,30 @@ finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 
     <!-- 검색: 제목 아래 --sp-5, 폭 min(40rem, 100%), 가운데. sticky 아님. 높이 --h-control-sm(32px) -->
     <div class="search">
       <label class="sr-only" for="searchInput">글 검색</label>
+      <!-- v4.0(M2): placeholder에서 가운뎃점 나열과 "( / )"를 뺀다. 이름은 위 <label>이, 단축키는 aria-keyshortcuts가 맡는다.
+           눈에 보이는 단축키 표시는 .search-key(키캡 하나)다 — 비어 있고 포커스가 없을 때만 보인다(CSS). 순서 고정: input → kbd → 지우기 -->
       <input class="search-input" id="searchInput" type="search"
-             placeholder="제목 · 요약 · 태그 검색  ( / )"
-             autocomplete="off" enterkeyhint="search">
+             placeholder="제목이나 태그로 찾기"
+             aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search">
+      <kbd class="search-key" aria-hidden="true">/</kbd>
       <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
     </div>
   </div>
 
-  <!-- v3.9: 분류 인덱스 행(#catRow · #catIndex · .index-label)은 폐기됐다(§4-3). 분류는 사이드바(§3-2)와 카드의 .entry-cat이 맡는다.
-       .page-head 다음 자식은 곧바로 태그 인덱스다 -->
+  <!-- v3.9: 분류 인덱스 행(#catRow)은 폐기. v4.0(2026-09-23): 태그 인덱스(<details id="tags">)도 폐기 — 사용자 판정(§4-3).
+       .page-head 다음 자식은 곧바로 결과 줄이다 -->
 
-  <!-- 태그 인덱스 — 접혀 있다(§4-3). v3.4: id는 "tags" — 헤더의 "태그" 링크(index.html#tags)가 여기로 온다(§3-3) -->
-  <details class="index-fold" id="tags" hidden>
-    <summary class="index-fold-summary">태그 <span class="index-count">12</span></summary>
-    <div class="index-row">
-      <nav class="index-list" id="tagIndex" aria-label="태그 필터">
-        <button class="index-item is-active" type="button" data-tag="*" aria-pressed="true">
-          <span class="index-name">전체</span><span class="index-count">4</span>
-        </button>
-        <button class="index-item" type="button" data-tag="css" aria-pressed="false">
-          <span class="index-name">css</span><span class="index-count">1</span>
-        </button>
-      </nav>
-    </div>
-  </details>
+  <!-- v4.0(C1 + 2026-09-23): 결과 줄. 목록 "앞". 문장(.list-status, role="status")과 필터 해제 버튼(.list-reset)이 한 줄이다.
+       여기가 생겼으므로 #postList의 aria-live는 폐지됐다 — 아래 §4-5. 로드 전·오류·0편에는 app.js가 줄째 hidden -->
+  <div class="list-bar" id="listBar" hidden>
+    <p class="list-status" id="listStatus" role="status"></p>
+    <button class="list-reset" id="listReset" type="button" hidden>전체 글 보기</button>
+  </div>
 
   <!-- 목록 — v3.2: 카드 그리드(2~3열). 카드 = 분류 라벨 → 제목 → 날짜·태그(§4-4)
-       v3.8: 첫 렌더 300ms 뒤 app.js가 data-ready=""를 붙인다. 그 뒤로 새로 그려지는 카드는 arrive 없음(§4-4, §8, §11-4) -->
-  <div class="post-list" id="postList" aria-live="polite">
+       v3.8: 첫 렌더 300ms 뒤 app.js가 data-ready=""를 붙인다. 그 뒤로 새로 그려지는 카드는 arrive 없음(§4-4, §8, §11-4)
+       v4.0: aria-live 없음(C1). data-cats(= 글이 있는 분류의 수)는 app.js가 붙인다 — 정적 마크업에는 없다(§4-4) -->
+  <div class="post-list" id="postList">
     <section class="entry-group">
       <h2 class="entry-group-label">2026</h2>   <!-- 그리드 위 full-width. 한 해뿐이면 없음 -->
       <ul class="entry-list">
@@ -739,15 +869,19 @@ finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 
        글 0편·빈 분류에는 없다. 새 클래스 없음 — .list-empty .btn 여백 규칙은 components.css §4에 이미 있다 -->
   <div class="list-empty" id="listEmpty" hidden>
     <p><strong>조건에 맞는 글이 없습니다.</strong></p>
-    <p>검색어·분류·태그를 바꿔 보세요.</p>
-    <button class="btn" type="button">조건 초기화</button>
+    <p>검색어를 바꾸거나 전체 글에서 찾아 보세요.</p>
+    <!-- v4.0: 문구 "조건 초기화" → "전체 글 보기". .list-reset과 같은 동작이라 같은 이름이다(FD — 동작의 이름은 흐름 전체에서 하나) -->
+    <button class="btn" type="button">전체 글 보기</button>
+    <!-- v4.1(UX-§8 error-recovery): 불러오기 실패(showLoadError)에서는 위 버튼 대신 <button class="btn btn-primary" type="button">다시 시도</button> 하나.
+         누르면 location.reload(). err.code === 'file'(file:// 로 연 경우)에는 두지 않는다 — 다시 시도해도 같다. 새 클래스 없음 -->
   </div>
 
 </main>
 ```
 
 **DOM 순서 = 시선 순서 = Tab 순서.** 어긋나면 결함이다.
-~~v3.4: `정체(제목) → 찾기(검색) → 축으로 좁히기(분류) → 태그 → 목록`~~ → **v3.9: `정체(제목) → 찾기(검색) → 태그 → 목록`.**
+~~v3.4: `정체(제목) → 찾기(검색) → 축으로 좁히기(분류) → 태그 → 목록`~~ → ~~v3.9~~ → ~~v4.0 초안: `… → 태그 → 결과 → 목록`~~ → **v4.0(2026-09-23): `정체(제목) → 찾기(검색) → 결과(`.list-bar`) → 목록`.**
+결과 줄이 목록 **앞**인 이유는 §4-5 — "몇 편인지"는 카드를 보기 전에 알아야 하는 정보이고, 뒤에 두면 스크린리더가 카드 전량을 읽은 뒤에야 개수를 듣는다.
 "축으로 좁히기(분류)"는 화면에서 사라진 것이 아니라 **왼쪽 사이드바로 옮겨 간 것**이다 — 햄버거가 첫 Tab 정지점이라 Tab 순서에서도
 분류는 여전히 검색보다 앞이다(§3). (v3.2의 "분류 → 검색"은 툴 행의 좌우 배치를 따른 것이었다. 검색이 제목 바로 아래 가운데로 올라가면서
 화면 순서가 바뀌었고, DOM도 그대로 따라간다 — 위에서 아래로 한 줄씩이라 어느 폭에서도 같은 순서다.)
@@ -803,12 +937,33 @@ finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 
 - `.page-head` 위 여백 `--sp-6`(헤더와 간판 사이 숨), 아래 여백 `--sp-6`(검색창과 인덱스 사이 —
   인덱스는 작은 글자라 이만큼 띄워야 "머리말 끝"이 읽힌다).
 - 액센트 바(`.hero::before`)·통계·진입 애니메이션 없음. 제목과 검색, 둘이 전부다.
+- **v4.0 — 정렬 축 결정(meeting-07 M13): 가운데를 유지한다.** 결함 제기는 "index만 가운데, post·write·푸터는 왼쪽 — 상세로 넘어갈 때
+  시선축이 한 번 바뀐다"였다. 유지하는 근거 셋 — ① **사용자 원문이 축을 정했다**("큰 제목은 가운데 상단", "검색어 창은 상단 가운데") —
+  FD 기준상 브리프가 축을 정했으면 브리프가 이긴다. ② 가운데는 **머리말 한 덩어리뿐**이고 그 아래 작업 영역(결과 줄·카드)은 전부 왼쪽 선이다.
+  축이 바뀌는 자리가 페이지 안에 **한 번, 같은 곳**(머리말 끝)에 있다 — 상세로 넘어갈 때의 전환도 "머리말은 간판, 나머지는 왼쪽"이라는 같은
+  규칙의 결과다. ③ v4.0의 결과 줄(`.list-bar`, §4-5)이 머리말 바로 아래 왼쪽 선에 작은 글자로 서서 **왼쪽 선을 먼저 긋는다** — v3.9에서는
+  그 자리에 접힌 태그 손잡이가 있었고, 그것이 사라진 뒤 카드 그리드만 남으면 "가운데 → 카드"로 축이 건너뛴다.
+- v4.0(2026-09-23): `.page-head` 아래 여백 `--sp-6`의 상대가 태그 손잡이에서 **결과 줄**로 바뀐다. 값은 그대로다.
 - **`.page-sub`는 폐기됐다**(사용자 요청). `data-site-sub`도 마크업에서 지운다 — `app.js`·`post.js`의
   `[data-site-sub]` 채우기 줄은 죽은 코드가 되므로 함께 지운다(§12-10). `index.json`의 `site.subtitle`
   필드는 데이터로만 남는다(마이그레이션 불필요, §9-2와 같은 태도). ~~사이트를 설명하는 문장은 §3-4의
   소개 페이지가 맡는다~~ (v3.9: 소개 페이지 폐기 — 사이트를 설명하는 문장은 두지 않는다. 사용자 판정).
 
-### 4-3. 인덱스 — 태그 (`.index-*`) (v3.9: 분류 축 폐기)
+### 4-3. ~~인덱스 — 태그 (`.index-*`)~~ (v3.9: 분류 축 폐기 → **v4.0: 태그 축도 폐기 — 절 전체가 이력**)
+
+> **v4.0 사용자 판정(원문, 2026-09-23): "홈 화면에 게시글 바로 위에 존재하는 태그 카테고리 지워".**
+> 대상은 `<details class="index-fold" id="tags">` 한 덩어리다. v3.9가 "태그 쪽은 그대로"라고 적은 근거는 *"`#tags`를 지우면 `?tags=` 해제 UI가
+> 사라져 상세의 태그 링크 정책(§5-3)까지 흔들린다"*였다 — 그 근거는 유효하고, 그래서 **해제 UI를 먼저 다른 자리에 만든 뒤** 지운다:
+> 결과 줄 `.list-bar`(§4-5)가 걸린 필터를 문장으로 보여 주고(`css 태그 3편`) `전체 글 보기`로 푼다.
+>
+> **지우는 것(코드에 남아 있으면 결함)**: 마크업 `<details id="tags">` `#tagIndex` · CSS `.index-row` `.index-list` `.index-item`(+`::before` 구분자·`.is-active`)
+> `.index-name` `.index-count` `.index-fold` `.index-fold-summary`(+ coarse 보정) · JS `renderTagIndex()` `indexItem()` `tagCounts()` `openTagsFromHash()`
+> `hashchange` 핸들러 · `#tagIndex` 클릭 핸들러 · 헤더 `태그` 링크(§3-3).
+> **남는 것**: `?tags=` 읽기·쓰기(`readUrl`/`writeUrl`), `matches()`의 태그 조건, 상세의 `.tag` 링크, 카드의 `.entry-tag`(링크 아님, 그대로).
+> 태그를 **고르는** UI는 목록에 더 이상 없다 — 태그로 좁히는 길은 글을 읽다가 그 글의 태그를 누르는 것이다. 태그가 60개를 넘어
+> 목록에서 고를 필요가 생기면 그때 별도 화면을 검토한다(아래 "한계와 다음 단계"의 정신 그대로 — 필요해지기 전에 만든 화면은 AI티다).
+>
+> 이하 본문은 v3.9 시점의 규칙이며 **이력으로만 남는다.**
 
 > **v3.9 사용자 판정(원문): "태그 리스트 불필요하게 2개(하나 삭제)".** 실측(1280px): `분류 전체 1 · Java 1` 바로 아래
 > `▾ 태그 1 / 전체 1 · Java 1` — 분류명 = 태그명이라 **같은 알약 줄이 둘**이었다(designer·dev 동일 관찰, meeting-06 #3).
@@ -925,20 +1080,62 @@ finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 
 | 요소 | 규칙 | 근거 |
 |---|---|---|
 | `.entry-list` | `display: grid; grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr)); gap: --sp-4` | **미디어쿼리 없이** auto-fill이 열 수를 정한다. 17rem(272px): 1440 도킹(본문 1088) **3열** / 1024 도킹(700) **2열** / 768(704) **2열** / 616 아래 **1열**. 15rem이면 1440에서 4열 — 제목이 두 줄씩 꺾이고 한 줄에 훑을 카드가 너무 많다 |
-| `.entry` | `position: relative` · 세로 flex · 1px `--c-border` · `--r-md` · 면 `--c-surface` · 패딩 `--sp-4 --sp-5`(440px 이하 `--sp-4`) · **그림자 없음** | 면이 바탕보다 한 단계 밝아 "종이가 얹혀 있다"가 경계선만으로 읽힌다. 원칙 3 유지 |
-| **`.entry-cat`** | `--fs-xs` / 700 / `--ls-wide` / **`--c-accent`** / 한 줄 말줄임 / **링크 아님** / `display: block` | 카드의 첫 줄, 작은 소문 라벨. 액센트색인 이유: 분류는 상세의 `.post-cat`과 같은 개념이고 그 색이 청록이다. 링크가 아닌 이유는 태그와 같다(카드 전체가 이미 링크). ~~**v3.7(§0-3 ⑤): 모든 카드가 같은 라벨이 되는 두 경우엔 CSS가 감춘다** — `#catIndex`의 선택 항목이 "전체"가 아닐 때 / 인덱스 항목이 "전체 + 하나"뿐일 때~~ → **v3.9: 감추는 경우는 하나 — 글이 있는 분류가 블로그 전체에 하나뿐일 때.** 상태의 출처는 `#catIndex`(폐기)가 아니라 사이드바 트리다: `body:has(#sideTree .side-cat):not(:has(#sideTree .side-cat:not(.is-empty) ~ .side-cat:not(.is-empty))) .post-list .entry-cat { display: none }` — "글 있는 `.side-cat`이 둘 이상 없다"(트리가 그려진 뒤에만). **`?cat=` 필터 중에는 감추지 않는다**: `#catRow`가 없는 화면에서 라벨은 필터가 걸렸다는 유일한 보이는 표시다(§4-3). 트리가 그려지기 전(`#sideTree` 비어 있음)에는 감추지 않는다 — 카드가 먼저 놓이고 라벨이 뒤늦게 사라지는 깜빡임을 막는다. JS는 계속 그린다(마크업 불변). 연관 글 카드(§5-8)는 `.post-list` 밖이라 그대로 |
-| `.entry-title` | `--fs-lg` / 600 / `--c-text` / `display: block` / `flex: none` | 화면에서 **가장 눈에 띄는 글자**. 두 줄이 되어도 자르지 않는다(그리드 행 높이가 따라간다) |
+| `.entry` | `position: relative` · 세로 flex · **1px 경계선(위·좌·우 `--c-border-soft` / 아래 `--c-border`)** · **`--r-sm`** · 면 `--c-surface` + **위 가장자리 7px 풀 자국**(`background-image`) · 패딩 `--sp-4 --sp-5`(440px 이하 `--sp-4`) · **그림자 없음** | **v4.0 M4 — 표면 재설계.** 아래 "카드 표면(v4.0)" 참조 |
+| **`.entry-cat`** | `--fs-xs` / **`--fw-text`(400)** / **자간 0** / **`--c-accent`** / 한 줄 말줄임 / **링크 아님** / `display: block` | 카드의 첫 줄. 액센트색인 이유: 분류는 상세의 `.post-cat`과 같은 개념이고 그 색이 청록이다. 링크가 아닌 이유는 태그와 같다(카드 전체가 이미 링크). **v4.0(M1)**: 700 + `--ls-wide`를 뗐다 — 제목보다 먼저 오는 "굵고 자간 벌린 작은 대문자 줄"이 FD 클리셰⑤(아이라벨) 그 자체였고, 같은 카드 안에서 제목(700)과 굵기가 같아 **무엇이 주인공인지 흐려졌다.** 이제 카드 안의 굵기는 제목 하나뿐이다. 표시 조건은 아래 `data-cats` 행 |
+| **`.entry-cat`의 표시 조건** | **v4.0: `#postList`의 컨테이너 속성 하나** — `.post-list[data-cats="1"] .entry-cat { display: none }` | ~~v3.7 `#catIndex` 기준 두 경우~~ → ~~v3.9 `#sideTree` 기준 `:has()` 3중 체인~~ → **v4.0: 속성 하나.** 규칙 자체(= "글이 있는 분류가 블로그 전체에 하나뿐이면 라벨은 정보가 0이다")는 v3.9 그대로이고, **상태를 읽는 방법만** 바꾼다. v3.9의 `body:has(#sideTree .side-cat):not(:has(… ~ …))`는 ⓐ 목록의 생김새를 **사이드바 DOM에 묶어** 두 부품이 서로를 알게 했고, ⓑ 형제 결합자 3중 `:has()`라 트리가 다시 그려질 때마다 전 카드가 재평가되며, ⓒ 무엇을 뜻하는지 읽어서 알 수 없다. `app.js`가 이미 세고 있는 숫자(`data-cats`)를 그대로 적어 두면 CSS는 한 줄이면 된다. **`?cat=` 필터 중에는 여전히 감추지 않는다**(§4-3 근거 유지) — 그래서 값은 **필터 결과가 아니라 블로그 전체** 기준이다. **속성이 없으면 라벨은 보인다**(JS 실패·첫 렌더 전의 안전한 기본값). 연관 글 카드(§5-8)는 `.post-list` 밖이라 그대로 |
+| `.entry-title` | `--fs-lg` / **`--fw-bold`(700)** / `--c-text` / `display: block` / `flex: none` | 화면에서 **가장 눈에 띄는 글자**. 두 줄이 되어도 자르지 않는다(그리드 행 높이가 따라간다). v4.0: 600 → 700(§2 굵기 축) — 카드 안에서 굵은 것은 이것 하나다 |
 | `.entry-title::after` | `position: absolute; inset: 0` — **카드 전체를 링크 면적으로 늘린다** | `<li>`를 통째로 `<a>`로 감싸면 스크린리더가 카드 내용 전부를 링크 이름으로 읽는다. `::after` 방식은 Tab 정지점이 제목 하나이고 태그·분류는 링크가 아니다(300편 × 4 = Tab 1200번을 만들지 않는다) |
 | `.entry-meta` | `flex-wrap`, `--fs-sm`, `align-items: baseline`, **`margin-block-start: auto`**, 위 패딩 `--sp-2` | 마지막 줄. **카드 바닥에 붙는다** — 한 줄 제목 카드와 두 줄 제목 카드가 한 행에 있어도 날짜 줄이 같은 높이에 선다(그리드가 행 높이를 맞추고 auto 마진이 밀어 내린다) |
 | `.entry-date` | **`--c-meta`** / `tabular-nums` | 시간 = 황토(§1-2). 300개가 같은 색이라 리듬이 된다 |
 | `.entry-tags` `.entry-tag` | `<ul>`/`<li>`, **링크 아님**, **`--c-tag`** | 태그는 "무엇에 관한 메모인지"라 목록에서 정보다. 누르고 싶으면 상세로 가서 누른다 — 여기서 링크로 두면 카드 전체 링크(`::after`)와 충돌한다 |
 | hover / focus-visible | 제목 = 밑줄 + `--c-accent`. 카드 = **경계선만** 액센트 쪽으로 살짝(`color-mix` 45%). **이동·그림자·배경 변화 없음** | 그리드에서 카드가 움직이면 옆·아래 카드가 흔들려 보인다. `:has()`가 없는 브라우저는 제목만 반응한다 — 퇴행 없음 |
+| **누르는 순간 (v4.1)** | `.entry:has(.entry-title:active)` → 경계선 `--c-accent` 그대로(100%) | **UX-§2 `press-feedback`.** 터치에는 hover가 없어 v4.0까지 손가락으로 카드를 누르면 다음 페이지가 뜰 때까지 아무 반응이 없었다. 여전히 선 하나 — 이동·그림자·면 변화 없음 |
 | 카드 사이 | `gap: --sp-4` | 16px. 한 행의 카드가 "한 줄"로 읽히면서도 경계선이 붙어 표로 보이지 않는 최소값(v3.1 1열의 12px보다 4px 넓다 — 가로로도 떨어져야 하기 때문) |
 | 터치 타깃 | **카드 전체**가 링크 면적이다(`::after`). 카드 최소 높이 = 패딩 32 + 라벨 + 제목 + 메타 ≈ 110px > 44px | `.entry-title` 자체의 `--h-control` 규칙은 없다(§11-2) |
 | `created` 내림차순 고정 | 정렬 컨트롤이 없다(§0-2). 학습 기록의 순서는 시간순 하나다 | |
 
 **360px 검산** — 거터 20×2 + 카드 패딩 16×2 + 경계선 2 = 74px. 제목에 **286px**이 남는다(1열).
 `minmax(min(17rem, 100%), 1fr)`의 `min()`이 320px 화면에서도 카드가 거터를 넘지 않게 한다.
+
+#### 카드 표면 (v4.0 — meeting-07 M4)
+
+> **결함:** *"카드가 '메모지'라는 이름과 달리 1px 테두리 + 라운드 사각형뿐 — 종이 물성이 배경색 하나에 그친다."*
+> **범위(회의 충돌1 결론):** **그리드(정보구조)는 그대로 두고 표면만 바꾼다.** "형태는 유지, 재질만 바꾼다."
+> **되살리지 않는 것(v2.x 폐기 목록 그대로):** 회전 · 압정 · 광택 · 쐐기(접힌 모서리) · 종이 6색 · 그림자.
+> 이 다섯이 사용자가 "AI티"로 판정한 것이고, 그 판정은 유효하다. 아래 셋은 전부 **선과 면**으로만 한다.
+
+| # | 무엇 | 값 | 왜 이것이 "종이"인가 |
+|---|---|---|---|
+| ① | **모서리 반경** `--r-md`(10px) → **`--r-sm`(6px)** | `border-radius: var(--r-sm)` | 10px 라운드 사각형은 **앱 카드**의 어휘다(모든 UI 킷의 기본값). 잘라 낸 종이 한 장의 모서리는 거의 직각이고, 실제 메모지·인덱스카드의 반경은 2~4px다. 0으로 두지 않는 이유 — 0은 "표"나 "코드 블록"의 어휘이고, 우리 목록은 표가 아니다. 6px이 "종이지만 날카롭지는 않다"의 자리다 |
+| ② | **아래 경계선만 한 단계 진하게** | 위·좌·우 `--c-border-soft`, 아래 `--c-border` | 위에서 내려다본 종이 한 장은 **아래 모서리에만 그늘**이 생긴다(빛은 위에서 온다). 그림자 금지(원칙 3)를 지키면서 "얹혀 있음"을 만드는 유일한 수단이 선 굵기가 아니라 **선 밝기의 비대칭**이다. 부수 효과 하나 — 카드가 세로로 늘어설 때 시선이 아래로 떨어져 스캔 방향과 같아진다 |
+| ③ | **위 가장자리 7px 풀 자국** | `background-image: linear-gradient(180deg, color-mix(in oklab, var(--c-border-soft) 55%, var(--c-surface)) 0, var(--c-surface) 7px)` + `background-color: var(--c-surface)` | 메모지 패드에서 한 장을 뜯으면 **위쪽에 접착제 자국**이 남는다. 이 블로그에서 가장 정직한 "메모지" 신호이고, 클립아트가 아니라 **면의 밝기 변화 한 번**이다. 7px인 이유: 4px면 경계선의 안티앨리어싱과 섞여 "선이 두꺼워졌나"로 보이고, 10px부터는 "카드 헤더 띠"(다시 앱 카드)가 된다. 그라디언트라 띠의 아래끝이 단단한 선으로 끊기지 않는다 — 자국이지 띠가 아니다 |
+
+- **색은 전부 토큰의 `color-mix`다.** `@property`로 등록된 색 토큰을 읽으므로 테마 크로스페이드에서 그라디언트도 프레임마다 다시 계산돼 함께 건너간다(§11, `components.css` §16 전구와 같은 원리).
+- **hover는 그대로 경계선 하나다.** 풀 자국이 hover에서 액센트로 물드는 안은 기각했다 — 카드 위를 지날 때마다 면이 바뀌면 그리드 전체가 깜빡이는 표로 읽힌다(v3.2가 이동·그림자를 뺀 것과 같은 이유). 다만 hover의 경계선 색 변화는 **아래 선까지 함께** 간다(원래 한 선언이다).
+- **`.post-recap` `.toc` `.prose details`는 따라오지 않는다.** 저 셋은 "본문 위의 상자"이고 카드는 "책상 위의 종이"다 — v3.8이 "한 페이지에 상자 어휘가 하나"라고 적은 것은 **본문 안**의 이야기다. 목록 카드와 본문 상자가 서로 다른 것은 결함이 아니라 두 화면이 다른 것이다.
+- **440px 이하**: 패딩만 `--sp-4`로 내린다(v3.2 그대로). 반경·경계선·풀 자국은 그대로 — 좁은 화면일수록 "종이 한 장"이라는 단서가 더 필요하다.
+
+#### 카드가 한 장뿐인 그리드 (v4.0 — meeting-07 M15 · **v4.1 조건 축소**)
+
+~~**`.entry-list`에 `.entry`가 하나뿐이면 그 그리드는 1열 `min(28rem, 100%)`이다.**~~
+**v4.1: 목록 전체가 카드 한 장일 때만(그룹이 하나이고 그 그룹의 카드가 하나) 1열 `min(28rem, 100%)`이다.** 연관 글은 그룹이 없어 v4.0 그대로 받는다.
+
+```css
+.post-list:not(:has(.entry-group + .entry-group)) .entry-list:has(> .entry:only-child),
+.post-related .entry-list:has(> .entry:only-child) { grid-template-columns: min(28rem, 100%); }
+```
+
+- **v4.1 실측 결함(1440px, 고정 1 + 2026년 2 + 2025년 1)**: v4.0 규칙은 "그룹 안의 외톨이"마다 걸려 카드 폭이 **448 → 352 → 448**로 그룹마다 널뛰었다.
+  같은 물건이 줄마다 다른 폭이면 그리드가 아니다(UX-§4 `consistency`, §6 `visual-hierarchy`). M15가 고치려던 것은 "글이 1편일 때 오른쪽 736px이 빈 화면"이지
+  "그룹마다 한 장"이 아니었다. 아래 v4.0 문장 중 "고정 글 그룹과 연도 그룹이 각각 한 장씩이면 **둘 다** 이 규칙을 받는다"는 **폐기**다 — 이제 둘 다 받지 않고
+  둘 다 3열 폭(352px)으로 선다.
+
+- **실측 결함**: 글이 1편인 지금 1440px에서 3열 `auto-fill` 그리드에 카드 한 장이 놓여 **오른쪽에 약 736px이 빈다.** 빈 칸 둘이 "아직 안 불러온 자리"로 보인다(UX-§5 `content-priority`).
+- **`auto-fit`으로 바꾸지 않는 이유** — 한 장이 1088px로 늘어나 제목 한 줄이 60자가 된다. 카드가 아니라 배너가 된다.
+- **28rem(448px)인 이유** — 카드 내용폭 408px에서 `--fs-lg` 한글 제목이 한 줄 ≈ 21자. "메모 한 장"으로 읽히는 폭이고, 3열일 때의 카드(≈312px)보다 한 단계 크되 읽기 칼럼(720px)은 넘지 않는다.
+- **두 장일 때는 규칙이 없다.** 3열 중 한 칸이 비는 것은 "구멍"이 아니라 그리드의 정상 상태다. 규칙은 **"외톨이"** 하나만 다룬다.
+- `:has()`를 모르는 브라우저는 v3.9 상태 그대로다(퇴행 없음). 고정 글 그룹과 연도 그룹이 각각 한 장씩이면 **둘 다** 이 규칙을 받는다 — 같은 폭으로 서므로 왼쪽 선이 어긋나지 않는다.
+- `.post-related .entry-list`(연관 글, 13rem)는 이 규칙을 **받는다** — 추천이 한 편뿐일 때 208px 카드 하나가 656px 칼럼에 외톨이로 놓이는 것이 같은 결함이다. 28rem이 칼럼(656px)보다 넓으면 `min()`이 100%로 잡는다.
 
 **연도 그룹 `.entry-group`**
 
@@ -993,6 +1190,82 @@ finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 
   둘째 줄은 다음 행동. 이 화면은 글이 0편인 지금 **사용자가 가장 먼저 보는 화면**이다.
   "비어 있음"이 고장으로 보이면 안 된다.
 - 문구는 상황별로 JS가 갈아 끼운다(글 0편 / 검색 결과 없음 / 없는 분류).
+- **v4.1 — 불러오기 실패에는 되돌아갈 길이 있어야 한다(UX-§8 `error-recovery` · FD "실패는 방향을 말하는 순간").** v4.0의 실패 화면은
+  `글 목록을 불러오지 못했습니다` + 오류 문장뿐이고 **누를 것이 없었다** — 할 수 있는 일(새로고침)을 사용자가 스스로 알아내야 했다.
+  이제 셋째 자식으로 `button.btn.btn-primary` **`다시 시도`**(→ `location.reload()`)를 둔다. 조건: `err.code !== 'file'`(file:// 이면 다시 해도 같다 —
+  그때는 v4.0 그대로 버튼 없이 `로컬 서버로 열어 주세요` 안내만). 둘째 줄 문구는 원인 + 할 일: 네트워크면 `인터넷 연결을 확인한 뒤 다시 시도해 주세요.`,
+  그 밖에는 `err.message` 그대로. 버튼이 둘이 되는 화면은 없다(실패에는 `전체 글 보기`가 뜻이 없다). 버튼 둘 사이 간격 규칙(`.btn + .btn`)은
+  `components.css` §4에 이미 있다 — 상세 화면(§5 `.post-error`)과 같은 규칙.
+
+### 4-4-1. 검색 지우기의 누르는 면적 (v4.1 — UX-§2 `touch-target-size` "보이는 크기 밖으로 면적을 넓혀라")
+
+`.search-clear`의 **보이는 원판은 그대로 `--h-control-xs`**(24 / coarse 36)이고, **누르는 상자는 인풋 높이와 같은 정사각 `--h-control-sm`**(32 / coarse 44)이다.
+v4.0은 원판 = 상자라 손가락에서 36px — 44에 못 미쳤다. 원판은 `background-clip: content-box` + 패딩 `(sm − xs) / 2` + 반경 `--r-full`로 그린다
+(상자 반경 16 − 패딩 4 = 안쪽 반경 12 = 지름 24의 원). 배경색이라 hover 전환이 산다. 상자 오른쪽 끝 = 인풋 오른쪽 끝이고, 인풋의 오른쪽 패딩
+(`--sp-1 + xs + --sp-1` = 32 / 44)이 정확히 이 상자 폭이다. 마크업 변화 없음. `.search-key`(키캡)는 v4.0 자리 그대로(원판 자리의 가운데).
+
+### 4-5. 결과 줄 `.list-status` (v4.0 신설 — meeting-07 C1)
+
+> **치명 결함:** `#postList`에 `aria-live="polite"`가 걸려 있어 **검색·필터가 바뀔 때마다 카드 전량이 다시 낭독된다.**
+> `renderList()`는 필터마다 전량 재렌더하므로(§4-4) 스크린리더는 한 글자 입력마다 목록 전체를 읽는다 —
+> 글이 늘면 검색 자체가 불가능해진다(UX-§1 `contextual-live-badge-updates`, 3개 보고서 교차확인).
+> **원인은 live 영역의 크기다.** "무엇이 바뀌었는가"를 **한 문장**으로 말하는 자리를 따로 두면, 목록 자체는
+> 조용히 바뀌어도 된다.
+
+```html
+<div class="list-bar" id="listBar" hidden>
+  <p class="list-status" id="listStatus" role="status"></p>
+  <button class="list-reset" id="listReset" type="button" hidden>전체 글 보기</button>
+</div>
+<div class="post-list" id="postList"></div>
+```
+
+**v4.0(2026-09-23) — 줄이 `.list-bar`로 한 겹 싸였다.** 태그 인덱스(§4-3)가 폐기되면서 `?tags=` 필터를 **보여 주고 푸는** 자리가 필요해졌고,
+그 두 일은 "지금 몇 편이 어떤 조건으로 보이는가"와 한 문장 거리라 이 줄에 붙인다. 버튼을 `.list-status` **안**에 넣지 않는 이유 —
+`role="status"`의 내용은 바뀔 때마다 통째로 낭독된다. 버튼 이름까지 매번 읽히면 안 된다.
+
+| 규칙 | 내용 | 왜 |
+|---|---|---|
+| **`#postList`에 `aria-live`를 붙이지 않는다** | 세 페이지 어디에도. `#postRelatedList`도 마찬가지 | 이 절의 전부다. 다시 붙으면 결함이다 |
+| `role="status"` | `.list-status` 자신에게. `aria-live="polite"` `aria-atomic="true"`를 따로 적지 않는다 — `role="status"`가 둘 다 함의한다 | 속성 셋을 적으면 "무엇이 진짜 손잡이인가"가 흐려진다. 하나면 된다 |
+| 위치 | `.page-head` 다음, `#postList` **앞**. DOM 순서 = 낭독 순서 | 개수를 들은 다음 카드를 훑는다. 뒤에 두면 카드 전량을 읽은 뒤에야 "3편"이 온다 |
+| 문구 | 필터 없음 `전체 N편`. 필터가 걸려 있으면 조건을 **앞에** 붙인다 — 분류 `Java 분류 3편` / 태그 `css 태그 3편`(여럿이면 `css, js 태그`) / 검색 `‘그리드’ 검색 3편`. 조건이 둘 이상이면 쉼표로 잇는다(`Java 분류, ‘그리드’ 검색 2편`). 분류·태그의 이름은 **화면 표기**(분류 표시 이름, 태그는 글에 적힌 원문 표기)다 | 가운뎃점으로 잇지 않는다(원칙 7). `분류`/`태그`/`검색`이라는 말을 붙이는 이유 — 태그와 분류가 같은 이름(`Java`)인 블로그라 이름만 쓰면 무엇으로 걸렀는지 알 수 없다(§4-3 v3.9의 "같은 줄 둘"과 같은 뿌리) |
+| **`.list-reset`** | 필터(분류·태그·검색 중 하나라도)가 걸려 있을 때만 `hidden`을 뗀다. 문구 `전체 글 보기`. 누르면 `resetFilters()` → 주소에서 `?q` `?cat` `?tags`를 지우고(push) 다시 그린 뒤 **포커스를 첫 카드 제목으로**, 카드가 없으면 `#main`으로 옮긴다 | 버튼이 스스로 사라지므로 포커스를 옮기지 않으면 `<body>`로 떨어진다. 첫 카드 제목은 "전체 목록이 여기서 시작한다"는 뜻이고 다음 Tab이 자연스럽다. `.list-empty`의 버튼과 **같은 이름·같은 함수**다 |
+| `.list-reset` 생김새 | 버튼 어휘를 하나 더 만들지 않는다 — **링크처럼 보이는 글자 버튼**: `--fs-sm` · `--c-accent` · 밑줄 옅게(hover에서 진하게) · 배경·테두리 없음 · 높이 `--h-control-sm` | `.btn` 상자를 결과 줄에 두면 카드 그리드 위에 "덩어리"가 하나 더 생긴다. 이 동작은 "필터를 떼는 가벼운 손잡이"라 본문 링크와 같은 무게가 맞다 |
+| 빈 결과·0편 | **줄째 감춘다**(`#listBar` `hidden`, 문구도 비운다). "0편"을 쓰지 않는다 | 그 상황의 설명과 `전체 글 보기`는 `.list-empty`가 이미 하고 있다. 줄을 남기면 같은 버튼이 두 개가 되고, `role="status"`가 "0편"을 읽은 직후 `.list-empty`가 또 읽히면 같은 말이 두 번이다 |
+| 로딩 중·로드 실패 | 줄째 감춘다. `#listLoading`·`.list-empty`가 맡는다(그 둘에는 `role`을 주지 않는다) | "불러오는 중"까지 live로 읽으면 한 번의 검색에 두 번 말한다 |
+| 생김새 | 줄: `display: flex` · `flex-wrap` · `align-items: baseline` · 간격 `--sp-3` · 위 여백 없음(머리말의 아래 여백이 맡는다) · 아래 여백 `--sp-4`. 문장: `--fs-sm` · `--c-text-mute` · `tabular-nums`. **왼쪽 선은 카드와 같다**(가운데 정렬 아님, §4-2 ③) | v3.9에서 `#catRow`와 함께 사라진 `전체 N`의 "개수" 정보가 여기로 돌아온 것이다. 작고 낮은 색이라 카드 제목과 겨루지 않는다 |
+| 첫 렌더 | 로드 직후 한 번 채워지고, 그때 `role="status"`가 짧은 한 문장을 읽는다 | 짧은 문장 하나는 허용 비용이다. 이것이 없으면 "필터를 눌렀는데 아무 일도 안 일어난 것 같다"가 된다 |
+| 같은 문장이면 쓰지 않는다 | `textContent`가 이미 같은 값이면 대입하지 않는다 | 검색어를 고쳐도 결과가 같으면(`‘그리’` → `‘그리드’`가 아닌 한) 조용해야 한다 — 실제로는 검색어가 문장에 들어가 매번 바뀌므로 이 규칙은 분류·태그 재렌더(뒤로가기)에서만 일한다 |
+
+### 4-6. 목록 상태 보존 — `목록` 링크와 뒤로가기 (v4.1 신설 — UX-§9 `back-behavior` · `state-preservation` · `back-stack-integrity`)
+
+> **결함 둘(코드 실측).** ① post.html의 `.back-link`는 늘 `href="index.html"`이다 — `index.html?cat=java&q=캡슐` 에서 글을 열고 `목록`을 누르면
+> 분류·검색이 풀린 전체 목록 맨 위로 떨어진다(`post.js`에 목록 주소를 아는 코드 0줄). ② 목록은 `index.json`을 받은 **뒤에** 그려지므로, 뒤로가기로
+> 돌아왔을 때 브라우저의 스크롤 복원이 "아직 짧은 페이지"에서 먼저 일어나 맨 위에 남는다(bfcache에 걸리지 않은 경우). 300편이 되면 읽던 자리를
+> 매번 다시 찾아 내려가야 한다. **새 마크업·새 클래스 없음 — JS 몫이다.**
+
+| # | 규칙 | 누가 · 어디 |
+|---|---|---|
+| ① 마지막 목록 기억 | sessionStorage **`blogList`** = `{"search":"?cat=java&q=…","y":1234}`. `search`는 `writeUrl()` 직후와 첫 렌더 뒤에 `location.search`로, `y`는 **`pagehide`**(와 `visibilitychange`→`hidden`)에서 `scrollY`로 쓴다. 키는 `config.js` `storageKeys.list = 'blogList'`. 전부 try/catch(막혀 있으면 v4.0과 같다) | `app.js` · `config.js` |
+| ② `목록`의 목적지 | post.html이 열리면 `blogList.search`를 읽어 `''`이거나 `?`로 시작하는 문자열이면 **`.back-link`의 `href`를 `'index.html' + search`로** 바꾼다. 값이 없으면 마크업 그대로(`index.html`). `history.back()`을 쓰지 않는다 — 새 탭·외부 링크로 들어온 사람에게는 "뒤"가 이 사이트가 아니다 | `post.js` `start()` |
+| ③ 돌아온다는 뜻 | `.back-link` 클릭 때 sessionStorage **`blogListReturn`** = 지금 글의 id(한 번 쓰고 지우는 표식). `preventDefault` 없음 | `post.js` |
+| ④ 스크롤 복원 | `app.js` 시작 때 `history.scrollRestoration = 'manual'`(지원할 때만). **첫 `renderList()` 뒤** 다음 조건이면 `requestAnimationFrame` 안에서 `scrollTo(0, blogList.y)`: (내비게이션 종류가 `back_forward` — `performance.getEntriesByType('navigation')[0].type` — 이거나 `blogListReturn`이 있다) **그리고** `blogList.search === location.search`. 그 밖에는 맨 위(v4.0 그대로). `blogListReturn`은 읽자마자 지운다 | `app.js` `start()` |
+| ⑤ 포커스 | ④에서 복원했고 `blogListReturn`이 있었으면, 그 id의 카드 제목(`.entry-title[href="post.html?id=<encodeURIComponent(id)>"]`)에 `focus({ preventScroll: true })` — 키보드로 읽던 사람이 다음 Tab을 "방금 읽은 글 다음"에서 이어 간다. 없으면(필터가 바뀌어 사라졌다) 아무것도 하지 않는다 | `app.js` |
+| ⑥ 헤더 `글` · `전체 글 보기` | **바뀌지 않는다** — 새로 시작하는 길이라 맨 위·필터 없음이 맞다(§3-3, §4-5). ④는 `blogListReturn`/`back_forward`일 때만 일한다 | — |
+| ⑦ bfcache | `pageshow`의 `persisted`면 아무것도 하지 않는다(브라우저가 이미 되살렸다) | `app.js` |
+| ⑧ 인트로 | 인트로가 뜨는 첫 방문(§3-5)에는 돌아올 목록이 없다 — 규칙이 겹치지 않는다. 인트로가 뜬 채 복원 조건이 참인 경우는 없다(같은 세션이면 `data-intro="done"`) | — |
+
+**이행 판단(frontend-dev #133-137, 2026-09-23 등재 — 위 표와 어긋나면 이것이 현행).**
+
+| 자리 | 표의 원안 | 이행 | 근거 |
+|---|---|---|---|
+| ④ 복원 조건 | `back_forward` 또는 `blogListReturn` | **+ `reload`** — `blogListReturn` · `back_forward` · `reload` 셋 중 하나 **그리고** `search` 일치 | `scrollRestoration = 'manual'`로 돌린 대가로 새로고침이 맨 위로 떨어지면 브라우저가 원래 하던 일을 빼앗는다 |
+| ④ `scrollRestoration` 절충 | `'manual'` | 그대로 `'manual'`. 대가 하나를 받아들인다 — 같은 문서 안의 `pushState` 항목(필터·검색을 바꾼 기록) 사이를 뒤로가기로 오갈 때는 스크롤이 **제자리**에 머문다(브라우저 자동 복원이 꺼졌고 문서가 바뀌지 않아 ④가 돌지 않는다) | 목록 필터 사이의 뒤로가기는 목록을 다시 그릴 뿐 "읽던 자리"가 없다. 상세 → 목록의 복원이 주 목적이다 |
+| ③ 표식이 걸리는 곳 | `.back-link` 클릭 | `.back-link` **와 `showError()`의 `목록으로 돌아가기`**(같은 목적지 — §5-6). **수정키 클릭(Ctrl · Shift · Meta · Alt)과 가운데 버튼은 표식을 남기지 않는다** | 새 탭·새 창으로 연 목록은 이 탭이 떠나지 않는다 — 남은 표식이 나중에 헤더 `글`로 들어온 목록까지 옛 자리로 끌고 간다(⑥ 위반) |
+| ① 키 | `storageKeys.list = 'blogList'` | `storageKeys.list = 'blogList'` · **`storageKeys.listReturn = 'blogListReturn'`** — 두 키 모두 `config.js`에 | 문자열을 두 파일(`app.js` · `post.js`)이 따로 적지 않는다 |
+| §4 · §5-6 `다시 시도`의 네트워크 판정 | "네트워크 오류면" | **`err.code === 'network' && err.cause`** — `store.js` `fail()`이 fetch 자체의 예외를 `cause`로 붙인 경우만. HTTP 상태 실패(`network`이지만 `cause` 없음)는 `err.message`를 그대로 보인다 | "인터넷 연결을 확인" 문구는 요청이 서버에 닿지 못했을 때만 참이다. 404·500에 그 문구를 보이면 거짓말이다 |
+| §8-1 토스트 | 종류별 시간 · hover·focus 정지 · 떠나면 2000 | 표 그대로 이행 — `ok`·종류 없음 3200 / `warn`·`err` 5200, `mouseenter`·`focusin` 정지, `mouseleave`·`focusout`(토스트 밖으로 나갈 때) 2000ms 새로, 제거 400ms | — |
 
 ---
 
@@ -1001,7 +1274,10 @@ finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 
 ```html
 <main class="site-main" id="main" tabindex="-1">
 
-  <a class="back-link" href="index.html">← 목록</a>
+  <!-- v4.0(M2): 문구에서 "←" 문자를 뺀다. 방향 표시는 CSS ::before가 그리는 쐐기(‹ 모양 선 두 개) — 원칙 7의 유일한 화살표 예외이고,
+       마크업 문자가 아니라서 스크린리더가 "왼쪽 화살표 목록"이라고 읽지 않는다
+       v4.1(§4-6): href는 마크업에서 index.html로 시작하고, post.js가 마지막으로 본 목록 주소(sessionStorage blogList.search)로 바꾼다 -->
+  <a class="back-link" href="index.html">목록</a>
 
   <article class="post is-loading" id="post">
     <header class="post-head">
@@ -1104,7 +1380,10 @@ finish(): intro.hidden = true; sessionStorage 'blogIntro' = '1'(try/catch). 한 
   (`Date: 2020.05.26  Updated: 2020.05.30`).
   사례 1은 같은 정보를 글 맨 아래 두는데, 우리는 **사용자가 직접 요구한 기능**이라
   "표시했지만 안 보이는" 위치로 내리지 않는다.
-- **구분자 `·`는 CSS가 그린다**(`.post-dates > * + *::before`). 마크업에 문자를 넣지 않는다.
+- ~~**구분자 `·`는 CSS가 그린다**(`.post-dates > * + *::before`).~~ **v4.0(M2): 구분자 없음.** `게시`·`수정`이라는 라벨 문자열과
+  두 `<time>` 사이의 간격(`--sp-4`)이 이미 경계를 말한다(원칙 7 판별법 — 지워도 잃는 것이 없다). `components.css`의 `::before` 규칙은 삭제한다.
+- **v4.0(M9): 요약이 제목과 같은 문자열이면 요약 줄을 감춘다.** `post.js` `fillHead()`가 둘을 앞뒤 공백을 떼고 비교해 같으면 `#postSummary`에
+  `hidden`. 실측: `캡슐화` / `캡슐화` 두 줄 — 한 요소는 한 가지 일만 한다(FD). 에디터가 요약을 제목으로 채워 두는 경우가 있어 데이터를 고치지 않고 화면에서 거른다.
 - **`updated`가 `created`와 같은 날이면 `#postUpdated`에 `hidden`을 붙인다.**
   같은 날짜가 두 번 찍히면 "수정 이력이 있다"는 정보가 아니라 중복이다.
   → `created`는 불변, `updated`는 저장할 때마다 갱신(CLAUDE.md 절대 규칙 4)은 그대로다.
@@ -1226,7 +1505,9 @@ C의 한계를 숨기지 않는다. 사이드바 기본은 닫힘이라 **고정
 - **유지한다.** 학습 기록은 시간순으로 이어 읽는 경우가 실제로 있고,
   마크업은 이미 있으며(post.js), 비용은 텍스트 두 줄이다.
 - **카드가 아니다.** 테두리·배경·그림자·hover 이동 전부 없앤다.
-  `← 이전` / `다음 →` 라벨은 `--fs-xs`·mute, 제목은 `--fs-sm`·본문색. 두 줄이 전부다.
+  ~~`← 이전` / `다음 →`~~ → **v4.0(M2): `이전 글` / `다음 글`** 라벨은 `--fs-xs`·mute·**`--fw-text`·자간 0**, 제목은 `--fs-sm`·본문색·`--fw-bold`. 두 줄이 전부다.
+  화살표(`::before`/`::after` content)는 삭제한다 — 방향은 문자열과 칸의 위치(이전 왼쪽, 다음 오른쪽 정렬)가 말한다(원칙 7).
+  라벨 문자열은 `post.js`가 `이전`/`다음` → **`이전 글`/`다음 글`**로 바꿔 쓴다 — 화살표가 빠지면 "이전" 한 단어는 무엇의 이전인지 약하다.
 - 768px 이상에서 2열(이전 왼쪽 / 다음 오른쪽), 미만에서는 1열로 쌓인다.
   이전 글이 없으면 다음 글이 오른쪽 칸을 지킨다(`.is-next:only-child { grid-column: 2 }`).
 
@@ -1238,6 +1519,12 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
 않는다(§8-2) — JS가 실패해도 v3.0과 같은 화면이다.
 `pointer-events: none`을 걸되 **`.back-link`는 예외**다. CDN이 막혀 `post.js`가
 클래스를 떼지 못하면 사용자가 페이지에 갇힌다. 탈출구는 항상 살아 있어야 한다.
+
+**v4.1 — `.post-error`의 되돌아갈 길 둘(UX-§8 `error-recovery`).** `post.js` `showError()`는 지금 `a.btn` `목록으로 돌아가기` 하나를 그린다.
+**네트워크·서버 실패**(`store.loadPost`가 reject하고 `err.code !== 'file'` — "글을 불러오지 못했습니다" 분기)와 **본문 렌더 실패**("본문을 그리지 못했습니다")에서는
+그 앞에 `button.btn.btn-primary` **`다시 시도`**(→ `location.reload()`)를 먼저 둔다 — 순서 `다시 시도` → `목록으로 돌아가기`. 주 동작이 앞이다.
+없는 글·쓸 수 없는 id·id 없음·file:// 에서는 다시 해도 같으므로 v4.0 그대로 `목록으로 돌아가기` 하나. `목록으로 돌아가기`의 `href`도 §4-6 ②의 목록 주소를 따른다.
+두 버튼 사이 간격은 `.post-error .btn + .btn`(`components.css` §4, `--sp-3`) — 새 클래스 없음. 정적 마크업(JS가 문구를 못 채울 때의 바닥)은 바뀌지 않는다.
 
 ### 5-7. `.prose` 안
 
@@ -1254,8 +1541,20 @@ JS가 붙였다 떼는 클래스 하나가 곧 트리거라 JS에 추가 협조�
   ```
   - `.code-lang`은 장식 라벨이라 `aria-hidden="true"`다(같은 정보가 `.code-copy`의
     `aria-label`에 있다 — 빼지 않으면 언어명을 두 번 읽는다).
-  - 언어가 없으면 `TEXT`로 채운다. 라벨 칸을 비우면 머리띠 높이가 블록마다 달라진다.
+  - ~~언어가 없으면 `TEXT`로 채운다.~~ **v4.0(M3): 언어가 없으면 `text`, 표에 없는 언어는 적힌 그대로(`kotlin`) — 강제 대문자 금지.**
+    이름표(`LANG_LABEL`)에 있는 언어는 그 고유 표기(`Java` `JavaScript` `SQL`)를 쓴다 — 고유명사의 대소문자는 장식이 아니다.
+    `lang.toUpperCase()`로 만든 `KOTLIN`은 FD 클리셰⑤(ALL-CAPS 데이터 라벨)다. 라벨 칸을 비우지 않는 이유는 그대로 — 비우면 머리띠 높이가 블록마다 달라진다.
 - 표는 `.table-wrap` 안의 `.prose table` — 규칙 전체는 §7-1.
+- **v4.1 — 복사 버튼은 늘 또렷하다(UX-§1 `color-contrast` · §2 `hover-vs-tap`).** v4.0까지 마우스 기기에서 `.code-copy`를 `opacity: .5`로 흐려 두고
+  코드 블록 hover·focus-within에서만 1로 올렸다. 흐린 동안 `복사`의 대비가 7.2 → 약 2.4:1(라이트)로 AA에 못 미쳤고, 키보드·확대 사용자는 hover 없이
+  흐린 글자를 읽어야 했다. `prose.css`의 `@media (hover: hover) and (pointer: fine)` 블록을 **삭제**했다. 머리띠의 작은 글자라 늘 보여도 코드와 겨루지 않는다.
+- **v4.1 — 외부 링크의 `↗`(원칙 7 예외 둘째, §1-2).** `content: "\2060↗" / " (새 창)"` — 스크린리더는 "(새 창)"을 읽고(v4.0은 "북동쪽 화살표"),
+  U+2060(단어 잇기)이 링크 끝 글자와 화살표를 한 줄에 묶는다(360px 실측: `MDN 문서` / `↗를` 로 갈라졌다). 대체 텍스트 문법을 모르는 브라우저는
+  첫 선언(`"\2060↗"`)을 쓴다. 투명도 .65 → .8(뜻을 가진 기호가 되었으니 비텍스트 3:1). `markdown.js`는 바뀌지 않는다.
+- **v4.1 등재(frontend-dev 이행, meeting-07 M8 · m3)**: `markdown.js` `renderInto()`가 본문의 `# 제목`(h1)을 **h2로 내린다**(`demoteH1` — 속성·자식 그대로
+  옮긴 새 h2로 교체). 페이지의 h1은 글 제목 하나다(UX-§1 `heading-hierarchy`). 본문 이미지는 `loading="lazy"` `decoding="async"`를 받는다 —
+  `width/height`는 넣지 않는다(마크다운 원문이 크기를 모르고, 재서 넣으려면 이미지를 먼저 받아야 해 lazy의 뜻이 사라진다. 근거는 `markdown.js` 주석).
+  자리 흔들림(CLS)은 `.prose img`의 `--c-surface-2` 면이 "여기 이미지가 온다"를 말하는 것으로 받아들인다.
 - **코드블록 안 `pre`의 여백(v3.3 수정)**: `.prose pre`(JS 실패 시 폴백)의 `margin-block: --sp-7`이
   `.code-wrap > pre`에도 먹어 머리띠와 첫 줄 사이에 52px 빈 띠가 있었다(특이도가 같아 뒤 규칙이 이겼다).
   `prose.css`가 `.prose .code-wrap > pre { margin: 0 }`로 고쳤다. 마크업은 그대로다.
@@ -1287,7 +1586,7 @@ IDE는 자기 글꼴·안티앨리어싱을 전제로 값을 잡지만 웹에서
 | 원시형 (int·boolean — IntelliJ에서 키워드) | `.hljs-type` | `--hl-type` | = 키워드 | = 키워드 |
 | 문자열 (DEFAULT_STRING) | `.hljs-string` `.hljs-quote` `.hljs-regexp` | `--hl-string` | `#067D17` (5.3:1) | **AA 보정 `#7A9B67`** ← 원본 `#6A8759`(3.5:1) → 4.5:1 |
 | 숫자 (DEFAULT_NUMBER) | `.hljs-number` | `--hl-number` | `#1750EB` (6.2:1) | `#6897BB` (4.5:1 — 경계값, 그대로) |
-| 주석 (LINE/BLOCK_COMMENT) | `.hljs-comment` (기울임 — Light.xml `FONT_TYPE 2`) | `--hl-comment` | **AA 보정 `#767676`** ← 원본 `#8C8C8C`(3.4:1) → 4.5:1 | **AA 보정 `#929292`** ← 원본 `#808080`(3.6:1) → 4.6:1 |
+| 주석 (LINE/BLOCK_COMMENT) | `.hljs-comment` (~~기울임 — Light.xml `FONT_TYPE 2`~~ **v4.0(m7): 바로 선 글자.** 한글 폰트에는 이탤릭이 없어 브라우저가 글자를 기울여 합성한다 — 한글 주석이 비스듬히 뭉개졌다. 주석은 색(`--hl-comment`)만으로 이미 구별된다) | `--hl-comment` | **AA 보정 `#767676`** ← 원본 `#8C8C8C`(3.4:1) → 4.5:1 | **AA 보정 `#929292`** ← 원본 `#808080`(3.6:1) → 4.6:1 |
 | 함수 선언 (DEFAULT_FUNCTION_DECLARATION) | `.hljs-function` `.hljs-title` `.hljs-title.function_` | `--hl-function` `--hl-title` | `#00627A` (6.9:1) | `#FFC66D` (9.1:1) |
 | 클래스·인터페이스 이름 | `.hljs-title.class_` (+ `.inherited__`) | (`--code-text`) | 본문색 — IntelliJ는 클래스명을 색칠하지 않는다 | 본문색 |
 | 어노테이션 (DEFAULT_METADATA) | `.hljs-meta` + 안의 `.hljs-keyword` `.hljs-string` | `--hl-meta` | **AA 보정 `#857209`** ← 원본 `#9E880D`(3.5:1) → 4.8:1 | `#BBB529` (6.6:1) |
@@ -1298,9 +1597,11 @@ IDE는 자기 글꼴·안티앨리어싱을 전제로 값을 잡지만 웹에서
 | (정적 필드 DEFAULT_STATIC_FIELD `#871094` / `#9876AA`) | — | **쓰지 않는다** | hljs가 정적 필드를 구분하지 못한다. 엉뚱한 곳에 자주색이 찍히느니 본문색 | — |
 | diff + / − | `.hljs-addition` / `.hljs-deletion` | `--hl-addition` / `--hl-deletion` | 문자열 초록 / `--c-danger`와 같은 값 (IDE에 대응값 없음) | 같음 |
 | 마크다운 제목 | `.hljs-section` (700) | `--hl-title` | — | — |
+| 마크다운 강조 (v4.1 등재 — CSS에 있던 것) | `.hljs-strong` (700) · `.hljs-emphasis` (기울임) | (색 없음 — 굵기·기울임만) | — | — |
 
 - **굵기·기울임도 IDE를 따른다.** IDE 편집기는 한 굵기다 — v3.6까지 키워드·함수·타입·이름에 걸었던 600은 뗐다(키워드가
-  굵으면 자바 코드의 절반이 굵다). 남은 것은 주석 기울임(IntelliJ Light 설정)과 마크다운 제목 700(코드가 아니라 문서 구조)뿐.
+  굵으면 자바 코드의 절반이 굵다). 남은 것은 ~~주석 기울임(IntelliJ Light 설정)과~~ 마크다운 제목 700(코드가 아니라 문서 구조)뿐 —
+  주석 기울임은 v4.0(m7)에 뗐다(위 표 주석 행). 마크다운 코드 안의 `**굵게**` `*기울임*`(`.hljs-strong` `.hljs-emphasis`)은 문서 구조라 그대로 둔다.
 - hljs는 함수 "선언"과 "호출"을 가르지 않는다(둘 다 `.hljs-title.function_`) — 함수는 전부 선언색이다. IntelliJ에서는 호출이
   본문색이라 여기서 IDE와 한 번 갈린다. 다른 방법이 없다(하이라이터를 바꾸는 것은 의존성 승인 대상).
 - 인라인 코드(`.prose code`)는 바뀌지 않는다 — 문장 속 토큰이지 에디터가 아니다(§5-7).
@@ -1332,7 +1633,8 @@ IDE는 자기 글꼴·안티앨리어싱을 전제로 값을 잡지만 웹에서
 | 본문 | 절의 블록들을 `<div class="prose">` 안에 넣는다. **`.prose`를 그대로 쓴다** — 미리보기와 같은 재사용(§6). 글자 크기·행간·목록 마커·코드·표 규칙이 본문과 동일하다 | 카드만 보고 복습하는 사람의 글자가 본문보다 작으면 안 된다. 여백만 압축한다(아래 CSS) — 미리보기 `.prose`와 같은 태도 |
 | 빈 절 | h2 뒤에 블록이 0개(다음 h2가 바로 오거나 문서 끝)면 **만들지 않는다**. h2는 본문에 남는다 | 빈 카드는 "고장"으로 읽힌다(§4-4 빈 상태와 같은 이유) |
 | 위치 무관 | 절이 본문 어디에 있든(템플릿은 둘째 절) 옮긴다. 같은 제목의 h2가 둘이면 **첫째만** | 템플릿(§6-2)이 `## 핵심 → ## 다시 볼 때 이것만 → ## 헷갈린 것` 순서라 보통 둘째다 |
-| 목차·스파이 | 목차(`#toc`·`.side-toc`)의 항목은 그대로 — 옮긴 h2도 문서 안에 있고 id가 같다. 스파이(§5-4)는 `heading.el`을 그대로 관찰하므로 카드가 화면 위쪽 40% 띠를 지날 때 그 항목이 켜진다. 문서 순서와 목차 순서가 어긋나는 것(카드가 앞으로 왔는데 목차는 원래 자리)은 **받아들인다** — 목차를 재정렬하면 "본문 순서 = 목차 순서" 약속이 깨지고, 카드는 h2 3개 이상인 글에서만 목차와 만난다 |
+| 목차·스파이 | ~~목차의 항목은 그대로 … 문서 순서와 목차 순서가 어긋나는 것은 **받아들인다**~~ → **v4.1(meeting-07 M7, frontend-dev 이행)**: `mountRecap()`이 절을 옮긴 **뒤** `post.js` `headingsInDomOrder()`가 제목을 **문서 순서로 다시 모아** 인라인 목차(`#toc`)·사이드바 목차(`.side-toc`)·스크롤 스파이(§5-4)를 그 순서로 만든다. 카드가 앞으로 왔으면 목차에서도 첫 항목이다 — "본문 순서 = 목차 순서" 약속은 **옮긴 뒤의 본문**을 기준으로 지켜진다. v3.8의 "어긋남 감수"는 스파이가 위쪽 40% 띠에서 목차 아래 항목부터 켜지는 역순 결함이었다 |
+| 트리거 문구 (v4.1) | `CFG.recap.heading`(`'다시 볼 때 이것만'`) **또는** `CFG.recap.aliases`(`['핵심 정리']`)의 어느 것과 같은 h2. 비교는 `trim()` 뒤 **끝의 콜론(`:` `：`)을 떼고** 한다(`핵심 정리:`도 받는다) | meeting-07 M10 — 실제 글은 "핵심 정리"로 요약 절을 써서 템플릿 문구 하나만 받으면 기능이 한 번도 켜지지 않았다. 별칭은 `config.js` 한 곳에서 늘린다 |
 | 생김새 | `.entry`·`.toc`와 같은 어휘 — 1px `--c-border` + `--c-surface` 면 + `--r-md`, 그림자 없음. 패딩 `--sp-5 --sp-6`(440px 이하 `--sp-4 --sp-5`). 아래 여백 `--sp-8`(= `.toc`와 같다 — 본문 첫 문단과의 거리가 목차 상자 때와 같다). 제목은 `--fs-md` 700 본문색, `.prose h2`의 30px·액센트 밑선을 **받지 않는다**(선택자 `.post-recap > h2` — 카드 안 h2는 `.prose` 밖이라 그 규칙이 애초에 안 걸린다) | 카드가 본문보다 눈에 띄면 "글이 두 번 시작"(§0-3 ④)이 재발한다. 카드는 본문과 **같은 글자, 다른 면**으로만 갈린다. 색은 안 쓴다 — 역할색 셋(§1-2)에 "요약"은 없고, 넷째 색을 만들 값이 없다 |
 | 360px | 카드 안 `.prose`가 `min-inline-size: 0`, 코드 블록은 `.code-wrap`이 가로 스크롤(§7-1과 같다). 카드 자체는 칼럼 폭 — 넘침 없음 | 접점 표 "폰 360에서 한 줄 넘침 없이" |
 | JS-off / 실패 | 정적 마크업이 없다 — 절은 본문 안 제자리에 그대로 렌더된다(`post.js`가 못 옮기면 그냥 본문의 한 절) | §8-2 위반 없음 |
@@ -1453,89 +1755,248 @@ block은 `position: relative`인 `.entry`(조상)라 `overflow`의 클리핑 대
 720px 안에서는 두 칸이 각각 340px가 되어 쓸 수 없다. `.editor-page`가 그 한 화면에서만
 기준선을 76rem으로 푼다. **이 클래스는 write.html의 `<main>` 외에 어디에도 쓰지 않는다.**
 
+**v4.0(C5) — `<main>`의 첫 자식은 `<h1 class="sr-only">글 쓰기</h1>`다.** 이 페이지에 heading이 하나도 없어 스크린리더의 제목 탐색(H 키)이
+아무 데도 가지 못했다. 눈에 보이는 제목을 새로 두지 않는 이유 — 화면의 첫 줄은 이미 제목 입력칸(`.editor-title`, 큰 글자)이고, 그 위에
+"글 쓰기"를 또 찍으면 같은 자리에 제목이 둘이다. 문구는 헤더 내비 `쓰기`와 같은 동사다(수정 모드에서도 바꾸지 않는다 — 모드는 `#editorMode`가 말한다).
+
+### 6-0. v4.1 재설계 — 세 덩어리 (사용자 원문 *"게시글 작성 부분을 더 더 가독성과 구조, 편의성, 코드나 글 작성을 고도화 해줘"*)
+
+> **v4.0 실측 결함(1440 / 1024 / 360, 라이트·다크)** — 두 스킬의 항목 이름을 붙인다.
+> ① **저장이 묻혀 있었다** — 저장 버튼·보기 전환·상태줄이 메타 카드 한가운데(요약 칸 아래)에 있어, 본문을 쓰다 저장하려면 위로 올라가야 했고
+>    저장 상태("저장하지 않은 변경")는 본문이 화면을 채우는 순간 화면 밖이었다(UX-§8 `submit-feedback` · `form-autosave`).
+> ② **보기 전환이 "다음 상태"를 이름으로 달았다** — 나란히 보는 중에 버튼이 `작성만 보기`라고 적혀 지금이 무엇인지 말하지 않았고, 원하는 보기에 가려면
+>    한두 번을 더 눌러야 했다(UX-§4 `state-clarity`).
+> ③ **한 줄 요약이 1/3 폭**(auto-fit 180px)에 끼어 1024px에서 예시 문장부터 잘렸다 — 문장 칸이 단어 칸과 같은 폭이었다(UX-§5 `content-priority`).
+> ④ **파일 id(기술 값)가 요약·태그와 같은 급**으로 서서 `2026-09-23-note-083407`이 매번 눈에 걸렸다(UX-§8 `progressive-disclosure`).
+> ⑤ **분류 셀렉트에 보이는 라벨이 없었다** — 고르고 나면 `Java`만 남아 그것이 분류인지 태그인지 옆 칸을 보고 추측해야 했다(UX-§8 `input-labels`).
+> ⑥ **검증 오류가 전부 토스트**였다 — 문제의 칸에서 멀고 2.6초 뒤 사라지고 칸에는 아무 표시가 없었다(UX-§8 `error-placement` · `aria-live-errors`).
+> ⑦ **툴바 12개가 한 줄로 흘러** 창 폭에 따라 아무 데서나 꺾였다(`구분선` 홀로 둘째 줄). 뜻의 묶음이 없었다(FD "구조는 정보다").
+> ⑧ **본문 칸과 미리보기가 따로 자라고 따로 스크롤**했다 — textarea는 52vh에서 자라고 미리보기는 100dvh에서 잘려 두 창 높이부터 달랐고, 긴 글에서
+>    툴바가 화면 밖으로 나갔으며 미리보기는 글 머리에 머물렀다(UX-§9 `persistent-nav`의 에디터판).
+> ⑨ **작성만 보기에서 한 줄이 100자를 넘었다**(76rem 전폭 textarea) — 글이 아니라 로그처럼 읽혔다(UX-§6 `line-length`).
+> ⑩ **본문 칸의 한글이 글자마다 벌어졌다** — 고정폭 폴백이 굴림체까지 떨어졌다(§2 `--ff-mono`).
+> ⑪ **삭제(v4.0 m9)가 저장 바로 옆**(`.editor-actions` 마지막)에 채운 빨강으로 섰다(UX-§9 `destructive-nav-separation` · §4 `primary-action`).
+
+**화면 위계 — 위에서 아래 = DOM 순서 = Tab 순서.**
+
+```
+┌ .editor-head ─ 무엇을 쓰는가 ───────────────────────────────────────────────┐
+│ 제목 (큰 글자, 라벨 없음)                                                     │
+│ [분류 ▾][+ 새 분류]   [태그          ]   (●) 고정                             │
+│ ┌ .cat-new (열었을 때만) ────────────────────────────────────────────────┐   │
+│ 한 줄 요약 [                                                          ]      │
+│ ▸ 파일 id  (수정 중이면 "파일 id와 글 삭제")    ← <details class="editor-more"> │
+└──────────────────────────────────────────────────────────────────────────┘
+┌ .editor-bar ─ 지금 상태 (sticky — 768 이상) ─────────────────────────────────┐
+│ [작성|나란히|미리보기]  1,234자  읽는 데 약 3분  12행 5열     ● 저장됨   [저장] │
+└──────────────────────────────────────────────────────────────────────────┘
+┌ .editor-split ─ 쓴다 (창 높이 = 화면 − 작업 줄) ──────────────────────────────┐
+│ ┌ .editor-pane ───────────────────┐  ┌ .preview-pane ──────────────────┐     │
+│ │ B I 코드 링크 · H2 목록 … · 퀴즈 템플릿│  │  (상세와 같은 .prose)            │     │
+│ │ textarea (창 안에서 스크롤)        │  │  (본문 스크롤을 따라간다)          │     │
+│ └─────────────────────────────────┘  └─────────────────────────────────┘     │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+| 결정 | 무엇 | 왜 (위 결함 번호) |
+|---|---|---|
+| **작업 줄 `.editor-bar` — sticky** | 보기 방식 · 계기판 · 저장 무리(`.editor-actions`: 상태 · 서버 · 다시 연결 · 저장)를 한 줄로. `position: sticky; top: 0; z-index: --z-bar` · 면 `--c-bg`(불투명) · 그림자·경계선 없음 | ①. 헤더가 static인 사이트(§3)에서 sticky는 **이것 하나**다. 헤더는 "사이트를 옮겨 다니는 길"이라 스크롤과 함께 떠나도 되지만, 이 줄은 "지금 쓰는 글의 상태와 저장"이라 쓰는 내내 보여야 한다. 에디터는 도구 화면이다 — IDE·문서 편집기의 상태 표시줄이 같은 이유로 고정이다. **붙는 것은 768px 이상뿐** — 아래 "작업 줄의 폭 규칙" |
+| **작업 줄의 폭 규칙** (v4.1 마무리 — 이행 뒤 실측) | **붙는 줄은 한 줄이다.** ① **768px 이상**: 줄은 감기지 않는다(`flex-wrap: nowrap`). 저장 무리가 남은 폭을 전부 받고(`flex: 1 1 0`) 무리 안에서도 감기지 않는다 — 폭이 모자라면 버튼(다시 연결 · 저장)은 그대로, 상태줄·서버 문구가 먼저 두 줄로 접힌다(행간 `--lh-head`, 두 줄 35px가 버튼 40px 안에). **서버 없음이면 계기판은 글자 수 하나만**(폭 무관 — 커서·분량이 서버 문구에 자리를 내준다). ② **768px 미만**: `position: static`. 저장 무리는 감기지 않고 상태줄이 저장 옆에서 두 줄로 접힌다. 서버 없음만 감긴다(상태 / 서버 문구 / [다시 연결 · 저장]) | 실측(이행 직후, 800px 높이): 360 서버 없음 **170px**(4줄) · 연결됨 110~**141px**(저장이 셋째 줄에 홀로), 768 서버 없음 **158px**(저장이 셋째 줄에 홀로), 1024 서버 없음 110px — 화면의 14~21%를 늘 덮었고, 창 높이 식(`--editor-bar-h` = 한 줄 64px)이 틀어져 창 바닥이 46~106px 화면 밖으로 밀렸다. 768 미만에서 한 줄은 불가능하다 — 보기 스위치(≈138) + 저장(≈68)이 360 내용폭의 2/3이고 상태줄은 문장이다. 두 줄짜리가 붙으면 폰 화면의 14~23%(자판이 뜨면 1/3 넘게)를 덮는다. 붙이지 않아도 저장이 멀어지지 않는다: 창 높이가 "화면 − 64px"이라 창을 화면에 맞추면 그 위 64px에 작업 줄의 **마지막 줄(저장이 있는 줄)**이 걸린다(실측 360 ✔). Ctrl+S는 폭과 무관하다. 폭 하나로 정하는 이유 — 상태(서버 · 보류 안내)가 바뀔 때마다 줄이 붙었다 떨어졌다 하면 쓰는 중에 화면이 튄다. 고친 뒤: 360 static(서버 없음 160 · 연결됨 110), 768 서버 없음 79 · 연결됨 64, 1024·1440 64 |
+| **창 높이 = 화면 − 작업 줄** | `.editor-pane` `.preview-pane` `block-size: max(24rem, calc(100dvh - --editor-bar-h - --sp-5))`. textarea는 창 안에서 `flex: 1`, `resize: none` | ⑧. 작업 줄이 위에 붙으면 두 창이 화면을 꽉 채우고 글은 **창 안에서** 스크롤한다 — 툴바(창의 첫 줄)가 늘 보인다. 24rem 바닥은 가로로 누운 폰에서 창이 툴바만 남는 것을 막는다 |
+| **보기 방식 `.view-switch`** | 세 칸 `작성` `나란히` `미리보기`, 지금 것이 `aria-pressed="true"`. 1024px 미만에서 `나란히`는 CSS가 감춘다 | ②. 셋이 한꺼번에 보이고 지금 것이 눌려 있다. 눌림 = 밝은 면 + `--c-border-strong` 테두리 + 굵기(색만으로 말하지 않는다) |
+| **한 창만 볼 때는 읽는 폭으로 가운데** | `작성`: 창 폭 `min(100%, --w-prose + --sp-5 × 2)`. `미리보기`: `min(100%, --w-prose + --sp-6 × 2)` | ⑨. 작성 칸 한 줄 ≈ 85칸(고정폭) — 코드 80칸이 접히지 않는다. 미리보기만은 post.html 본문 칼럼과 같은 폭이라 같은 줄바꿈으로 선다(여백 압축도 이때는 푼다 — `prose.css` §10) |
+| **메타 격자** | 768px부터 `[분류 | 태그 | 고정]` 한 줄 + 전폭 줄(`.cat-new` · `.field-group.is-wide` 요약). 좁으면 1열 | ③. 칸의 폭은 값의 길이를 따른다 — 분류·태그는 단어, 요약은 문장 |
+| **분류에 보이는 라벨** | `<label class="field-label" for="fCategory">분류 (글이 저장될 폴더)</label>` — v4.0의 `sr-only`를 뗀다. 문구 그대로 | ⑤. 옆 칸 `태그 (쉼표로 구분)`과 같은 꼴 "이름 (규칙)" |
+| **세부 설정 `.editor-more`** | `<details>` — 파일 id(+ 늘 보이는 도움말 `.field-hint`) · 글 삭제. 요약(summary) 문구는 JS가 정한다: 새 글 `파일 id` / 삭제 버튼이 보이면 `파일 id와 글 삭제` | ④ ⑪. 드물게 쓰는 기술 값과 되돌릴 수 없는 동작을 접는다. 요약 문구가 안에 무엇이 있는지 말한다(FD — 이름은 쓰는 사람의 말로) |
+| **삭제 자리** | `#btnDelete`는 `.editor-more`의 마지막 자식, `.btn.btn-ghost.btn-danger`, 문구 **`이 글 삭제`** | ⑪. 저장(작업 줄 오른쪽 끝)과 화면의 다른 덩어리에 있고, 평소엔 빨간 글자 + 옅은 테두리, hover에서만 채운다(`components.css` §5). 확인 모달은 v4.0 m9 그대로 |
+| **칸 아래 오류 `.field-error`** | 제목·분류·새 분류·본문 넷에 `<p class="field-error" id="…Error" hidden>`. 칸에 `aria-invalid="true"` + `aria-describedby`에 오류 id 추가 | ⑥. 아래 "오류 규칙" |
+| **툴바 묶음 `.md-group`** | 세 묶음: 글자(`bold` `italic` `code` `link`) / 블록(`heading` `list` `quote` `codeblock` `table` `hr`) / 복습(`quiz` `template`). 묶음 사이 여백 16px(버튼 사이 4px), 선 없음. 복습 묶음은 줄 끝으로 | ⑦. 묶음은 한 덩어리로 감긴다. 롤링 탭(←→ Home End)은 묶음을 넘어 12개를 그대로 흐른다(`editor.js`는 `.md-btn`을 툴바 전체에서 모으므로 코드 변경 없음) |
+| **계기판 `.editor-meter`** | `#editorChars`(공백 뺀 글자 수 `1,234자`) · `#editorRead`(`읽는 데 약 N분`, 500자/분, 0자면 hidden) · `#editorCaret`(`12행 5열`, 선택이 있으면 `12행 5열, 38자 선택`). live 영역 아님 | "얼마나 썼나·어디에 있나". 줄 번호 대신 커서 위치 — 아래 "하지 않는 것" |
+| **미리보기가 본문을 따라간다** | `나란히`에서 본문 칸 스크롤 → 미리보기 창(`#previewPane`)이 같은 비율로 스크롤(한 방향) | ⑧. 긴 글의 끝을 쓰는데 미리보기가 머리에 있으면 나란히 보기의 뜻이 없다 |
+
+**마크업 (v4.1 — 이것이 write.html `.editor`의 전체다).**
+
 ```html
+<h1 class="sr-only">글 쓰기</h1>
 <div class="editor-visitor" id="editorVisitor" hidden>…</div>
 
-<!-- v3.8: JS가 꺼져 있으면 이것만 보인다(.editor가 정적 hidden). 문구는 write.html의 것 그대로. CSP 때문에 인라인 style 없음
-     v3.9: "파일 내보내기"가 빠진다 — 저장 단일 모드(§6-1) -->
+<!-- v3.8: JS가 꺼져 있으면 이것만 보인다(.editor가 정적 hidden). CSP 때문에 인라인 style 없음
+     v3.9: "파일 내보내기"가 빠진다. v4.1: 문장 안의 가운뎃점 나열 → 쉼표(원칙 7) -->
 <noscript>
   <div class="editor-visitor">
     <p><strong>자바스크립트가 꺼져 있어요</strong></p>
-    <p>미리보기 · 임시저장 · 저장이 모두 자바스크립트로 동작합니다. …</p>
+    <p>미리보기, 임시저장, 저장이 모두 자바스크립트로 동작합니다. 브라우저 설정에서 자바스크립트를 켜고 새로고침해 주세요.</p>
   </div>
 </noscript>
 
-<!-- v3.8 M4-8: 정적 hidden + data-admin-only(§3, §8-2 예외). admin.js apply()가 관리자면 이 요소의 hidden만 떼고(자손은 그대로),
-     아니면 노드째 지운다. editor.js lockForVisitor()의 .editor 제거 줄은 그 뒤 죽은 코드라 지운다(§12-14) -->
 <div class="editor" data-admin-only hidden>
+
+  <!-- ① 무엇을 쓰는가 -->
   <div class="editor-head">
-    <input class="editor-title" id="fTitle" placeholder="제목">
-    <p class="editor-mode" id="editorMode" hidden>수정 중 · 게시일은 보존됩니다</p>
+    <label class="sr-only" for="fTitle">제목</label>
+    <input class="editor-title" id="fTitle" type="text" placeholder="제목" aria-required="true"
+           autocomplete="off" spellcheck="false" maxlength="120">
+    <p class="field-error" id="fTitleError" hidden></p>
+    <p class="editor-mode" id="editorMode" hidden></p>
 
-    <div class="cat-picker">
-      <label class="sr-only" for="fCategory">분류</label>
-      <select class="field" id="fCategory"></select>
-      <button class="btn btn-ghost" type="button" id="btnNewCat">+ 새 분류</button>
-    </div>
-    <div class="cat-new" id="catNew" hidden>
-      <p class="cat-new-hint">폴더명은 <strong>한 번 정하면 바꾸지 않는다.</strong> 영문 소문자·숫자·하이픈만.</p>
-      <label class="sr-only" for="fNewCatName">표시 이름</label>
-      <input class="field" id="fNewCatName" placeholder="표시 이름">
-      <label class="sr-only" for="fNewCatSlug">폴더명 (영문)</label>
-      <input class="field" id="fNewCatSlug" placeholder="폴더명 (영문)">
-      <button class="btn" type="button" id="btnAddCat">추가</button>
-      <button class="btn btn-ghost" type="button" id="btnCancelCat">취소</button>
-    </div>
-
-    <!-- v3.3: 라벨이 보인다. 셋 다 .field-group으로 묶는다(고정 스위치는 그대로) -->
     <div class="editor-fields">
       <div class="field-group">
-        <label class="field-label" for="fSummary">한 줄 요약</label>
-        <input class="field" id="fSummary" placeholder="예: auto-fill과 minmax로 반응형 그리드 만들기">
+        <label class="field-label" for="fCategory">분류 (글이 저장될 폴더)</label>
+        <div class="cat-picker">
+          <select class="field" id="fCategory" aria-required="true"></select>
+          <button class="btn btn-ghost" type="button" id="btnNewCat" aria-expanded="false" aria-controls="catNew">+ 새 분류</button>
+        </div>
+        <p class="field-error" id="fCategoryError" hidden></p>
       </div>
       <div class="field-group">
         <label class="field-label" for="fTags">태그 (쉼표로 구분)</label>
-        <input class="field" id="fTags" placeholder="css, layout">
+        <input class="field" id="fTags" type="text" placeholder="css, layout" autocomplete="off">
       </div>
+      <label class="switch"><input type="checkbox" id="fPinned"><span class="switch-ui" aria-hidden="true"></span>고정</label>
+
+      <div class="cat-new" id="catNew" hidden role="group" aria-label="새 분류 만들기">
+        <p class="cat-new-hint" id="catNewHint">폴더명은 <strong>한 번 정하면 바꾸지 않는다.</strong> 영문 소문자, 숫자, 하이픈만.</p>
+        <label class="sr-only" for="fNewCatName">새 분류 표시 이름</label>
+        <input class="field" id="fNewCatName" type="text" placeholder="표시 이름 (예: 알고리즘)" autocomplete="off" maxlength="40">
+        <label class="sr-only" for="fNewCatSlug">새 분류 폴더명 (영문 소문자, 숫자, 하이픈)</label>
+        <input class="field" id="fNewCatSlug" type="text" placeholder="폴더명 (영문: algorithm)"
+               aria-describedby="catNewHint" autocomplete="off" spellcheck="false" autocapitalize="none">
+        <button class="btn" type="button" id="btnAddCat">추가</button>
+        <button class="btn btn-ghost" type="button" id="btnCancelCat">취소</button>
+        <p class="field-error" id="fNewCatError" hidden></p>
+      </div>
+
+      <div class="field-group is-wide">
+        <label class="field-label" for="fSummary">한 줄 요약</label>
+        <input class="field" id="fSummary" type="text" placeholder="예: 클로저가 변수를 붙드는 원리" autocomplete="off" maxlength="160">
+      </div>
+    </div>
+
+    <details class="editor-more" id="editorMore">
+      <summary id="editorMoreSummary">파일 id</summary>
       <div class="field-group">
         <label class="field-label" for="fId">파일 id</label>
-        <input class="field" id="fId" placeholder="제목에서 자동 생성">
+        <input class="field" id="fId" type="text" placeholder="비워 두면 자동으로 만듭니다"
+               autocomplete="off" spellcheck="false" aria-describedby="fIdHint">
+        <p class="field-hint" id="fIdHint">비워 두면 저장할 때 날짜와 제목으로 만듭니다. 영문 소문자, 숫자, 하이픈을 씁니다. 수정 중에 바꾸면 저장할 때 파일 이름이 바뀝니다.</p>
       </div>
-      <label class="switch"><input type="checkbox" id="fPinned"><span class="switch-ui"></span>고정</label>
-    </div>
-
-    <!-- v3.9 저장 단일 모드(§6-1): 미리보기 → 저장(항상 보임, 서버 없으면 disabled) → 서버 표시 → 다시 연결. DOM 순서 고정.
-         #btnExport는 폐기. #btnSave는 disabled로 시작하고 editor.js가 /api/health 성공 때 푼다.
-         #editorServer·#btnRetry는 hidden으로 시작 — 판정(≤2초) 전에는 아무 말도 하지 않는다 -->
-    <div class="editor-actions">
-      <button class="btn" type="button" id="btnPreviewToggle">미리보기</button>
-      <button class="btn btn-primary" type="button" id="btnSave" disabled
-              title="저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장</button>
-      <span class="editor-server" id="editorServer" hidden>로컬 서버 연결됨</span>
-      <button class="btn btn-ghost" type="button" id="btnRetry" hidden>다시 연결</button>
-    </div>
-    <p class="editor-status" id="editorStatus" role="status" aria-live="polite">저장됨</p>
+      <button class="btn btn-ghost btn-danger" type="button" id="btnDelete" hidden>이 글 삭제</button>
+    </details>
   </div>
 
+  <!-- ② 지금 상태 — sticky 작업 줄. 순서 고정: 보기 → 계기판 → 저장 무리(상태 → 서버 → 다시 연결 → 저장) -->
+  <div class="editor-bar" id="editorBar">
+    <div class="view-switch" role="group" aria-label="보기 방식">
+      <button class="view-btn" type="button" data-view="write" aria-pressed="false">작성</button>
+      <button class="view-btn" type="button" data-view="split" aria-pressed="true">나란히</button>
+      <button class="view-btn" type="button" data-view="preview" aria-pressed="false">미리보기</button>
+    </div>
+    <p class="editor-meter" id="editorMeter">
+      <span id="editorChars">0자</span>
+      <span id="editorRead" hidden></span>
+      <span id="editorCaret" hidden></span>
+    </p>
+    <div class="editor-actions">
+      <p class="editor-status is-new" id="editorStatus" role="status">준비 중…</p>
+      <span class="editor-server" id="editorServer" hidden></span>
+      <button class="btn btn-ghost" type="button" id="btnRetry" hidden>다시 연결</button>
+      <button class="btn btn-primary" type="button" id="btnSave" disabled
+              title="저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장</button>
+    </div>
+  </div>
+
+  <!-- ③ 쓴다 -->
   <div class="editor-split" id="editorSplit" data-mode="split">
     <div class="editor-pane">
-      <!-- v3.8: 12버튼. 순서 고정 — bold italic heading link code codeblock list quote quiz table hr template.
-           quiz·template는 A-4·A-11(§5-7-3, §6-2). 새 클래스 없음 — [data-md="template"]만 CSS가 auto 마진으로 줄 끝에 민다 -->
       <div class="md-toolbar" id="mdToolbar" role="toolbar" aria-label="마크다운 서식">
-        <button class="md-btn" type="button" data-md="bold" aria-label="굵게" title="굵게 (Ctrl+B)" aria-keyshortcuts="Control+B">B</button>
-        …
-        <button class="md-btn" type="button" data-md="quote" aria-label="인용">인용</button>
-        <button class="md-btn" type="button" data-md="quiz" aria-label="퀴즈 블록">퀴즈</button>
-        <button class="md-btn" type="button" data-md="table" aria-label="표">표</button>
-        <button class="md-btn" type="button" data-md="hr" aria-label="구분선">구분선</button>
-        <button class="md-btn" type="button" data-md="template" aria-label="복습 템플릿 넣기">템플릿</button>
+        <div class="md-group" role="group" aria-label="글자">
+          <button class="md-btn" type="button" data-md="bold" aria-label="굵게" title="굵게 (Ctrl+B)" aria-keyshortcuts="Control+B">B</button>
+          <button class="md-btn" type="button" data-md="italic" aria-label="기울임" title="기울임 (Ctrl+I)" aria-keyshortcuts="Control+I">I</button>
+          <button class="md-btn" type="button" data-md="code" aria-label="인라인 코드">코드</button>
+          <button class="md-btn" type="button" data-md="link" aria-label="링크">링크</button>
+        </div>
+        <div class="md-group" role="group" aria-label="블록">
+          <button class="md-btn" type="button" data-md="heading" aria-label="제목">H2</button>
+          <button class="md-btn" type="button" data-md="list" aria-label="목록">목록</button>
+          <button class="md-btn" type="button" data-md="quote" aria-label="인용">인용</button>
+          <button class="md-btn" type="button" data-md="codeblock" aria-label="코드 블록 (// 로도)">코드 블록</button>
+          <button class="md-btn" type="button" data-md="table" aria-label="표">표</button>
+          <button class="md-btn" type="button" data-md="hr" aria-label="구분선">구분선</button>
+        </div>
+        <div class="md-group" role="group" aria-label="복습">
+          <button class="md-btn" type="button" data-md="quiz" aria-label="퀴즈 블록">퀴즈</button>
+          <button class="md-btn" type="button" data-md="template" aria-label="복습 템플릿 넣기">템플릿</button>
+        </div>
       </div>
-      <textarea class="editor-area" id="fBody"></textarea>
+      <label class="sr-only" for="fBody">본문 (마크다운)</label>
+      <p class="sr-only" id="bodyHint">…(v3.9 문장 그대로)…</p>
+      <textarea class="editor-area" id="fBody" spellcheck="false" autocomplete="off" aria-required="true" aria-describedby="bodyHint"
+                placeholder="마크다운으로 씁니다. 줄 첫머리 // 는 코드 블록, Tab은 들여쓰기(빠져나가려면 Esc 뒤 Tab)."></textarea>
+      <p class="field-error" id="fBodyError" hidden></p>
     </div>
-    <div class="preview-pane"><div class="prose" id="preview"></div></div>
+    <div class="preview-pane" id="previewPane" role="region" aria-label="미리보기"><div class="prose" id="preview"></div></div>
   </div>
 </div>
 ```
+
+**폐기(v4.1)** — `#btnPreviewToggle`(순환 버튼 → `.view-switch`) · `.editor-actions`의 옛 자리(메타 카드 안의 버튼 줄 — 이름은 작업 줄의 저장 무리로 **뜻이 바뀌어** 남는다) ·
+분류 라벨의 `sr-only` · 툴바의 v3.8 순서(`… code codeblock list quote quiz table hr template`) · `[data-md="template"]`의 auto 마진(묶음 단위로 옮김) ·
+`#editorStatus`의 `aria-live="polite"`(`role="status"`가 함의한다 — §4-5와 같은 규칙) · `.editor-area`의 `min-block-size`·`resize: vertical` · 연결됨 상태의 `로컬 서버 연결됨` 문구(§6-1).
+
+**`.editor-head` 직계 자식 순서(v4.1, 고정)**: `label.sr-only` → `.editor-title` → `#fTitleError` → `.editor-mode` → `.editor-fields` → `.editor-more`.
+**`.editor-fields` 자식 순서(고정)**: 분류 `.field-group` → 태그 `.field-group` → `.switch` → `.cat-new` → 요약 `.field-group.is-wide`.
+분류가 요약·태그보다 앞인 v3.x 근거(글이 저장될 폴더를 정하는 유일한 필드)는 그대로다. `.cat-new`가 `.switch` 뒤에 오는 이유 — 격자에서 전폭 줄이라
+DOM이 이 자리여야 분류 줄 **바로 아래**에 열린다(`order` 금지 — §4). `+ 새 분류`를 누르면 `openNewCat()`이 포커스를 이름 칸으로 옮기므로 Tab 순서의 거리는 문제가 되지 않는다.
+**`.editor` 직계 자식 순서(고정)**: `.editor-head` → `.editor-bar` → `.editor-split`.
+
+#### 오류 규칙 (v4.1 — UX-§8 `error-placement` · `error-clarity` · `focus-management` · `aria-live-errors`)
+
+| 칸 | 오류 줄 | 언제 | 문구(원인 + 고칠 방법) |
+|---|---|---|---|
+| `#fTitle` | `#fTitleError` | 저장 때 제목이 비었다 | `제목을 입력해 주세요.` |
+| `#fCategory` | `#fCategoryError` | 저장 때 분류를 안 골랐다 | `분류를 골라 주세요. 글이 저장될 폴더입니다. 없으면 “+ 새 분류”로 만들거나 미분류를 고르세요.` |
+| `#fNewCatName` / `#fNewCatSlug` | `#fNewCatError`(둘이 한 줄을 나눠 쓴다) | `추가` 때 — `rejectNewCat()`의 여섯 경우 | v4.0 토스트 문구 그대로, 문장 안의 `·`만 쉼표로(`폴더명은 영문 소문자, 숫자, 하이픈만 쓸 수 있어요. 하이픈으로 시작하거나 끝날 수 없습니다.`) |
+| `#fBody` | `#fBodyError` | 저장 때 본문이 비었다 | `본문이 비어 있어요. 한 줄 이상 써야 저장할 수 있습니다.` |
+
+- **보이기**(`showFieldError(field, errEl, text)`): `errEl.textContent = text` → `hidden` 해제 → `field`에 `aria-invalid="true"` → `field`의 `aria-describedby` 토큰 목록에
+  `errEl.id` 추가(중복 없이, 기존 `catNewHint` `bodyHint`는 지우지 않는다) → **포커스를 그 칸으로**. 칸에 이미 포커스가 있으면 `blur()` 뒤 `focus()` —
+  포커스가 "새로" 들어와야 스크린리더가 설명(오류)을 읽는다. 오류 줄에 `role="alert"`·`aria-live`를 주지 않는다(포커스 이동과 겹치면 두 번 읽힌다).
+- **지우기**(`clearFieldError`): 그 칸의 `input`(셀렉트는 `change`) 때 — `aria-invalid` 제거, `hidden`, `aria-describedby`에서 오류 id만 뺀다. 새 분류는 두 칸 중
+  어느 것을 고쳐도 `#fNewCatError`를 지운다. `취소`로 `.cat-new`를 닫을 때도 지운다.
+- **한 번에 하나** — `validate()`는 v4.0처럼 첫 실패에서 멈춘다(제목 → 분류 → 본문). 여러 칸 오류 요약(error summary)은 두지 않는다 — 필수 칸이 셋뿐이고
+  한 번에 하나씩 칸 옆에서 말하는 편이 짧다.
+- **토스트로 말하지 않는다** — 위 넷은 `U.toast`를 부르지 않는다. 토스트는 칸과 무관한 결과(저장 성공, 서버 오류, 분류를 만들었다)만 말한다.
+- **생김새**(`components.css` §11): 오류 줄 = `--fs-sm` · `--c-danger` · 앞에 7px 점. 칸 = 테두리 `--c-danger`(포커스 링도 danger로). 제목 칸은 아랫선,
+  본문은 **창**(`.editor-pane:has(.editor-area[aria-invalid="true"])`)의 테두리가 빨개진다(textarea 자신은 테두리가 없다).
+- **이행 판단(frontend-dev-2 #142, 2026-09-23 등재)** — ① `showFieldError()`의 끝에 **`errEl.scrollIntoView({ block: 'nearest' })`**: `focus()`는 칸만 화면에
+  들이고, 본문 오류 줄은 키 큰 창의 바닥이라 칸이 보여도 줄은 화면 밖일 수 있다. `nearest`라 이미 보이면 움직이지 않는다.
+  ② **`미리보기`만 보는 중에 본문 오류면 본문이 보이는 보기로 먼저 바꾼다** — 넓으면 `나란히`(보던 미리보기를 잃지 않는다), 좁으면 `작성`. 감춰진 칸에는
+  포커스도 오류 줄도 닿지 않기 때문이다. 손수 고른 보기(`viewChoice`, 아래 표)는 바꾸지 않는다.
+
+#### 작업 줄의 JS (frontend-dev-2 — `editor.js`)
+
+| 부품 | 규칙 |
+|---|---|
+| **보기 방식** | `setViewMode(mode)`: `#editorSplit[data-mode]` = mode, 세 `.view-btn`의 `aria-pressed` = (`data-view === mode`). 클릭 → `state.modeTouched = true` + `setViewMode(btn.dataset.view)`. **1024px 미만에서 mode가 `split`이면 `write`로**(`watchWidth()`의 변경 때 `modeTouched`와 무관하게, 그리고 시작 때) — `나란히`는 그 폭에서 CSS가 감춘 버튼이라 눌린 채 사라지면 안 된다. `preview`로 바뀌면 미리보기를 한 번 즉시 그린다(debounce 대기 중이면 flush). 포커스는 누른 버튼에 머문다. `MODE_LABEL`·`#btnPreviewToggle`의 `aria-label` 갈아 끼우기는 삭제 |
+| **계기판** | `updateMeter()` — `onEdit()`와 `writeForm()`(불러오기·초안 복원) 뒤: 글자 = `body.value.replace(/\s+/g, '').length` → `#editorChars` = `n.toLocaleString('ko-KR') + '자'`. 분량 = n이 0이면 `#editorRead` hidden, 아니면 `'읽는 데 약 ' + Math.max(1, Math.round(n / 500)) + '분'`. `updateCaret()` — 본문의 `keyup` `mouseup` `select` `input` `focus`에서(rAF 하나로 묶는다): 줄 = 커서 앞의 `\n` 수 + 1, 칸 = 커서 − (그 줄 시작) + 1 → `12행 5열`, 선택이 있으면 `, 38자 선택`을 붙인다. 첫 `focus` 전에는 hidden. **`aria-live`를 붙이지 않는다** |
+| **미리보기 따라가기** | mode가 `split`일 때만: 본문 `scroll`(rAF 하나로 묶는다) → `r = body.scrollTop / max(1, body.scrollHeight - body.clientHeight)` → `#previewPane.scrollTop = r × (scrollHeight − clientHeight)`. 한 방향(본문 → 미리보기)만 — 양방향이면 서로를 되밀어 떤다. 미리보기를 다시 그린 뒤에도 한 번 맞춘다. 스크롤 핸들러 안에서 레이아웃을 읽는 것은 두 요소의 치수 셋뿐이다(UX-§3 `reduce-reflows`) |
+| **서버 표시** | 연결됨이면 `#editorServer`는 **hidden**, 글자 비움. 서버 없음이면 v3.9 그대로(`.is-off` + 문구, `#btnRetry` 보임) — §6-1 |
+| **세부 설정 요약** | `syncActionButtons()`가 `#btnDelete`를 보일 때 `#editorMoreSummary` = `파일 id와 글 삭제`, 감출 때 `파일 id`. `details`의 `open`은 건드리지 않는다(사용자가 연 것은 사용자가 닫는다) |
+| **이행 판단 — 보기 방식 (frontend-dev-2 #141, 2026-09-23 등재)** | ① **`state.viewChoice`** — 손수 누른 보기를 기억한다. 좁아져 `split`이 `write`로 내려갔다가 다시 1024 이상으로 넓어지면 `modeTouched`면 `viewChoice`로, 아니면 기본(`split`)으로 돌아온다(위 "1024 미만에서 `write`로"의 짝 — 원안은 넓어질 때를 정하지 않았다). ② **감춰지는 `나란히`에 있던 포커스는 `작성`으로** — 폭이 줄어 `나란히`가 `display: none`이 되면 포커스가 `body`로 튕긴다. 새로 눌린 버튼(`작성`)으로 옮긴다. 브라우저가 미디어 쿼리 알림보다 먼저 포커스를 거둘 수 있어 "마지막으로 포커스를 가진 보기 버튼"도 본다 |
+| **이행 판단 — 커서 갱신 (frontend-dev-2 #143)** | `updateCaret()`을 부르는 이벤트에 **`keydown`** 을 더한다(`keydown` `keyup` `mouseup` `select` `input` `focus`, rAF 하나로 묶음). 화살표를 누르고 있는 동안에는 `keyup`이 오지 않아 `N행 M열`이 멈춰 있었다 — rAF 콜백은 키의 기본 동작 뒤에 돌아 커서가 옮겨 간 값을 읽는다 |
+
+#### 하지 않는 것 (v4.1)
+
+- **줄 번호·현재 줄 강조** — textarea는 긴 줄을 접는다(`pre-wrap`, §6 "알려진 차이"). 줄 번호를 맞추려면 숨은 거울 요소에 같은 글을 그려 논리 줄마다 접힌
+  높이를 재야 하고, 그것을 **타자마다** 한다(UX-§3 `reduce-reflows` · `main-thread-budget`). 현재 줄 강조도 같은 거울이 필요하다. IDE가 주는 "어디에 있나"는
+  계기판의 `N행 M열`이 레이아웃 비용 0으로 준다. 코드 에디터 라이브러리는 의존성 승인 대상이다(CLAUDE.md 규칙 2).
+- **본문 칸 글꼴을 본문 글꼴로** — 들여쓰기(Tab = 공백 2칸)와 코드 블록 정렬이 고정폭을 전제한다. 한글이 벌어지던 문제는 `--ff-mono` 폴백으로 푼다(§2).
+- **작업 줄에 그림자·"떠 있음" 표시** — 창의 윗선이 바로 아래에 있어 선이 겹친다. 스크롤 상태를 재는 JS도 두지 않는다.
+- **양방향 스크롤 동기화 · 커서 위치로 미리보기 맞추기** — 비율 동기화 하나로 충분하다(마크다운 줄과 렌더 블록의 1:1 대응은 파서 수준 작업이다).
+- **보기 방식 단축키** — §6-2 "여기 없는 단축 입력을 만들지 않는다".
+- **제목 칸의 보이는 라벨** — 화면 첫 줄이 이미 큰 제목이다(v4.0 C5 근거 그대로). 대신 이 칸의 아랫선이 유일한 윤곽이라 `--c-border-strong`(3:1)이다.
+
+#### §6 공통 규칙 (v3.0부터 누적 — 취소선은 폐기, **v4.1** 표시가 현행. §6-0과 어긋나면 §6-0이 이긴다)
 
 **v3.0에서 바뀐 것**
 
@@ -1546,9 +2007,9 @@ block은 `position: relative`인 `.entry`(조상)라 `overflow`의 클리핑 대
 | 에디터 패널의 `box-shadow` | **삭제** — 1px 테두리만 남는다(원칙 3) |
 | "+ 새 카테고리" 라벨 | "+ 새 분류" — 화면 어휘를 §4-3의 `분류`와 통일 |
 
-- `.editor-head`의 직계 자식 순서는 **고정**이다:
+- ~~`.editor-head`의 직계 자식 순서는 **고정**이다:
   `.editor-title` → `.editor-mode` → `.cat-picker` → `.cat-new` → `.editor-fields`
-  → `.editor-actions` → `.editor-status`.
+  → `.editor-actions` → `.editor-status`.~~ → **v4.1: §6-0의 순서가 대신한다**(`.editor-actions` · `.editor-status`는 작업 줄로, `.cat-picker` · `.cat-new`는 `.editor-fields` 안으로).
   분류는 **글이 저장될 폴더(`posts/<slug>/`)를 정하는 유일한 필드**라 요약·태그보다 앞이다.
   읽는 화면(§4의 분류 → 검색)과 쓰는 화면에서 축의 순서가 뒤집히면 안 된다.
 - **`.editor-fields`의 요약·태그·id는 `.field-group`(라벨 + 입력칸) 셋이다(v3.3).** v3.2까지 라벨이
@@ -1557,13 +2018,17 @@ block은 `position: relative`인 `.entry`(조상)라 `overflow`의 클리핑 대
   placeholder는 입력을 시작하면 사라지는 라벨이라 라벨이 아니다. `title` 속성은 뗀다(툴팁은 터치·키보드에서
   안 보인다 — §9-3과 같은 근거). 라벨 문구: `한 줄 요약` / `태그 (쉼표로 구분)` / `파일 id`.
   placeholder는 **예시 값**으로 바꾼다(라벨이 이름을 맡았으니 placeholder는 형식을 보여 준다).
+  **v4.1**: 분류도 보이는 라벨을 받아 `.field-group`이 넷이 되고(분류·태그·요약 + `.editor-more` 안의 파일 id), 파일 id는 접힌 세부 설정으로 간다(§6-0).
+  요약은 `.field-group.is-wide`(768px부터 전폭 줄). `.field-group.is-wide`는 이 한 곳에만 쓴다.
 - `.cat-new-hint`는 **입력칸보다 먼저** 온다. slug를 되돌릴 수 없다는 사실은 타이핑 전에 읽혀야 한다.
 - `.cat-new`는 `hidden` 속성으로만 토글한다.
-- `.editor-split[data-mode]` : `split` / `write` / `preview`. 1024px 미만에서는 세로로 쌓인다.
+- `.editor-split[data-mode]` : `split` / `write` / `preview`. ~~1024px 미만에서는 세로로 쌓인다.~~ **v4.1: 1024px 미만에는 `split`이 없다** —
+  `.view-btn[data-view="split"]`을 CSS가 감추고 `editor.js`가 `write`로 바꾼다(§6-0 작업 줄의 JS). 한 창 보기는 읽는 폭으로 가운데 선다.
 - **미리보기 `.prose`는 본문과 같은 규칙에 "여백만 압축"한 것이다**(`prose.css`).
   `h1/h2`의 위 여백 `--sp-10` → `--sp-7`, `h3` `--sp-6`,
   `.code-wrap`/`.table-wrap`/`img`의 위아래 `--sp-5`.
   **글자 크기·행간·색은 절대 다르게 두지 않는다** — 미리보기는 "결과와 같은 것"이어야 한다.
+  **v4.1: 압축은 `나란히`(`[data-mode="split"]`)에서만.** `미리보기`만 볼 때는 창이 상세 칼럼 폭으로 서므로 여백까지 상세와 같다 — 같은 글이 두 화면에서 같은 길이다.
 - **textarea와 미리보기의 코드 크기·행간이 같다(v3.9 — meeting-06 #5).** `.editor-area`는 `calc(var(--fs-prose) * .92)` + `--lh-code`, 미리보기·상세의
   `.prose pre code`는 `0.92em` + `--lh-code`, `tab-size`는 둘 다 4(§2). 나란히 보기에서 같은 코드 블록이 왼쪽과 오른쪽에서 같은 줄 높이로 서고,
   줄을 세며 오가는 눈이 다시 맞추지 않는다. **알려진 차이 하나 — textarea는 긴 줄을 접고(`pre-wrap`, 브라우저 기본) 미리보기의 `pre`는 가로
@@ -1576,6 +2041,7 @@ block은 `position: relative`인 `.entry`(조상)라 `overflow`의 클리핑 대
   `title`(라벨과 같은 문구)은 삭제한다. 남는 `title`은 ~~넷~~ **셋(v3.9 — `#btnExport` 폐기)** — `#btnSave`(§6-1), `[data-md="bold"]` `[data-md="italic"]`. `#btnRetry`(v3.9)는 단축키가 없으니 `title`도 없다. 헤더의 `#themeToggle`도 마찬가지다(§3).
   지우는 것은 `#fTitle` `#fCategory` `#fNewCatName` `#fNewCatSlug` `#fBody` `#btnPreviewToggle`과 단축키 없는 `.md-btn` 8개(§12-14).
   마우스 사용자가 단축키를 발견하는 유일한 길이 툴팁이라 그것만 남긴다 — 나머지 정보는 전부 화면에 이미 있다.
+  **v4.1**: `.view-btn` 셋 · `#btnDelete` · `.editor-more > summary`에도 `title`이 없다(단축키 없음). 남는 `title`은 여전히 셋이다.
 
 ### 6-1. 저장 버튼과 서버 연결 표시 (v3.5 신설 → **v3.9 저장 단일 모드** — `docs/api.md` §4)
 
@@ -1590,22 +2056,44 @@ body 클래스·`data-`·다른 `is-*`는 없다. 새 클래스는 `.editor-serv
 | 상태 | 언제 | `#btnSave` | `#editorServer` | `#btnRetry` | 상태줄 `#editorStatus` |
 |---|---|---|---|---|---|
 | **확인 중** | 로드 직후 ~ `/api/health` 응답(≤ 2초) | `disabled`(마크업 초기값) | `hidden`(마크업 초기값) | `hidden` | `준비 중…`(마크업 초기값) |
-| **연결됨** | health `ok: true` | `disabled` 제거 | `hidden` 제거, 클래스 없음, 문구 `로컬 서버 연결됨` — 초록 점(`--c-ok`) | `hidden` | 평소 규칙(`저장됨` / `.is-dirty`) |
-| **서버 없음** | health 실패·타임아웃·`ok: false` / 저장 중 네트워크 실패 | `disabled` | `hidden` 제거 + **`.is-off`**, 문구 **`서버 없음 · start.bat(Docker) 실행 후 저장`** — 경고색 점·글자(`--c-warn`) | `hidden` 제거 | `.is-dirty`면 그대로(초안은 살아 있다) |
+| **연결됨** | health `ok: true` | `disabled` 제거 | ~~`hidden` 제거, 문구 `로컬 서버 연결됨`, 초록 점~~ → **v4.1: `hidden` 그대로, 글자 비움** | `hidden` | 평소 규칙(`저장됨` / `.is-dirty`) |
+| **서버 없음** | health 실패·타임아웃·`ok: false` / 저장 중 네트워크 실패 | `disabled` | `hidden` 제거 + **`.is-off`**, 문구 **`서버 없음: start.bat(Docker)를 실행한 뒤 저장하세요`**(v4.0 — 가운뎃점 제거, 원칙 7) — 경고색 점·글자(`--c-warn`) | `hidden` 제거 | `.is-dirty`면 그대로(초안은 살아 있다) |
 
 | 요소 | 규칙 | 왜 |
 |---|---|---|
-| `#btnSave` (`.btn.btn-primary`) | `.editor-actions`의 **둘째**(미리보기 다음). **항상 보인다.** 문구 `저장`. `title="저장 (Ctrl+S)"` `aria-keyshortcuts="Control+S"`. 마크업에서 `disabled`로 시작 — `editor.js`가 연결됨에서만 푼다. 저장 중(`setSaving`)에도 `disabled` | v3.5의 `hidden`은 "이 버튼이 있는지 없는지"를 서버가 정했다. 이제 저장은 유일한 동작이라 버튼은 늘 그 자리에 있고, **눌릴 수 있는지**만 바뀐다. 자리가 고정되어야 "왜 버튼이 사라졌지"가 생기지 않는다. `disabled`의 생김새는 `base.css`(opacity .5 + `not-allowed`) 그대로 — `components.css` §5가 `:disabled:hover`에서 hover 색 변화만 되돌린다(눌리지 않는 것이 눌릴 듯 반응하면 안 된다) |
+| `#btnSave` (`.btn.btn-primary`) | **v4.1: 작업 줄 `.editor-bar` 안 저장 무리(`.editor-actions`)의 마지막 — 줄의 오른쪽 끝.** **항상 보인다.** 문구 `저장`. `title="저장 (Ctrl+S)"` `aria-keyshortcuts="Control+S"`. 마크업에서 `disabled`로 시작 — `editor.js` `syncActionButtons()`가 정한다: **눌리는 것은 연결됨이고 · 저장 중이 아니고 · 삭제 중이 아니고 · 폼이 잠기지 않았을(불러오는 중이 아닐) 때뿐**(v4.0 C2·m9 이행을 등재). 잠긴 동안 Ctrl+S는 토스트로 이유를 말한다(`글을 불러오는 중이에요. 끝나면 저장할 수 있어요` / `삭제하는 중이라 저장할 수 없어요`) | v3.5의 `hidden`은 "이 버튼이 있는지 없는지"를 서버가 정했다. 이제 저장은 유일한 동작이라 버튼은 늘 그 자리에 있고, **눌릴 수 있는지**만 바뀐다. 자리가 고정되어야 "왜 버튼이 사라졌지"가 생기지 않는다. `disabled`의 생김새는 `base.css`(opacity .5 + `not-allowed`) 그대로 — `components.css` §5가 `:disabled:hover`에서 hover 색 변화만 되돌린다. v4.1: sticky 작업 줄의 오른쪽 끝이라 **본문을 쓰는 내내 보인다**(§6-0 ① — 768 미만은 static이고, 창을 화면에 맞추면 창 바로 위에 걸린다: §6-0 "작업 줄의 폭 규칙") |
 | ~~`#btnExport`~~ | **폐기.** 마크업·`editor.js` 내보내기 경로·`util.download`·`components.css`의 격하 셀렉터(`#btnSave:not([hidden]) ~ #btnExport`)·`.modal-body ol/ul` 목록 규칙(내보내기 안내 전용이었다) 전부 삭제 | 주 동작이 하나면 격하 규칙도 필요 없다. 다운로드로 만든 `index.json`을 사람이 옮기는 흐름이 `created` 드리프트의 원인이었다(meeting-06 "그 밖에") — 폐지로 근본 원인이 소멸한다 |
-| `.editor-server` (`#editorServer`) | `<span>`, `#btnSave` 다음. `margin-inline-start: auto`로 줄 오른쪽 끝. 작은 글자 + 점 — `.editor-status`와 같은 어휘. **`.is-off`면 점·글자가 `--c-warn`**(라이트 5.1:1 / 다크 9.1:1 — AA), 문구는 위 표의 것 **글자 그대로**. `.is-off`에서는 `white-space: normal`(문구가 길어 360px에서 두 줄이 된다 — `nowrap`이면 칼럼을 넘친다) | 저장 버튼이 **왜 눌리지 않는지**를 같은 줄에서 말한다. 안내를 `.editor-status`에 넣지 않는 이유는 v3.5와 같다(`setStatus()`가 `textContent`를 통째로 갈아 끼운다). 색만으로 상태를 말하지 않는다 — 문구가 다르고 점의 색은 보조다 |
-| `#btnRetry` (`.btn.btn-ghost`) | `.editor-actions`의 **마지막**. 문구 `다시 연결`. 서버 없음 상태에서만 보인다(`hidden` 토글). 클릭 → `detectServer()` 재실행 — 실행 중 `disabled`, 결과에 따라 위 표의 상태로. `title` 없음(단축키 없음) | Docker를 뒤늦게 켠 사용자가 새로고침으로 초안을 흔들지 않고 서버를 다시 찾는 길. ghost인 이유 — 주 동작(저장) 옆의 보조 동작이고, 눌리지 않는 primary 버튼 옆에 또 하나의 채운 버튼이 서면 어느 것이 저장인지 흐려진다 |
-| Ctrl+S | 연결됨 → 저장. **서버 없음·확인 중 → `preventDefault` + 토스트(`is-warn`) `서버 없음 · start.bat(Docker) 실행 후 저장`**(`#editorServer`의 문구와 같은 문자열 — 두 자리가 다른 말을 하면 안 된다). `disabled` 버튼은 클릭 이벤트가 나지 않지만 키는 `keydown`에서 잡는다 | Ctrl+S는 브라우저의 "페이지 저장" 대화상자를 여는 키다. 막지 않으면 사용자는 `.html`을 내려받고 글은 저장되지 않는다 |
-| 저장 피드백 | **새 부품 없음.** 성공: 상태줄 `저장됨 · posts/<slug>/<id>.md`(`setStatus`, dirty 해제) + `onSaved()`가 `store.loadIndex(true)` **`store.loadCategories(true)` + `drawSide()` 재호출**(v3.9 — 사이드바에 새 글·새 분류가 새로고침 없이 나타난다, meeting-06 "그 밖에"). 실패(4xx/5xx): 토스트(`is-err`)에 `error.message` 그대로, 상태줄 `.is-dirty` 유지. 네트워크 실패: 토스트 `서버가 꺼졌습니다 — start.bat(Docker)를 실행한 뒤 다시 연결` + **서버 없음 상태로 전환**(위 표) | 상태줄·토스트가 이미 "결과를 말하는 자리"다(§8-1). 초안은 localStorage 임시저장이 붙들고 있고 `beforeunload`가 남아 있어 창을 닫으려 하면 경고한다 — 서버가 없어도 글을 잃는 길은 없다 |
-| `.editor-head` 자식 순서 | 변함 없음(`.editor-actions` → `.editor-status`) | |
+| `.editor-server` (`#editorServer`) | `<span>`, 저장 무리 안 **상태줄 다음**. ~~`margin-inline-start: auto`~~ — v4.1: 무리째 오른쪽에 붙는다(`.editor-bar > .editor-actions`의 auto 마진). 작은 글자 + 점 — `.editor-status`와 같은 어휘. **보이는 것은 서버 없음(`.is-off`)뿐**(v4.1 — 연결됨은 눌리는 저장 버튼이 이미 말한다. 초록 점 둘(상태줄 `저장됨` + `로컬 서버 연결됨`)이 한 줄에 나란히 서던 v4.0이 중복이었다). **`.is-off`면 점·글자가 `--c-warn`**(라이트 5.1:1 / 다크 9.1:1 — AA), 문구는 위 표의 것 **글자 그대로**. `.is-off`에서는 `white-space: normal` | 저장 버튼이 **왜 눌리지 않는지**를 같은 줄에서 말한다(UX-§2 `error-feedback` "문제 옆에서"). 안내를 `.editor-status`에 넣지 않는 이유는 v3.5와 같다(`setStatus()`가 `textContent`를 통째로 갈아 끼운다). 색만으로 상태를 말하지 않는다 |
+| `#btnRetry` (`.btn.btn-ghost`) | 저장 무리 안 **`#btnSave` 바로 앞**(v4.0: 줄의 마지막 → v4.1: 저장 앞. 저장이 줄의 끝을 지킨다). 문구 `다시 연결`. 서버 없음 상태에서만 보인다(`hidden` 토글). 클릭 → `detectServer()` 재실행 — 실행 중 `disabled`, 결과에 따라 위 표의 상태로. `title` 없음(단축키 없음) | Docker를 뒤늦게 켠 사용자가 새로고침으로 초안을 흔들지 않고 서버를 다시 찾는 길. ghost인 이유 — 주 동작(저장) 옆의 보조 동작이고, 눌리지 않는 primary 버튼 옆에 또 하나의 채운 버튼이 서면 어느 것이 저장인지 흐려진다 |
+| **`#btnDelete`** (v4.0 m9 이행 → **v4.1 자리 확정**) | **`.editor-more`의 마지막 자식**, `.btn.btn-ghost.btn-danger`, 문구 **`이 글 삭제`**(v4.0 `삭제`). 보이기 조건은 이행 그대로 — 디스크의 글을 열었거나 방금 저장했고(`state.onDisk`) 서버 판정이 끝났을 때(`serverChecked`). 서버 없음·저장 중·삭제 중·잠김이면 `disabled`. 누르면 확인 모달(포커스는 `취소`, 확인 버튼은 모달 안 `.btn-danger` 단독 = 채운 빨강) → `DELETE /api/posts/{id}` | 파괴적 동작은 주 동작과 **공간으로** 떨어져야 하고(UX-§9 `destructive-nav-separation`), 드물게 쓰는 것은 접어 둔다(§8 `progressive-disclosure`). v4.0 임시 자리(저장 무리 끝)는 저장과 한 뼘 거리였다. 문구가 무엇이 사라지는지 말한다(FD — CTA는 일어날 일을 그대로) |
+| Ctrl+S | 연결됨 → 저장. **서버 없음·확인 중 → `preventDefault` + 토스트(`is-warn`) `서버 없음: start.bat(Docker)를 실행한 뒤 저장하세요`**(`#editorServer`의 문구와 같은 문자열 — 두 자리가 다른 말을 하면 안 된다). `disabled` 버튼은 클릭 이벤트가 나지 않지만 키는 `keydown`에서 잡는다 | Ctrl+S는 브라우저의 "페이지 저장" 대화상자를 여는 키다. 막지 않으면 사용자는 `.html`을 내려받고 글은 저장되지 않는다 |
+| 저장 피드백 | **새 부품 없음.** 성공: 상태줄 `저장됨: posts/<slug>/<id>.md`(v4.0 M2 — 가운뎃점 대신 쌍점. `setStatus`, dirty 해제) + `onSaved()`가 `store.loadIndex(true)` **`store.loadCategories(true)` + `drawSide()` 재호출**(v3.9). 실패(4xx/5xx): 토스트(`is-err`)에 `error.message` 그대로, 상태줄 `.is-dirty` 유지. 네트워크 실패: 토스트 `서버가 꺼졌습니다. start.bat(Docker)를 실행한 뒤 다시 연결하세요` + **서버 없음 상태로 전환**(위 표) | 상태줄·토스트가 이미 "결과를 말하는 자리"다(§8-1). 초안은 localStorage 임시저장이 붙들고 있고 `beforeunload`가 남아 있어 창을 닫으려 하면 경고한다 — 서버가 없어도 글을 잃는 길은 없다 |
+| **상태줄 문구(v4.1 등재)** | `준비 중…`(마크업) · **`불러오는 중…`**(수정 모드 fetch, 폼 잠김) · `임시저장 중…` · `임시저장됨. 아직 서버에 저장하지 않았어요` · `새 글. 아직 저장하지 않았어요`(`.is-new`) · `서버에 저장하는 중…` · `저장됨: posts/…` · **`서버에서 삭제하는 중…`**(삭제, 폼 잠김) · Tab 안내 둘(§6-2) | 한 자리가 말하는 문장은 여기가 목록이다. 새 문장을 만들면 이 줄에 먼저 적는다 |
+| **폼 잠금(v4.0 C2 이행 → v4.1 생김새)** | 불러오는 중·삭제 중: 글자 칸(제목·요약·태그·id·본문·새 분류 두 칸)은 `readOnly`, 나머지 컨트롤(분류 셀렉트·고정·분류 버튼 셋·툴바 12개)은 `disabled`, `.editor`에 `aria-busy="true"`. 보기 방식·다시 연결은 잠그지 않는다(글을 바꾸지 않는다). **v4.1 CSS**: `.editor[aria-busy="true"]`의 `readOnly` 칸은 글자 `--c-text-mute` + 커서 `progress` | readOnly는 브라우저가 아무 표시도 하지 않아 "왜 안 쳐지지"가 된다(UX-§8 `read-only-distinction`). disabled(흐림 .5)와 다르게 보여야 한다 — 잠긴 것은 곧 풀린다 |
+| `.editor-head` 자식 순서 | ~~변함 없음(`.editor-actions` → `.editor-status`)~~ → **v4.1: 둘 다 작업 줄로 옮겼다**(§6-0) | |
 
 **하지 않는 것** — 서버 버전·브랜치·dirty(`/api/health`의 `git`)를 화면에 그리지 않는다(v3.5 그대로). 자동 재시도(폴링)도 없다 — 2초마다
 `/api/health`를 두드리면 `start.ps1`의 404 로그가 콘솔을 채우고, 사용자가 원할 때 `다시 연결`을 누르는 편이 정직하다.
 **`#bodyHint`·placeholder의 "Ctrl+S" 문구는 모드별이 아니라 고정이다** — `Ctrl+S 저장`. v3.8 #88의 "모드별 갈아 끼우기"는 폐기.
+**v4.1 — placeholder는 한 문장으로 줄인다**: `마크다운으로 씁니다. 줄 첫머리 // 는 코드 블록, Tab은 들여쓰기(빠져나가려면 Esc 뒤 Tab).` —
+v3.9의 두 줄(단축키 셋 나열 포함)은 쓰기 시작하면 사라지는 자리에 규칙을 담았다(UX-§8 `input-helper-text`). `Ctrl+B`·`Ctrl+S`는 툴바·저장 버튼의
+`title`과 `#bodyHint`(스크린리더)가 계속 말한다. Tab 탈출 안내는 첫 Tab 때 상태줄(§6-2)이 다시 말한다 — 이제 상태줄이 작업 줄에 있어 쓰는 자리에서 보인다.
+
+**v4.1 — 초안 복구 모달을 고르지 않고 닫을 때(frontend-dev-2 보고 결함).** 복구 모달(`applyDraftIfNewer()`)을 Esc·✕로 닫으면 다음 입력의 자동 임시저장이
+**옛 초안을 조용히 덮는다** — 사용자는 아무것도 고르지 않았는데 한쪽 글이 사라진다(UX-§8 `sheet-dismiss-confirm` · CLAUDE.md "데이터 유실"). 규칙:
+**선택 없이 닫기 = "결정 보류"** — ① 화면의 글은 그대로 두고 ② 옛 초안은 지우지도 덮지도 않는다(첫 자동저장 **전에** 옛 초안을 보류 슬롯으로 옮기거나, 보류 중에는
+그 슬롯에 쓰지 않는다 — 구현은 dev-2 판단. 저장소 형식이 바뀌면 `store.draft`(frontend-dev 소유)와 맞춘다) ③ 상태줄에 `이전 임시저장본이 남아 있어요:` +
+링크 둘 `복구` `버리기`(`setStatusNodes` — 새 부품 없음)를 두어 결정을 나중에도 할 수 있게 한다 ④ 둘 중 하나를 고르면 보류가 끝난다. 모달의 ✕·Esc는 없애지 않는다(UX-§1 `escape-routes`).
+
+**결정 보류의 구현(frontend-dev-2 #147, 2026-09-23 등재 — 저장 형식이 그대로라 frontend-dev와 맞출 것이 없었다).**
+
+| 자리 | 이행 |
+|---|---|
+| 보류 슬롯 | 선택 없이 닫는 즉시 옛 초안을 **`store.draft`의 id `held:<슬롯>`**(새 글은 `held:new`)으로 옮기고 원래 슬롯은 비운다 — 자동 임시저장은 평소처럼 원래 슬롯에 쓴다(지금 쓰는 글도 계속 보호된다). payload는 `{ held: [초안, …] }`. **`store.draft`의 저장 형식(키 접두 · 봉투)은 바뀌지 않았다** — id 자리에 다른 문자열을 넣었을 뿐이라 `store.draft` 코드 변경 없음. 옮기기에 실패하면(저장소 가득 참) 옛 초안을 원래 슬롯에 두고 결정 전까지 그 슬롯에 쓰지 않는다 |
+| 쌓임 | 보류는 여러 개가 될 수 있다(보류 중 새로고침 → 그사이 쓴 초안의 복구 모달도 닫으면 둘). 안내의 `복구`·`버리기`는 가장 최근 것부터 |
+| 안내의 수명 | 결정할 때까지 **어떤 상태줄 문장 뒤에도** `이전 임시저장본이 남아 있어요: 복구 버리기`가 붙는다(`저장됨: …`·`임시저장됨. …` 등 문장이 바뀌어도 다시 붙는다). 같은 글을 다시 열면 로드 뒤 다시 건다 |
+| `복구`의 확인 | 화면에 저장하지 않은 변경(dirty)이 있을 때만 확인 모달 — 제목 **`이전 임시저장본으로 바꿀까요?`** / 본문 **`지금 화면에서 고친 내용은 이전 임시저장본으로 바뀌고 되돌릴 수 없습니다.`** / 버튼 **`바꾸기`**(`danger`) · **`취소`**(ghost, 초기 포커스). 변경이 없으면 묻지 않고 바꾼다. `버리기`는 묻지 않는다(토스트 `임시저장본을 버렸습니다`) — 버리는 것은 화면 밖의 사본이고 화면의 글은 그대로다 |
+| 포커스 | `복구`·`버리기`를 누르면 링크가 사라진다 — `body`로 튕긴 포커스는 본문 칸이 보이면 본문 칸으로 |
 
 ### 6-2. 단축 입력 (v3.8 신설 · **v3.9 Enter 규칙 표** — 본문 `#fBody` 안에서)
 
@@ -1694,16 +2182,19 @@ meeting-05 A-11). `quiz`: §5-7-3 스니펫을 커서 위치에 블록으로 끼
 .post-related .post-related-title                       (v3.3 — §5-8. 안의 카드는 .entry 계열 재사용)
 .post-recap                                             (v3.8 — 요약 카드, post.js가 .prose 앞에 끼운다, §5-7-2. 안은 h2 + .prose 재사용)
 .field-group .field-label                               (v3.3 — 에디터 입력칸 라벨, §6)
+.field-group.is-wide .field-error .field-hint           (v4.1 — 전폭 칸(요약 하나) · 칸 아래 오류 · 칸 아래 늘 보이는 도움말, §6-0)
+.editor-bar .view-switch .view-btn .editor-meter        (v4.1 — sticky 작업 줄 · 보기 방식 세 칸 · 글자 수/분량/커서, §6-0)
+.editor-actions                                         (v3.5 → v4.1 뜻 변경: 메타 카드 안의 버튼 줄 → 작업 줄의 저장 무리(상태·서버·다시 연결·저장))
+.editor-more .md-group                                  (v4.1 — 세부 설정 <details>(파일 id·삭제) · 툴바 묶음 셋, §6-0)
 .tag
 .toast .toast.is-ok .toast.is-warn .toast.is-err
 .modal .modal-panel .modal-head .modal-body .modal-foot  (열림: body.modal-open + .modal.is-open)
 .sr-only
-.search .search-input .search-clear
-.index-row .index-list .index-item .index-name .index-count       (v3.9: .index-label 폐기 — #catRow와 함께. #tags 안에서만 쓴다, §4-3)
-.index-fold .index-fold-summary
+.search .search-input .search-clear .search-key         (v4.0 .search-key — "/" 키캡, 비었고 포커스 없을 때만 보임, §4)
 .entry-group .entry-group-label .entry-list .entry .entry-cat .entry-title
 .entry-meta .entry-date .entry-tags .entry-tag          (.entry-cat은 v3.2 — §4-4)
-.list-loading .list-empty                                (v3.8: .list-empty 안 button.btn — 필터 초기화, §4)
+.list-bar .list-status .list-reset                       (v4.0 — 결과 줄 · 필터 해제, §4-5)
+.list-loading .list-empty                                (v3.8: .list-empty 안 button.btn — v4.0 문구 "전체 글 보기", §4)
 .list-page     (index.html의 <main>에만 붙는다 — §2, §4)
 .editor-page   (write.html의 <main>에만 붙는다 — §6)
 .back-link .post-nav-item .post-nav-label .post-nav-title
@@ -1711,7 +2202,7 @@ meeting-05 A-11). `quiz`: §5-7-3 스니펫을 커서 위치에 블록으로 끼
 .cat-picker .cat-new .cat-new-hint
 .field .switch .switch-ui .md-toolbar .md-btn .editor-status .editor-mode .editor-visitor
 .editor-server .editor-server.is-off                    (v3.5 — 로컬 서버 연결 표시 · v3.9 서버 없음 상태, §6-1. #btnSave는 .btn.btn-primary, #btnRetry는 .btn.btn-ghost)
-.intro .intro-bulb                                      (v3.6 — 인트로 전등, index.html <body> 첫 자식, §3-5)
+.intro .intro-bulb .intro-skip                          (v3.6 — 인트로 전등, index.html <body> 첫 자식, §3-5 · v4.0 .intro-skip 건너뛰기)
 .footer-note .footer-meta
 .code-wrap .code-lang .code-copy    (markdown.js가 주입)
 .table-wrap                          (markdown.js가 주입)
@@ -1723,7 +2214,9 @@ meeting-05 A-11). `quiz`: §5-7-3 스니펫을 커서 위치에 블록으로 끼
 `.post-body` `.post-read` / `.bg-layer` `.bg-mesh` `.bg-grain` / `.brand-mark` / `.header-actions` /
 **v3.4: `.page-sub` `[data-site-sub]` / `.list-tools` / `.nav-link.is-active`(→ `aria-current="page"`) / `#tagFold`(→ `#tags`)** /
 **v3.8: `.entry.is-hidden`**(§4-4 — 전량 재렌더라 붙는 일이 없었다) /
-**v3.9: `.index-label` · `#catRow` `#catIndex` `#catIndexLabel` · `.index-item.is-empty` · `.index-item[aria-current]`(§4-3) / `#btnExport`(§6-1) / `about.html` `js/about.js`(§3-4)**
+**v3.9: `.index-label` · `#catRow` `#catIndex` `#catIndexLabel` · `.index-item.is-empty` · `.index-item[aria-current]`(§4-3) / `#btnExport`(§6-1) / `about.html` `js/about.js`(§3-4)** /
+**v4.0: `.index-row` `.index-list` `.index-item` `.index-name` `.index-count` `.index-fold` `.index-fold-summary` · `#tags` `#tagIndex` · 헤더 `태그` 링크(§3-3·§4-3) · `#postList[aria-live]`(§4-5) · `.post-dates` 구분자 `::before`(§5-2) · `.post-nav-label` 화살표(§5-5)** /
+**v4.1: `#btnPreviewToggle`(→ `.view-switch`) · `#editorStatus[aria-live]`(`role="status"`로 충분) · `.code-copy`의 hover 흐림(`opacity: .5`) · `.md-btn[data-md="template"]`의 auto 마진(→ `.md-group:last-child`) · 분류 라벨의 `sr-only`(§6-0)**
 
 `.sr-only`는 `:focus`와 `:focus-visible` **둘 다**에서 드러난다(스킵 링크는 한 경우라도
 새면 실패다). 보이지 않는 `<label>`로도 쓴다 — 입력칸의 이름은 `placeholder`가 아니라
@@ -1770,11 +2263,16 @@ meeting-05 A-11). `quiz`: §5-7-3 스니펫을 커서 위치에 블록으로 끼
 
 **토글되는 상태**
 
-`is-active` `is-open` `is-dirty` `is-loading` `is-pinned` `is-empty` **`is-off`(v3.9)**
+`is-active` `is-open` `is-dirty` `is-loading` `is-pinned` `is-empty` **`is-off`(v3.9)** **`is-new`(v4.0)**
+
+**v4.0: `is-new`는 `.editor-status`에만** — 한 번도 저장한 적 없는 새 글(meeting-07 C6). 점이 초록(`--c-ok` = "저장됨")이 아니라 중립(`--c-text-mute`)이다.
+`write.html`의 `#editorStatus`는 **정적으로 `is-new`를 달고 시작**하고(JS가 붙이면 첫 페인트 뒤라 초록 점이 한 번 비친다), `editor.js` `startNew()`가 다시 붙이며,
+`setStatus`/`setStatusNodes`가 dirty 값을 받을 때(임시저장·초안 복원·수정 모드 로드·서버 저장) 뗀다. `.is-dirty`와 함께 붙는 순간에는 경고색이 이긴다(CSS 순서).
 
 (`is-open`은 v3.2부터 `.side-cat`에도 쓴다 — 펼쳐진 분류. `is-pinned`는 `.side-post`에도,
 `is-empty`는 `.side-cat`에도. 같은 뜻이면 같은 이름이다.
 **v3.4: `is-active`는 `.index-item`에만 남는다** — `.nav-link`의 현재 페이지는 `aria-current="page"`다(§3-3).
+**v4.0: `.index-item`이 폐기되어(§4-3) `is-active`를 붙이는 곳이 없다 — 이름은 목록에 남겨 두되 새로 쓰지 않는다.**
 **v3.8: `is-hidden` 폐기** — `.entry`에만 걸려 있었고 붙이는 코드가 없었다(§4-4).
 **v3.9: `is-off`는 `.editor-server`에만** — "서버 없음"(§6-1). `is-empty`는 v3.9부터 `.side-cat`에만 붙는다(`.index-item.is-empty`는 분류 인덱스와 함께 폐기, §4-3).
 `#btnSave[disabled]`는 클래스가 아니라 폼 속성이다 — 눌릴 수 없다는 사실은 브라우저가 이미 아는 상태라 클래스로 한 번 더 적지 않는다.)
@@ -1782,6 +2280,12 @@ meeting-05 A-11). `quiz`: §5-7-3 스니펫을 커서 위치에 블록으로 끼
 **v3.8 — 목록 컨테이너의 속성 `#postList[data-ready]`.** 클래스가 아니라 속성이다(인트로의 `data-intro`와 같은 태도 —
 "시간이 지났다"는 사실을 적는 자리이지 토글되는 상태가 아니다). `app.js`가 첫 렌더 300ms 뒤 한 번 붙이고 떼지 않는다.
 CSS는 `.post-list[data-ready] .entry { animation: none }` 한 줄로 읽는다(§4-4·§11-4).
+
+**v4.0 — 속성 둘이 더 있다.** ① **`#postList[data-cats]`** — 글이 있는 분류의 수(블로그 전체 기준, 필터와 무관). `app.js`가 글을 받은 뒤
+`renderList()` 전에 한 번 적는다. CSS는 `.post-list[data-cats="1"] .entry-cat { display: none }` 한 줄(§4-4). 속성이 없으면 라벨은 보인다.
+② **`inert`** — `ui.js` `initIntro()`가 인트로가 떠 있는 동안 `body`의 `.intro` 아닌 자식 전부에 붙이고 `finish()`에서 뗀다(§3-5).
+CSS는 `inert`를 읽지 않는다(브라우저가 포커스·클릭·접근성 트리에서 뺀다 — 그것이 전부다). `html[data-intro="done"]`은 v4.0부터
+`finish()`도 붙인다(건너뛰기로 끝냈을 때 본문 진입 애니메이션을 즉시 끊기 위해 — §3-5 표).
 
 **생성 시점에 정해져 바뀌지 않는 분류 클래스**
 
@@ -1794,6 +2298,11 @@ CSS는 `.post-list[data-ready] .entry { animation: none }` 한 줄로 읽는다(
 > 토스트의 등퇴장은 v3.0에서도 `is-visible`을 쓴다. 위 "폐기"는 **`.memo` 진입용**
 > `is-visible`을 말한다. 혼동을 없애기 위해 `.toast`의 표시 상태는 그대로 두되
 > `ui.js`의 `reveal()`/IntersectionObserver는 통째로 삭제한다(§12).
+
+**v4.1 — ARIA 속성 셋이 CSS의 손잡이가 된다(클래스를 따로 만들지 않는다 — "ARIA 속성이 곧 상태").**
+① **`[aria-invalid="true"]`** — `.field` `.editor-title` `.editor-area`(`editor.js`가 오류 때 붙이고 고치면 뗀다, §6-0 오류 규칙). CSS: 테두리·포커스 링 `--c-danger`,
+본문은 `.editor-pane:has(.editor-area[aria-invalid="true"])`. ② **`.view-btn[aria-pressed]`** — 지금 보기 방식(§6-0). ③ **`.editor[aria-busy="true"]`** — 폼 잠금
+(v4.0 C2 이행, §6-1). CSS는 그 안의 `:read-only` 칸만 흐린다.
 
 `body.modal-open` `body.admin-off` **`body.side-open` `body.side-pinned`**(v3.2, §3-2) 는 body에만 붙는 예외다.
 `html[data-side="pinned"]`는 `theme-init.js`가 첫 페인트 전에 붙이는 힌트로, `ui.js` `initSide()`가 body를
@@ -1815,7 +2324,8 @@ CSS는 `.post-list[data-ready] .entry { animation: none }` 한 줄로 읽는다(
 
 | 동작 | JS 타이밍 | CSS가 맞춰 둔 시간 |
 |---|---|---|
-| 토스트 퇴장 | `is-visible` 제거 후 **400ms** 뒤 DOM 제거 | 260ms (`--dur`) |
+| 토스트 퇴장 | `is-visible` 제거 후 **400ms** 뒤 DOM 제거 | ~~260ms (`--dur`)~~ **160ms (`--dur-fast`, v4.1 — 퇴장은 빠르게, §11)**. 등장은 `--dur` |
+| **토스트 머무는 시간 (v4.1 — #137 이행 ✔)** | `util.js` `TOAST_MS` 2600 하나 → **종류별: `ok`·종류 없음 `3200` / `warn`·`err` `5200`**. 포인터가 토스트 위에 있거나 토스트 안에 포커스가 있는 동안은 타이머를 멈추고(`mouseenter` · `focusin`), 떠나면(`mouseleave` · 토스트 밖으로 나가는 `focusout`) 남은 시간이 아니라 **2000ms**를 새로 센다 | CSS 무관. UX-§8 `toast-dismiss`(3–5초) · WCAG 2.2.1. 2.6초는 한국어 50자 경고(`서버가 꺼졌습니다. start.bat(Docker)를…`)를 끝까지 읽기 전에 사라졌다. 경고·오류는 할 일이 담긴 문장이라 더 길다 |
 | 모달 닫힘 | `is-open` 제거 후 **220ms** 뒤 DOM 제거 | 160ms (`--dur-fast`) |
 | 모달 열림 | append → **다음 rAF**에 `is-open` | 420ms (`--dur-slow`) |
 | **목록 첫 렌더 확정 (v3.8)** | 첫 `renderList()` 직후 `setTimeout(300)` → `#postList`에 `data-ready=""`(한 번, 떼지 않음) | 260ms (`--dur`, `arrive`). 더 이르면 진행 중인 카드가 끝 상태로 끊긴다 |
@@ -1925,10 +2435,11 @@ JS-off 방문자는 write.html에서 `<noscript>`의 안내(§6)만 본다. `bod
 ```html
 <footer class="site-footer">
   <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
-  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+  <p class="footer-meta"><span data-year>2026</span></p>
 </footer>
 ```
 문구는 **요구사항 #16 그대로 유지**한다. 세 페이지 동일.
+**v4.0(M2)**: 보조 줄은 연도 하나(`메모 블로그 · 2026` → `2026`, §3 주석). 자간 확장(`--ls-wide`)도 뗀다 — 원칙 7.
 v2.x의 `.footer-note::before`(액센트 그라디언트 바)는 **삭제**한다 — 히어로의 바와
 짝을 이루던 장식인데 짝이 사라졌다. 푸터는 본문과 1px 실선으로만 나뉜다.
 **가운데 정렬이 아니라 왼쪽 정렬**이다 — 이 페이지의 모든 왼쪽 선이 한 줄이어야 한다.
@@ -1970,11 +2481,14 @@ tokens → base → layout → components → prose
 | **`.post` — 콘텐츠 도착 ② (v3.4)** | `opacity` .38→1 (`.is-loading` 제거 시) | `--dur` + `--ease` |
 | 인풋 포커스 | `border-color` / `box-shadow` (`.field`는 `background-color`도) | `--dur-fast` |
 | **`.editor-server` (v3.9)** | `color` / `::before` `background-color` — `.editor-status`와 같은 어휘. 연결됨(초록) ↔ 서버 없음(`.is-off`, 경고색)이 건너갈 때 | `--dur-fast` |
-| 토스트 | `opacity` / `transform` | `--dur` |
+| 토스트 | `opacity` / `transform` | ~~`--dur`~~ **v4.1: 등장 `--dur` / 퇴장 `--dur-fast`** |
 | 모달 | `opacity` / `transform` | 열림 `--dur-slow` / 닫힘 `--dur-fast` |
+| **`.view-btn` (v4.1)** | `background-color` / `border-color` / `color` — 눌림 상태가 옮겨 갈 때 | `--dur-fast` |
+| **`.editor-title` (v4.1)** | `border-color` + `box-shadow`(포커스 2px 아랫선) | `--dur-fast` |
+| **`.editor-more > summary::before` (v4.1)** | `rotate`(세부 설정 삼각형) — 목차·퀴즈 삼각형과 같다 | `--dur` |
 | 목차 접기 화살표(`summary::before`) | `rotate` | `--dur` |
-| **사이드바 `.side` (v3.2)** | `translate`(슬라이드) + `visibility`(닫힐 때만 `--dur` 지연) + `box-shadow`(도킹 전환) | 슬라이드 `--dur` + `--ease` |
-| **스크림 `.side-scrim` (v3.2)** | `opacity` + `visibility` | 등장 `--dur-fast`, 퇴장 `--dur`(패널과 함께 사라진다) |
+| **사이드바 `.side` (v3.2)** | `translate`(슬라이드) + `visibility`(닫힐 때만 닫힘 시간만큼 지연) + `box-shadow`(도킹 전환) | ~~슬라이드 `--dur`~~ **v4.1: 열림 `--dur` / 닫힘 `--dur-fast`** + `--ease` |
+| **스크림 `.side-scrim` (v3.2)** | `opacity` + `visibility` | ~~등장 `--dur-fast`, 퇴장 `--dur`~~ **v4.1: 등장 `--dur` / 퇴장 `--dur-fast` — 패널과 같은 박자** |
 | **도킹 시 본문 밀기 `body` (v3.2)** | `padding-inline-start` | `--dur` + `--ease`. 첫 페인트(`html[data-side]`)에는 이전 값이 없어 걸리지 않는다 |
 | 사이드바 안의 핀·쉐브론 | `rotate` / `translate` | `--dur-fast` |
 | **`.side-toc-item` (v3.3)** | `color` / `background-color` — `.side-post`와 같다. 현재 절이 옮겨 갈 때 색이 건너간다(위치·크기 모션 없음) | `--dur-fast` |
@@ -1985,6 +2499,12 @@ tokens → base → layout → components → prose
 | **`.intro` — 막 퇴장 (v3.6, `@keyframes intro-out`)** | `opacity` 1→0, 끝 프레임에 `visibility: hidden` `pointer-events: none` | `--dur-intro-out`(600) + `--ease-fade`, delay `--intro-out-at`(**1650**, v3.9), forwards |
 | **`.site-header` `.site-main` `.site-footer` — 본문 진입 (v3.6, `@keyframes intro-arrive`, index.html·첫 방문만)** | `opacity` 0→1 + `translate` **10px**→0 | `--dur-intro-out`(600) + `--ease`, delay `--intro-out-at`, both |
 | ~~`#themeToggle::before`~~ (v3.6 삭제) | ~~`box-shadow` / `scale`(해↔달)~~ — 사용자 요청 "테마 바꾸는데 깜빡이는 애니 넣지 말고". 아이콘은 즉시 바뀌고 색만 토큰 보간을 따른다 | — |
+
+**v4.1 — 등퇴장 규칙 하나(UX-§7 `exit-faster-than-enter` · `motion-consistency`).** 화면에 **들어오는** 것(모달 패널 · 토스트 · 사이드바 · 스크림)은
+`--dur`(모달 패널 `--dur-slow`)로 어디서 오는지 보이게, **나가는** 것은 `--dur-fast`(160ms)로 빠르게 — 닫기는 이미 끝난 결정이다. v4.0까지 모달만 이 규칙이었고
+토스트·사이드바는 같은 시간, 스크림은 거꾸로(등장 160 · 퇴장 260)였다. 기본 선언이 "나갈 때", 열린 상태 선택자(`.is-open` `.is-visible` `body.side-open`)가
+"들어올 때"의 시간을 갖는다. 색 전환은 전부 `--dur-fast`다 — `.prose a`의 밑줄 색만 `--dur`였던 것을 맞췄다(v4.1). `.code-copy`의 `opacity` 전환은
+흐림과 함께 삭제됐다(§5-7).
 
 **테마 크로스페이드의 작동 방식 (v3.4, JS 0줄)** — 사용자 요청 *"다크·라이트 전환할 때 약간의 텀을
 둬서 자연스러운 애니메이션으로 (1~2초)"*, *"언제나 가능하게 (순서·횟수 상관없이)"*. v3.1의 240ms는
@@ -2081,13 +2601,20 @@ tokens → base → layout → components → prose
 | **`.editor-server.is-off` · `.btn:disabled:hover` 되돌림** (v3.9 §6-1) | `components.css` §11 (`.editor-server` 옆) · §5 (버튼 옆) |
 | **`.editor-area`의 크기·행간·`tab-size`** (v3.9 §6) | `layout.css` §8 (에디터 골격 — v3.0부터 여기) · `.prose pre code`는 `prose.css` §7 |
 | ~~`.index-label` · `.index-item.is-empty` · `#btnSave:not([hidden]) ~ #btnExport` · `.modal-body ul/ol/li`~~ (v3.9 삭제) | — |
+| **v4.1 — `.editor` 골격 · `--editor-bar-h` · `.editor-head` · `.editor-title`(포커스·오류 간격 포함) · `.editor-fields` 격자(768 분기 포함) · `.editor-split`·창 높이·한 창 가운데 · `.editor-pane`·`.editor-area`·`.preview-pane` · `.editor-bar` · `.editor-bar > .editor-actions`** | `layout.css` §8 (768 분기는 §9) — 화면 골격 |
+| **v4.1 — `.view-switch` `.view-btn` · `.editor-meter` · `.editor-more` · `.md-group` · `.field-error` `.field-hint` · `[aria-invalid]` · `.editor[aria-busy]` 흐림 · `.btn-ghost.btn-danger` · `.btn:active`** | `components.css` §11 (버튼은 §5) — 부품의 생김새 |
+| **v4.1 마무리 — 작업 줄 폭 규칙의 배치**(`.editor-bar`의 wrap·static, 저장 무리의 flex·wrap, 무리 안 `.editor-status` `.editor-server`의 `min-inline-size`) | `layout.css` §8 · §9 |
+| **v4.1 마무리 — 접히는 글의 생김새**(`.editor-status` `.editor-server`의 행간 `--lh-head`) · **서버 없음의 계기판 축약**(`.editor-bar:has(.editor-server.is-off) .editor-meter`) · **`.cat-picker`의 768 nowrap** | `components.css` §11 (각 부품 정의 바로 아래) |
+| **v4.1 — `.nav-link::after`(누르는 면적)** | `components.css` §1 |
+| **v4.1 — `.search-clear`의 content-box 원판** | `components.css` §3 |
+| **v4.1 — `.entry:has(.entry-title:active)` · 한 장 규칙** | `layout.css` §6 |
 
 ### 11-2. 리터럴 금지의 범위
 
 | 값 | 리터럴 허용? | 이유 |
 |---|---|---|
 | 색·그림자·간격·폰트·반경·이징·지속시간 | **금지** | 전부 `tokens.css`에 있다 |
-| **누를 수 있는 것의 최소 크기** | **금지** | `--h-control`(40/44) `--h-control-sm`(32/44) `--h-nav`(36/44) `--h-control-xs`(30/40). **이 넷만 `pointer:coarse`에서 자동 상승한다** — 리터럴로 쓰면 그 상승을 놓친다 |
+| **누를 수 있는 것의 최소 크기** | **금지** | `--h-control`(40/44) `--h-control-sm`(32/44) `--h-nav`(36/44) `--h-control-xs`(24/36 — v3.2 값, 이 행만 30/40으로 남아 있던 오기를 v4.1에 정정). **이 넷만 `pointer:coarse`에서 자동 상승한다** — 리터럴로 쓰면 그 상승을 놓친다 |
 | 포커스·상태 글로우의 링 두께 | **금지** | `--ring-w` |
 | 누를 수 없는 라벨의 치수(`.tag` 24px 등) | 허용 | 터치 타깃 판정 대상이 아니다 |
 | 한 부품 안에서만 의미를 갖는 도형 치수(돋보기 11px, 표 가장자리 그림자 22px 등) | 허용 | 토큰화해도 재사용처가 없다 |
@@ -2102,7 +2629,9 @@ tokens → base → layout → components → prose
 | `--h-control` | 40 → 44 | `.btn` `.icon-btn` `.search-input` `.field` `.switch` `.sr-only:focus` — **`.entry-title`은 v3.1에서 빠졌다.** 목록의 터치 타깃은 박스 전체(`.entry-title::after`, §4-4)이고 박스 높이는 패딩만으로 44px을 넘는다 |
 | `--h-control-sm` | 32 → 44 | `.index-item` `.index-fold-summary` `a.post-cat` `.post-tags .tag` `.md-btn` `.code-copy` `.prose summary` `.toc-item` **+ v3.2: `.search-input` `.side-cat-name` `.side-cat-toggle` `.side-post`** **+ v3.3: `.side-toc-item`** |
 | `--h-nav` | 36 → 44 | `.nav-link` `.brand` `.back-link` |
-| `--h-control-xs` | **24 → 36**(v3.2) | `.search-clear` (하나뿐 — 인풋 안에 들어앉는 원판은 인풋보다 한 단계 작아야 "입력칸"으로 보인다) |
+| `--h-control-xs` | **24 → 36**(v3.2) | `.search-clear` (하나뿐 — 인풋 안에 들어앉는 원판은 인풋보다 한 단계 작아야 "입력칸"으로 보인다). **v4.1: 이 토큰은 "보이는 원판"의 지름이다. 누르는 상자는 `--h-control-sm`(32/44)** — §4-4-1 |
+
+**v4.1 추가 사용처** — `--h-control-sm`: `.view-btn` · `.editor-more > summary`. `--h-control`: `--editor-bar-h`의 식(작업 줄 높이). `--h-nav`: `.nav-link::after`의 최소 폭(누르는 면적, §3-3).
 
 `.search-input`이 `--h-control`에서 빠져 `--h-control-sm`으로 내려갔다(v3.2, §4-3). `.icon-btn`(햄버거·핀·닫기·테마)은 `--h-control` 그대로.
 
@@ -2118,8 +2647,8 @@ tokens → base → layout → components → prose
 | 360px | (기준선) | 여기서 가로 스크롤이 생기면 실패다. 분기 자체는 없다 |
 | 440px | `max-width` | 본문 코드·인용·표·목록의 좌우 패딩 압축 / `.entry` 카드 패딩 `--sp-5` → `--sp-4` / **v3.3: `.prose` `.post-summary`의 `word-break: keep-all` → `normal`**(360px에서 한 줄 17자인데 어절 보존이 줄마다 3~6자를 비웠다 — 본문·요약만, 제목·카드·사이드바는 그대로 keep-all) / ~~**v3.4: `.site-nav` 간격 `--sp-2`, "태그" 링크 소거(§3-3 표)**~~(v3.9 삭제) / 햄버거 위치가 헤더 위 패딩(`--sp-5`)을 따라감 |
 | ~~768px~~ | ~~`max-width`~~ | ~~`.list-tools` 세로 스택~~ — **v3.4 폐기.** 검색이 `min(40rem, 100%)`라 분기 없이 좁은 폭에 맞는다 |
-| 768px | `min-width` | `.post-nav` 1열 → 2열, 토스트가 오른쪽 아래로 |
-| 1024px | `min-width` | 에디터 split 2열, **사이드바 도킹**(`body.side-open.side-pinned` / `html[data-side="pinned"]` → 본문 `padding-inline-start: --w-side`, 그림자·스크림·스크롤 잠금 해제) |
+| 768px | `min-width` | `.post-nav` 1열 → 2열, 토스트가 오른쪽 아래로, **v4.1: 에디터 메타 격자 `[분류 | 태그 | 고정]` + 전폭 줄**. 같은 경계의 `max-width: 767.98px`에서 `.editor-meter`는 글자 수 하나만. **v4.1 마무리: 작업 줄 한 줄 규칙**(`.editor-bar` nowrap · 저장 무리 `flex: 1 1 0` nowrap) · **`.cat-picker` nowrap** / 같은 경계의 `max-width: 767.98px`에서 **`.editor-bar` static** · 저장 무리 nowrap(서버 없음만 wrap) — §6-0 "작업 줄의 폭 규칙" |
+| 1024px | `min-width` | 에디터 split 2열(**v4.1: 같은 경계의 `max-width: 1023.98px`에서 `.view-btn[data-view="split"]`을 감춘다**), **사이드바 도킹**(`body.side-open.side-pinned` / `html[data-side="pinned"]` → 본문 `padding-inline-start: --w-side`, 그림자·스크림·스크롤 잠금 해제) |
 | **1280px** (v3.7) | `min-width` | **post.html의 `.toc`가 칼럼 오른쪽 여백으로**(§5-4). 도킹 상태는 제외 |
 | **1540px** (v3.7) | `min-width` | 도킹 상태에서도 `.toc`가 여백으로 — 1540 − 260 = 1280, 첫 분기와 같은 기하. 두 분기는 한 규칙("칼럼 밖 여백 ≥ 280")의 두 얼굴이다 |
 
@@ -2485,9 +3014,126 @@ CSS는 web-designer가 v3.9로 교체했다. **인트로 0.2초 연장과 코드
 `- ` / `- ` + Enter → 빈 줄 / `1. a` + Enter → `2. ` / `//java` + Enter → 펜스(Enter 규칙 미발동) / Shift+Enter → 그냥 줄바꿈 / 각각 Ctrl+Z 한 번에 복원.
 #108: 한 줄 안에서 단어 선택 + Tab → 줄이 2칸 들여쓰기(단어 보존). 코드 크기: 나란히 보기에서 같은 10줄 코드 블록의 textarea 높이 = 미리보기 `pre` 높이(±1px).
 
+### 12-16. v4.0 이행 — 어휘 정리 · 카드 표면 · 결과 줄 · 인트로 건너뛰기 · 태그 인덱스 폐기 (#109-128)
+
+> 2026-09-23 한 세션에서 CSS·마크업·JS를 함께 이행했다(사용자 지시 *"태그 카테고리 지워"* + *"/frontend-design 기준으로 UI/UX 고도화"*).
+> ✔ = 이행·브라우저 확인 완료, ☐ = 남은 일(다음 라운드). 파일 소유권 표(§1-1)의 담당자가 다음 수정 때 이 표를 기준으로 삼는다.
+
+| # | 담당 파일 | 내용 | 근거 | 상태 |
+|---|---|---|---|---|
+| 109 | `tokens.css` | `--ff-sans` 정직화 · `--fw-text`/`--fw-bold` 신설 · `--ls-wide` 사용처 주석 · `--c-glow` 신설(+`@property`, `base.css` 전환 목록) | M5 · M6 · M1 · M12 | ✔ |
+| 110 | `base.css` `layout.css` `components.css` `prose.css` | `font-weight` 숫자 전부 `var(--fw-*)`(굵기 지도 §2) · `--ls-wide`는 `.entry-group-label` `.code-lang` 둘만 | M6 · M1 | ✔ |
+| 111 | `layout.css` | 카드 표면(반경 `--r-sm` · 아래 선 진하게 · 7px 풀 자국) · 한 장 그리드 `min(28rem, 100%)` · `.list-bar` · `.post-list` 위 여백 0 · `.post-dates` 간격 `--sp-4` · `.index-*` 삭제 | M4 · M15 · §4-5 · M2 · §4-3 | ✔ |
+| 112 | `components.css` | `.index-*` 절 삭제 · `.search-key` · `.list-status` `.list-reset` · `.entry-cat` 400·자간 0 · `data-cats` 한 줄 · `.post-dates` 구분자·`.post-nav-label` 화살표 삭제 · `.back-link::before` 쐐기 · 전구 `--c-glow` · `.intro-skip` · `.editor-status.is-new` · 소문 라벨 자간 삭제 | §4-3 · M1 · M2 · M12 · C4 · C6 | ✔ |
+| 113 | `prose.css` | h1 800·h2 750 → 700 · h5/h6 자간 삭제 · `.code-lang`/`.code-copy` 굵기 분리 · `.hljs-comment` 기울임 삭제 · `.prose a` 400 | M6 · M1 · m7 | ✔ |
+| 114 | `index.html` | `<details id="tags">` 삭제 · `.list-bar` · `#postList` `aria-live` 삭제 · 검색 placeholder + `aria-keyshortcuts` + `.search-key` · 인트로 `.intro-skip`·`aria-hidden` 이동 · 내비 `태그` 삭제 · 푸터 보조 줄 | §4-3 · C1 · M2 · C4 · §3-3 | ✔ |
+| 115 | `post.html` | 내비 `태그` 삭제 · `.back-link` 문구 `목록` · 날짜 주석 · `#postNav` 이름 `이전 글과 다음 글` · 푸터 보조 줄 | §3-3 · M2 | ✔ |
+| 116 | `write.html` | 내비 `태그` 삭제 · `<h1 class="sr-only">글 쓰기</h1>` · 푸터 보조 줄 | §3-3 · C5 | ✔ |
+| 117 | `app.js` | 태그 인덱스 함수·핸들러 삭제(`hashchange` 포함) · `renderStatus()`(문구·줄 감춤·`.list-reset` 표시) · `resetFilters()` 포커스 이동 · `markCatCount()` → `data-cats` · 빈 상태 버튼 `전체 글 보기` | §4-3 · §4-5 · §4-4 | ✔ |
+| 118 | `ui.js` | `initIntro()` — `inert` · Esc · `#introSkip` · `finish(moveFocus)` · `data-intro="done"` | C4 | ✔ |
+| 119 | `post.js` | `이전 글`/`다음 글` · `summary === title` 억제 | M2 · M9 | ✔ |
+| 120 | `markdown.js` | 코드 언어 라벨 원문 표기(`text` · 적힌 그대로) · 표 이름 구분자 쉼표 | M3 · M2 | ✔ |
+| 121 | `editor.js` | `임시저장 중…`(M11) · 상태줄·토스트의 가운뎃점·화살표·spaced em dash 삭제 · 새 글 `.is-new` · `SERVER_OFF_TEXT` 새 문구(§6-1) | M11 · M2 · C6 | ✔ |
+| 122 | `editor.js` | 로드 완료 전 폼 잠금(입력 유실) | C2 | ✔ |
+| 123 | `editor.js` | 초안 슬롯 경쟁 조건 | C3 | ✔ |
+| 124 | `post.js` `markdown.js` | recap 이동 뒤 목차·스크롤스파이 재수집 · 본문 `# h1` 강등 · recap 트리거 별칭 `핵심 정리` | M7 · M8 · M10 | ✔ |
+| 125 | `config.js` `util.js` `store.js` `ui.js` | 죽은 값·함수 정리 | m2 | ✔ |
+| 126 | `markdown.js` `store.js` | 이미지 `width/height` · `no-cache` 재검토 | m3 · m4 | ✔ |
+| 127 | `editor.js` `ui.js` | Esc 이중 핸들러 · 수정 모드 삭제 | m8 · m9 | ✔ |
+| 128 | `posts/index.json` | `created` 드리프트 정정 — **사용자 승인 대기** | m1 | ☐ |
+
+**#122-127 이행 기록(2026-09-23, v4.1 개정 때 등재)** — #124: §5-7-2 "목차·스파이"·"트리거 문구" 행, §5-7 h1 강등. #125: 삭제된 이름 —
+`Blog.util` `escapeHtml` `hashCode` `hashUnit` `fmtRelative` · `Blog.store.peekPost` · `config` `recentDays` `cdn.jquery` `admin.queryKey` · `Blog.ui.prefersReducedMotion`
+(다른 파일이 부르면 결함). `Blog.ui.isSideOverlay()` 신설(§3-2). #126: 이미지는 `width/height` 대신 `loading="lazy"` `decoding="async"`(§5-7).
+#127: `#btnDelete`의 최종 자리는 v4.1 §6-0·§6-1(`.editor-more`). 남은 결함 하나(복구 모달을 고르지 않고 닫기)는 §6-1 끝 규칙 → §12-17 #147.
+
+**셀프체크(이번 세션에서 한 것)** — `css/*`에서 `font-weight:\s*[0-9]` 0건 · `--ls-wide` 선언 2건 · `index-`/`#tags`/`tagIndex` 코드 참조 0건(주석 제외) ·
+1440/360px 라이트·다크 목록 · `?tags=`/`?cat=`/검색 결과 줄 문구 · `전체 글 보기` 후 포커스 · 인트로 Tab/Esc/건너뛰기 · 상세 뒤로 가기 쐐기·이전/다음 라벨.
+
+### 12-17. v4.1 이행 — 두 스킬 감사 · 에디터 재설계 (#129-149)
+
+> CSS(#129-132)는 이번 개정과 함께 교체됐다(✔). #133-147은 담당자가 이행했다(✔, 아래 "이행 기록"). #148-149는 이행 뒤 실측에서 나온 CSS 결함(✔). **줄번호보다 함수·선택자 이름을 기준으로 찾는다** — 두 개발자가 같은 날
+> #122-127을 이행해 줄이 움직였다. 한 파일을 두 사람이 만지는 일은 없다(§1-1): `post.js`·`app.js`·`util.js`·`config.js`는 frontend-dev, `write.html`·`editor.js`는 frontend-dev-2.
+
+| # | 담당 | 파일 · 위치 | 할 일 | 근거 | 상태 |
+|---|---|---|---|---|---|
+| 129 | web-designer | `tokens.css` `base.css` | `--c-border-strong`(+`@property`, `:root` 전환 목록) · `--z-bar` · `--sh-focus` 2겹 · `--ff-mono` 한글 폴백 | §2 | ✔ |
+| 130 | web-designer | `layout.css` | 사이드바·스크림 퇴장 `--dur-fast` · 한 장 규칙 조건 축소 · `.entry` `:active` · §8 에디터 전면(작업 줄·창 높이·한 창 가운데·메타 격자·오류 간격) · 768 분기 | §4-4 · §6-0 · §11 | ✔ |
+| 131 | web-designer | `components.css` | `.nav-link::after` · `.search-input` 윤곽 · `.search-clear` 면적 · `.btn:active` · `.btn-ghost.btn-danger` · 토스트 퇴장 · `.field` 윤곽 · `.field-error` `.field-hint` `[aria-invalid]` `.editor[aria-busy]` · `.switch-ui` 트랙 · `.md-group` · `.view-switch` `.view-btn` · `.editor-meter` · `.editor-more` · `.editor-status`/`.editor-server` 자리 · `.btn + .btn` | §3-3 · §4-4-1 · §6-0 · §6-1 | ✔ |
+| 132 | web-designer | `prose.css` | `.code-copy` 흐림 삭제 · 외부 링크 `↗` 대체 텍스트·단어 잇기·.8 · `.prose a` 밑줄 `--dur-fast` · 미리보기 여백 압축은 `split`에서만 | §5-7 · §6 | ✔ |
+| 133 | frontend-dev | `config.js` `storageKeys` · `app.js` `start()` `writeUrl()` `renderList()` | `storageKeys.list = 'blogList'`. `blogList` = `{search, y}` 쓰기(`writeUrl()` 뒤·첫 렌더 뒤 `search`, `pagehide`·`visibilitychange(hidden)`에 `y`). `history.scrollRestoration = 'manual'`. 첫 `renderList()` 뒤 복원 조건(`back_forward` 또는 `blogListReturn`) + `search` 일치면 rAF에서 `scrollTo(0, y)` → `blogListReturn`의 id 카드 제목에 `focus({preventScroll:true})` → `blogListReturn` 삭제. `pageshow.persisted`면 아무것도 안 함. 전부 try/catch | §4-6 ①④⑤⑦ | ✔ |
+| 134 | frontend-dev | `post.js` `start()` · `.back-link` · `showError()` | `blogList.search`가 `''` 또는 `?…`이면 `.back-link.href = 'index.html' + search`, `showError()`의 `목록으로 돌아가기` `href`도 같은 값. `.back-link` 클릭 → `sessionStorage.blogListReturn = <지금 글 id>`(preventDefault 없음) | §4-6 ②③ · §5-6 | ✔ |
+| 135 | frontend-dev | `app.js` `showLoadError()` · `setEmptyMessage()` | `err.code !== 'file'`이면 셋째 자식 `button.btn.btn-primary` 문구 **`다시 시도`** → `location.reload()`. 둘째 줄: 네트워크 오류면 `인터넷 연결을 확인한 뒤 다시 시도해 주세요.`, 그 밖은 `err.message`. `setEmptyMessage(title, desc, showReset)`의 셋째 인자를 `'reset' \| 'retry' \| false`로 넓히는 식을 권한다(버튼 하나를 고르는 자리 하나) | §4 · §4-4 | ✔ |
+| 136 | frontend-dev | `post.js` `showError()` · `start()`의 `loadPost` catch · `render()`의 렌더 실패 | "글을 불러오지 못했습니다"·"본문을 그리지 못했습니다" 두 분기만 `목록으로 돌아가기` **앞에** `button.btn.btn-primary` **`다시 시도`**(→ `location.reload()`). `showError(title, desc, hint, opts)`에 `{ retry: true }`. 없는 글·쓸 수 없는 id·id 없음·file:// 은 v4.0 그대로 | §5-6 | ✔ |
+| 137 | frontend-dev | `util.js` `toast()` · `TOAST_MS` | 머무는 시간 종류별: `ok`·없음 3200 / `warn`·`err` 5200. 토스트에 `mouseenter`·`focusin`이면 타이머 정지, `mouseleave`·`focusout`이면 2000ms 새로. 제거 타이머 400ms는 그대로(CSS 퇴장 160ms) | §8-1 | ✔ |
+| 138 | frontend-dev-2 | `write.html` `.editor-head` | §6-0 마크업대로: 분류 라벨 `sr-only` → `field-label`(문구 그대로), 분류를 `.field-group`으로 싸고 `.cat-picker`는 그 안에 · `.editor-fields` 자식 순서 `분류 → 태그 → 고정 → .cat-new → 요약(.field-group.is-wide)` · 오류 줄 `#fTitleError` `#fCategoryError` `#fNewCatError`(`.cat-new` 마지막) · `aria-required="true"`(제목·분류·본문) · `<details class="editor-more" id="editorMore"><summary id="editorMoreSummary">파일 id</summary>` 안에 파일 id `.field-group`(+ `p.field-hint#fIdHint`, 칸의 `aria-describedby="fIdHint"`, placeholder `비워 두면 자동으로 만듭니다`) + `#btnDelete`(`btn btn-ghost btn-danger`, 문구 `이 글 삭제`) · `.cat-new-hint`·`noscript`·`fNewCatSlug` 라벨의 `·` → 쉼표 | §6-0 | ✔ |
+| 139 | frontend-dev-2 | `write.html` `.editor-bar` | `.editor-head` 다음·`.editor-split` 앞에 `div.editor-bar#editorBar`: `.view-switch`(버튼 셋, 초기 `나란히` pressed) → `p.editor-meter#editorMeter`(span 셋) → `div.editor-actions`(`#editorStatus` → `#editorServer` → `#btnRetry` → `#btnSave`). `#btnPreviewToggle` 삭제. `#editorStatus`의 `aria-live` 삭제(`role="status"`만). `#editorServer`의 초기 문구 비움 | §6-0 · §6-1 | ✔ |
+| 140 | frontend-dev-2 | `write.html` `.editor-split` | 툴바를 `.md-group` 셋(`role="group"`, `aria-label` 글자·블록·복습)으로, 순서 `bold italic code link / heading list quote codeblock table hr / quiz template`. `코드블록` 문구 → `코드 블록`. textarea `aria-required="true"` · placeholder 한 문장(§6-1 끝) · 뒤에 `p.field-error#fBodyError`. `.preview-pane`에 `id="previewPane"` | §6-0 | ✔ |
+| 141 | frontend-dev-2 | `editor.js` `setViewMode()` `watchWidth()` `bind()` `start()` | `.view-btn` 클릭 → `modeTouched` + `setViewMode`. `aria-pressed` 동기화. 1024 미만에서 `split` → `write`(변경 때·시작 때, `modeTouched` 무관). `preview`로 갈 때 미리보기 즉시 그리기. `dom.previewToggle`·`MODE_LABEL` 갈아 끼우기 삭제 | §6-0 작업 줄의 JS | ✔ |
+| 142 | frontend-dev-2 | `editor.js` `validate()` `rejectNewCat()` `closeNewCat()` + 새 `showFieldError()` `clearFieldError()` | §6-0 "오류 규칙" 그대로 — 넷(제목·분류·새 분류·본문)은 토스트 없이 칸 아래. `aria-invalid` · `aria-describedby` 토큰 추가/제거 · 포커스(이미 포커스면 blur→focus) · 입력/`change`로 지우기 · `취소`로 닫을 때 지우기 | §6-0 | ✔ |
+| 143 | frontend-dev-2 | `editor.js` `onEdit()` `writeForm()` + 새 `updateMeter()` `updateCaret()` | 글자 수(공백 제외, `ko-KR`) · `읽는 데 약 N분`(500자/분, 0이면 hidden) · `N행 M열`(+ `, K자 선택`), 첫 focus 전 hidden, rAF 하나로 묶기, live 없음 | §6-0 | ✔ |
+| 144 | frontend-dev-2 | `editor.js` 본문 `scroll` + `renderPreview` 뒤 | `split`일 때만 본문 → `#previewPane` 비율 스크롤(한 방향, rAF) | §6-0 | ✔ |
+| 145 | frontend-dev-2 | `editor.js` `setServerMode()` `syncActionButtons()` | 연결됨 → `#editorServer` hidden + 글자 비움(서버 없음은 v3.9 그대로). `#btnDelete`를 보일 때 `#editorMoreSummary` = `파일 id와 글 삭제`, 감출 때 `파일 id`(`open`은 건드리지 않음). `#btnDelete` 조회는 `getElementById` 그대로(자리만 바뀜) | §6-0 · §6-1 | ✔ |
+| 146 | frontend-dev-2 | `editor.js` 문자열 | 화면 문장 안의 `·` → 쉼표(`rejectNewCat()`의 `폴더명은 영문 소문자·숫자·하이픈만…` 등 — `grep -n "·" js/editor.js`에서 주석 밖 문자열 전부) | 원칙 7 | ✔ |
+| 147 | frontend-dev-2 | `editor.js` `applyDraftIfNewer()`(복구 모달) · 자동 임시저장 | 모달을 고르지 않고 닫으면 "결정 보류": 화면 글 유지 · 옛 초안 보존(덮지 않는다) · 상태줄 `이전 임시저장본이 남아 있어요:` + `복구` `버리기` 링크(`setStatusNodes`) · 고르면 보류 끝. 저장소 형식이 바뀌면 frontend-dev(`store.draft`)와 먼저 맞춘다 | §6-1 끝 | ✔ |
+| 148 | web-designer | `layout.css` §8 · §9 · `components.css` §11 `.editor-status` `.editor-server` `.editor-meter` | 작업 줄 폭 규칙 — 768 이상 한 줄(nowrap · 저장 무리 `flex: 1 1 0` · 글이 먼저 접힘 · 행간 `--lh-head`), 768 미만 static · 무리 nowrap(서버 없음만 wrap), 서버 없음이면 계기판 글자 수만 | §6-0 "작업 줄의 폭 규칙" | ✔ |
+| 149 | web-designer | `components.css` §11 `.cat-picker` | 768 이상 `flex-wrap: nowrap` — `+ 새 분류`가 셀렉트 옆 한 줄 | §6-0 메타 격자 | ✔ |
+
+**#133-147 이행 기록(2026-09-23 — 이번 개정에서 ✔).** 담당자가 원안과 다르게, 또는 원안이 정하지 않은 자리를 정한 판단은 전부 해당 절에 등재했다 —
+frontend-dev: §4-6 "이행 판단"(④에 `reload` · ③ 표식이 `목록으로 돌아가기`에도 · 수정키 클릭 제외 · `scrollRestoration='manual'` 절충 · `storageKeys.listReturn` ·
+네트워크 판정 `err.code === 'network' && err.cause`) · §8-1(토스트, 원안 그대로). frontend-dev-2: §6-0 "작업 줄의 JS"(`viewChoice` · 숨겨지는 `나란히`의 포커스 · 커서 갱신에 `keydown`) ·
+§6-0 "오류 규칙"(`scrollIntoView({block:'nearest'})` · 미리보기 보기에서 본문 오류면 보기 전환) · §6-1 끝 "결정 보류의 구현"(`held:<슬롯>` · 확인 모달 문구 · 안내의 수명).
+삭제 버튼 `이 글 삭제`(`btn btn-ghost btn-danger`)와 요약 `파일 id와 글 삭제`는 원안 그대로 이행. **#148-149는 이행 뒤 실측(360/768/1024/1440 × 서버 연결됨/없음)에서 나온 CSS 결함**이다.
+§12-16 #122-127은 ✔ 그대로(#128 `created` 정정만 사용자 승인 대기).
+
+**확인 방법(담당자 셀프체크)** — #133·#134: `index.html?cat=…&q=…`에서 스크롤 → 글 열기 → `목록` → 같은 필터·같은 위치·읽은 카드 제목에 포커스 / 브라우저 뒤로가기도 같다 / 헤더 `글`은 맨 위.
+#135·#136: DevTools에서 네트워크 오프라인 → 목록·상세의 `다시 시도`가 보이고 온라인으로 돌린 뒤 누르면 뜬다. #137: 경고 토스트가 5초 머물고 위에 올리면 사라지지 않는다.
+#138-140: 1440/1024/768/360 라이트·다크에서 §6-0 그림과 같은 순서, 360에 가로 스크롤 없음, 작업 줄이 스크롤해도 위에 붙어 있다.
+#141: 1440에서 `작성`/`미리보기` → 창이 가운데 읽는 폭, 1023px로 줄이면 `나란히`가 사라지며 `작성`으로. #142: 빈 제목으로 Ctrl+S → 제목 아래 빨간 줄 + 포커스, 한 글자 치면 사라진다(스크린리더가 오류 문장을 읽는다).
+#143: 타자마다 글자 수, 화살표로 `N행 M열`. #144: 긴 글 끝으로 스크롤 → 미리보기도 끝. #145: 서버 있으면 초록 `로컬 서버 연결됨`이 없다, 수정 모드에서 세부 설정 요약이 `파일 id와 글 삭제`.
+#147: 초안이 있는 글을 열고 Esc → 한 글자 입력 → 새로고침 → 옛 초안이 여전히 복구 가능.
+
 ---
 
 ## 13. 변경 이력
+
+### v4.1 — 두 스킬 감사(바닥 품질) · 에디터 재설계
+
+| 절 | v4.0 | v4.1 |
+|---|---|---|
+| §1-2 원칙 7 | 화살표 예외 `.back-link` 하나 | **외부 링크 `↗` 둘째 예외**(판별법 통과 · 대체 텍스트 "(새 창)") |
+| §2 | 컨트롤 윤곽 = `--c-border`(1.4:1) · `--sh-focus` 번짐 한 겹 · `--ff-mono` 한글 폴백 없음 · `@property` "39"(오기) | **`--c-border-strong`**(3:1) · **`--z-bar`** · 포커스 2겹(실선 + 번짐) · 한글 폴백 둘 · 등록 **41** · 파생 `--editor-bar-h` |
+| §3-2 | — | `Blog.ui.isSideOverlay()` 등재, `prefersReducedMotion` 삭제 |
+| §3-3 | `글` 링크 13×36px | `::after`로 누르는 면적 36/44 정사각 이상 |
+| §4 · §4-4 · §4-4-1 | 불러오기 실패에 누를 것 없음 · 한 장 규칙 = 그룹 안 외톨이 · 검색 지우기 상자 = 원판(coarse 36) | **`다시 시도`** · 한 장 규칙 = 목록 전체 한 장 · 누름 반응 · 지우기 상자 32/44(원판은 그대로) |
+| §4-6 | — | **신설 — 목록 상태 보존**(`blogList` · `blogListReturn` · 스크롤·포커스 복원) |
+| §5 · §5-6 · §5-7 · §5-7-2 | `목록` = 늘 `index.html` · 상세 오류에 되돌아갈 길 하나 · 복사 버튼 hover 흐림 · 목차 "어긋남 감수" | 목록 주소 기억 · **`다시 시도`** · 복사 버튼 상시 · `↗` 대체 텍스트 · h1 강등·이미지 lazy 등재 · 재수집·별칭 등재 |
+| §6 · §6-0 · §6-1 | 메타 카드 안 저장 줄 · 순환 보기 버튼 · auto-fit 메타 · 토스트 오류 · 12버튼 한 줄 · 자라는 textarea · 저장 옆 채운 삭제 | **세 덩어리(머리 · sticky 작업 줄 · 창)** · 세 칸 보기 스위치 · `[분류|태그|고정]`+전폭 요약 · 칸 아래 오류 · 툴바 묶음 셋 · 창 높이 = 화면 − 작업 줄 · 한 창 가운데 · 계기판 · 미리보기 따라가기 · 세부 설정(파일 id · `이 글 삭제`) · 복구 모달 "결정 보류" |
+| §7 · §8 | — | `.field-error` `.field-hint` `.field-group.is-wide` `.editor-bar` `.view-switch` `.view-btn` `.editor-meter` `.editor-more` `.md-group` 등록 · `.editor-actions` 뜻 변경 · `#btnPreviewToggle` 폐기 · `[aria-invalid]` `[aria-pressed]` `[aria-busy]` |
+| §8-1 · §11 | 토스트 2.6초 · 등퇴장 시간 제각각 | 토스트 3.2/5.2초 + hover·focus 정지 · **"들어올 땐 `--dur`, 나갈 땐 `--dur-fast`"** 한 규칙 |
+| §11-1 · §11-2 · §11-3 | — | v4.1 부품 사는 곳 · `--h-control-xs` = 원판 지름 · 768/1024 경계의 max-width 짝 |
+| §12 | §12-16까지(#122-127 ☐) | #122-127 ✔ · **§12-17 신설(#129-147)** |
+| 정정(마무리 대조) | 머리말 목록에 §3-2 · §4-4-1 · §5-6 · §6-0 · §12-16 누락 · §6-0 "하지 않는 것" 아래에 옛 §6 규칙이 섞여 보임 · §11-2 첫 표 `--h-control-xs`(30/40) · §5-7-1 "주석 기울임 남음" · `.hljs-strong` `.hljs-emphasis` 미등재 | 머리말 목록 정정 · 소제목 "§6 공통 규칙" · 24/36 · 문장 정정 · 표에 등재. 마크업·클래스·§12-17 할 일 변화 없음 |
+| 이행 등재(커밋 전 마무리) | §12-17 #133-147 ☐ · 이행 판단 미등재 · 작업 줄이 폭·상태와 무관하게 sticky(360 서버 없음 170px · 768 서버 없음 158px) · 768 `+ 새 분류` 꺾임 · 머리말 "이행 상태"가 v4.0 마크업 기준 | #133-147 ✔ · §4-6 · §6-0 · §6-1 끝 · §8-1 이행 판단 등재 · **§6-0 "작업 줄의 폭 규칙"**(768 이상 한 줄 · 768 미만 static · 서버 없음 계기판 축약) · §11-1 · §11-3 · **§12-17 #148-149** · 머리말 "이행 완료". 마크업·클래스·JS 할 일 변화 없음 |
+
+### v4.0 — 어휘 규칙(원칙 7) · 굵기 2단 · 카드 표면 · 결과 줄 · 인트로 건너뛰기 · 태그 인덱스 폐기
+
+meeting-07 확정 결함 + 사용자 판정(2026-09-23) *"홈 화면에 게시글 바로 위에 존재하는 태그 카테고리 지워"*.
+
+| 절 | v3.9 | v4.0 |
+|---|---|---|
+| §1-2 | 원칙 6개 | 원칙 6에 굵기 2단 · **원칙 7 신설(생성물 기본값 금지 — 소문 라벨 · 가운뎃점 · 화살표)** |
+| §2 | `--ff-sans` Pretendard 1순위 · 굵기 토큰 없음 · `--ls-wide` 11곳 | 시스템 스택 · **`--fw-text` `--fw-bold`** · `--ls-wide` 2곳 · **`--c-glow`**(전구 전용) |
+| §3 · §3-3 | 내비 3항목 · 푸터 `이름 · 연도` | **내비 2항목(`태그` 삭제)** · 푸터 보조 줄 연도 하나 |
+| §3-5 | 막 `aria-hidden`, 건너뛸 수 없음 | **`.intro-skip` · `inert` · Esc · `finish()`가 `data-intro` 부착 · 켜짐 색 `--c-glow`** |
+| §4 · §4-2 | `#tags` · `#postList[aria-live]` · placeholder `제목 · 요약 · 태그 검색 ( / )` | **`#tags` 폐기 · `.list-bar` 신설 · live 영역은 `.list-status` 하나** · placeholder `제목이나 태그로 찾기` + `.search-key` · 가운데 정렬 유지 근거(M13) |
+| §4-3 | 태그 인덱스 | **절 전체 폐기(이력)** |
+| §4-4 | 카드 1px `--c-border` + `--r-md` · `.entry-cat` 700·자간 · `:has()` 3중 | **카드 표면 재설계 · 한 장 그리드 · `.entry-cat` 400 · `data-cats`** |
+| §4-5 | — | **신설 — 결과 줄**(문구 규칙 · `전체 글 보기` · 포커스 · 0편에 줄째 감춤) |
+| §5 · §5-2 · §5-5 · §5-7 · §5-7-1 | `← 목록` · 날짜 `·` · `← 이전`/`다음 →` · `TEXT`/대문자 · 주석 기울임 | `목록` + CSS 쐐기 · 구분자 없음 · `summary === title` 억제 · `이전 글`/`다음 글` · 원문 표기 · 바로 선 주석 |
+| §6 · §6-1 | heading 0개 · `서버 없음 · …` | **sr-only h1** · `서버 없음: …` |
+| §7 · §8 | — | `.search-key` `.list-bar` `.list-status` `.list-reset` `.intro-skip` 등록 · `.index-*` 폐기 · **`is-new`** · `#postList[data-cats]` · `inert` |
+| §12 | §12-15까지 | **§12-16 신설**(#109-128, ✔/☐) |
 
 ### v3.9 — 인트로 0.2초 · 소개 삭제 · 분류 인덱스 행 폐기 · 저장 단일 모드 · Enter 규칙 · 코드 크기 일치
 

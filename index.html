@@ -40,8 +40,13 @@
 
 <body>
 <!-- 인트로 전등 — index.html 전용, 세션당 1회(계약서 §3-5). <body> 첫 자식이어야 첫 페인트부터 본문을 덮는다.
-     그림·시간표는 전부 CSS(components.css §16 / layout.css §10), 종료(hidden + sessionStorage)는 ui.js initIntro(). -->
-<div class="intro" id="intro" aria-hidden="true"><div class="intro-bulb"></div></div>
+     그림·시간표는 전부 CSS(components.css §16 / layout.css §10), 종료(hidden + sessionStorage)는 ui.js initIntro().
+     v4.0(C4): 건너뛰기 버튼이 막의 마지막 자식이다. 포커스 가능한 자식이 있으므로 aria-hidden은 막이 아니라 장식인 전구에 붙는다.
+     막이 떠 있는 동안 ui.js가 body의 다른 자식 전부에 inert를 붙인다 — 첫 Tab은 이 버튼, Esc도 같은 일을 한다. -->
+<div class="intro" id="intro">
+  <div class="intro-bulb" aria-hidden="true"></div>
+  <button class="intro-skip" id="introSkip" type="button">건너뛰기</button>
+</div>
 <a class="sr-only" href="#main">본문 바로가기</a>
 
 <!-- 헤더는 static이다. sticky도, 밑선도, 로고 마크도 없다(계약서 §3).
@@ -52,12 +57,11 @@
   <button class="icon-btn side-toggle" id="sideToggle" type="button"
           aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
-  <!-- 항목·순서는 세 페이지가 동일하다(계약서 §3-3, 3항목 — v3.9에서 "소개"·about.html 삭제). 현재 페이지 표시는 클래스가 아니라
-       aria-current="page" — 이 페이지는 "글". "태그"는 문서가 아니라 문서 안의 위치(#tags)라 어디서도 page를 받지 않는다.
-       "글"(쿼리 없는 index.html)은 ?cat= ?tags= 필터를 푸는 유일한 보이는 링크이기도 하다 — #catRow의 "전체"가 사라졌다(§4-3). -->
+  <!-- 항목·순서는 세 페이지가 동일하다(계약서 §3-3, v4.0 2항목 — v3.9에 "소개", v4.0에 "태그"(#tags 폐기와 함께) 삭제).
+       현재 페이지 표시는 클래스가 아니라 aria-current="page" — 이 페이지는 "글".
+       "글"(쿼리 없는 index.html)은 ?cat= ?tags= 필터를 푸는 길이기도 하다 — 결과 줄의 "전체 글 보기"와 같은 곳이다(§4-5). -->
   <nav class="site-nav" aria-label="주요 메뉴">
     <a class="nav-link" href="index.html" aria-current="page">글</a>
-    <a class="nav-link" href="index.html#tags">태그</a>
     <a class="nav-link" href="write.html" data-admin-only hidden>쓰기</a>
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
@@ -83,33 +87,34 @@
      list-page: 목록만 폭을 넓힌다(--w-page). 카드 그리드가 2~3열이 되려면 720px로는 모자란다. -->
 <main class="site-main list-page" id="main" tabindex="-1">
 
-  <!-- DOM 순서 = 시선 순서 = Tab 순서: 정체 → 찾기(검색) → 태그 → 목록 (계약서 §4, v3.9).
+  <!-- DOM 순서 = 시선 순서 = Tab 순서: 정체 → 찾기(검색) → 결과 줄 → 목록 (계약서 §4, v4.0).
        분류는 화면에서 사라진 것이 아니라 왼쪽 사이드바로 옮겨 갔다 — 햄버거가 첫 Tab 정지점이라 순서상 여전히 검색 앞이다.
        v3.4 머리말은 제목 + 검색, 가운데 정렬. 부제(.page-sub)는 사용자 요청으로 폐기됐다. -->
   <div class="page-head">
     <h1 class="page-title" data-site-title>메모 블로그</h1>
-    <!-- 검색은 <h1>의 다음 자식. "고정"은 sticky가 아니라 자리 고정이다(§4-2) — 어디서든 "/"가 여기로 데려온다. -->
+    <!-- 검색은 <h1>의 다음 자식. "고정"은 sticky가 아니라 자리 고정이다(§4-2) — 어디서든 "/"가 여기로 데려온다.
+         v4.0(M2): placeholder의 가운뎃점 나열과 "( / )"를 뺐다. 단축키는 aria-keyshortcuts와 키캡(.search-key)이 말한다.
+         순서 고정: input → kbd → 지우기 버튼(CSS가 input의 상태를 + 결합자로 읽는다). -->
     <div class="search">
       <label class="sr-only" for="searchInput">글 검색</label>
       <input class="search-input" id="searchInput" type="search"
-             placeholder="제목 · 요약 · 태그 검색  ( / )"
-             autocomplete="off" enterkeyhint="search">
+             placeholder="제목이나 태그로 찾기"
+             aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search">
+      <kbd class="search-key" aria-hidden="true">/</kbd>
       <button class="search-clear" type="button" aria-label="검색어 지우기" hidden></button>
     </div>
   </div>
 
-  <!-- v3.9: 분류 인덱스 행(#catRow · #catIndex · .index-label)은 폐기됐다(계약서 §4-3) — 분류명 = 태그명인 블로그에서
-       같은 알약 줄이 둘로 보였다. 분류는 사이드바(#sideTree)와 카드의 .entry-cat이 맡는다. .page-head 다음 자식은 곧바로 태그 인덱스다. -->
+  <!-- v3.9: 분류 인덱스 행(#catRow)은 폐기. v4.0: 태그 인덱스(<details id="tags">)도 폐기 — 사용자 판정
+       "홈 화면에 게시글 바로 위에 존재하는 태그 카테고리 지워"(계약서 §4-3). 분류는 사이드바가, 태그 필터(?tags=)는 상세의 태그 링크가 건다. -->
 
-  <!-- 태그 인덱스 — 접혀 있다. 여닫는 일은 <details>가 한다(JS 0줄).
-       태그가 하나도 없으면 손잡이째 사라진다(hidden). ?tags= 가 있거나 주소 해시가 #tags면 app.js가 open을 붙인다.
-       id="tags"는 헤더 "태그" 링크(index.html#tags)의 앵커 대상이다(계약서 §3-3). -->
-  <details class="index-fold" id="tags" hidden>
-    <summary class="index-fold-summary">태그 <span class="index-count">0</span></summary>
-    <div class="index-row">
-      <nav class="index-list" id="tagIndex" aria-label="태그 필터"></nav>
-    </div>
-  </details>
+  <!-- 결과 줄(계약서 §4-5) — 몇 편이 어떤 조건으로 보이는지 한 문장 + 필터가 걸렸을 때만 "전체 글 보기".
+       live 영역은 .list-status 하나다(role="status"). #postList에는 aria-live를 붙이지 않는다 — 필터마다 카드 전량이 낭독됐다(C1).
+       hidden으로 시작한다. 로드·0편·오류에는 app.js가 줄째 감춘다. -->
+  <div class="list-bar" id="listBar" hidden>
+    <p class="list-status" id="listStatus" role="status"></p>
+    <button class="list-reset" id="listReset" type="button" hidden>전체 글 보기</button>
+  </div>
 
   <!-- CSP(style-src 'self')가 인라인 <style>을 막으므로 noscript 안에 숨김 규칙을 둘 수 없다.
        대신 #listLoading을 hidden으로 시작시키고 app.js가 켠다 — JS가 꺼져 있으면 영영 켜지지 않으니
@@ -121,8 +126,9 @@
     </div>
   </noscript>
 
-  <!-- 첫 렌더 300ms 뒤 app.js가 data-ready=""를 붙인다. 그 뒤 필터로 다시 그려지는 카드는 arrive 없음(계약서 §4-4·§11-4). -->
-  <div class="post-list" id="postList" aria-live="polite"></div>
+  <!-- 첫 렌더 300ms 뒤 app.js가 data-ready=""를 붙인다. 그 뒤 필터로 다시 그려지는 카드는 arrive 없음(계약서 §4-4·§11-4).
+       data-cats(글이 있는 분류의 수)도 app.js가 붙인다 — "1"이면 CSS가 카드의 분류 라벨을 감춘다(§4-4). aria-live 없음(§4-5). -->
+  <div class="post-list" id="postList"></div>
 
   <!-- hidden으로 시작한다. app.js start()가 fetch 직전에 켜고, 로드가 끝나면 다시 끈다. -->
   <p class="list-loading" id="listLoading" hidden>불러오는 중…</p>
@@ -133,7 +139,7 @@
 
 <footer class="site-footer">
   <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
-  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+  <p class="footer-meta"><span data-year>2026</span></p>
 </footer>
 
 <div class="toast-area" id="toastArea" aria-live="polite"></div>

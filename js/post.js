@@ -12,10 +12,47 @@
   var md = Blog.markdown;
 
   var dom = {};
+  var postId = '';
+
+  /* ---------- 목록으로 돌아가는 길 (계약서 §4-6 ②③) ----------
+     "목록"은 늘 index.html이었다 — 분류·검색을 걸고 글을 연 사람이 돌아가면 필터 풀린 전체 목록 맨 위로 떨어졌다.
+     app.js가 적어 둔 마지막 목록 주소로 보낸다. history.back()을 쓰지 않는 이유 — 새 탭·외부 링크로 들어온 사람에게
+     "뒤"는 이 사이트가 아니다. 주소는 늘 index.html로 시작하므로 저장소 값이 무엇이든 다른 문서·스킴으로 새지 않는다. */
+  var listHref = 'index.html';
+
+  function readListHref() {
+    var raw = null;
+    try { raw = window.sessionStorage.getItem(CFG.storageKeys.list); } catch (err) { return 'index.html'; }
+    if (!raw) return 'index.html';
+    try {
+      var search = JSON.parse(raw).search;
+      /* ''(필터 없음) 또는 '?…'만 받는다. 그 밖의 값은 다른 버전이 남긴 것이거나 손댄 것이다. */
+      if (search === '' || (typeof search === 'string' && search.charAt(0) === '?')) return 'index.html' + search;
+    } catch (err) { /* 깨진 값 = 기억 없음 */ }
+    return 'index.html';
+  }
+
+  /* "돌아간다"는 표식 — app.js가 이것을 보고 스크롤 자리와 방금 읽은 카드의 포커스를 되살린다(§4-6 ④⑤).
+     기본 동작(이동)은 막지 않는다. 저장이 막혀 있으면 자리 복원만 빠질 뿐 이동은 그대로다.
+     Ctrl·Shift 클릭(새 탭·새 창)은 이 탭이 떠나지 않으므로 적지 않는다 — 남은 표식이 나중에 헤더 "글"로 들어온 목록까지 옛 자리로 끌고 간다. */
+  function markListReturn(e) {
+    if (e && (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)) return;
+    try { window.sessionStorage.setItem(CFG.storageKeys.listReturn, postId); } catch (err) { /* 위와 같다 */ }
+  }
+
+  function bindBackLink() {
+    var back = U.qs('.back-link');
+    if (!back) return;
+    back.setAttribute('href', listHref);
+    U.on(back, 'click', markListReturn);
+  }
 
   /* ---------- 오류 화면 ---------- */
 
-  function showError(title, desc, hint) {
+  /* opts.retry: 다시 해 보면 나을 수 있는 실패(네트워크·렌더)에만 "다시 시도"를 주 동작으로 앞에 둔다(§5-6).
+     없는 글·쓸 수 없는 id·id 없음·file://은 다시 해도 같으므로 "목록으로 돌아가기" 하나. */
+  function showError(title, desc, hint, opts) {
+    var o = opts || {};
     if (dom.post) U.setHidden(dom.post, true);
     if (!dom.error) return;
     U.setHidden(dom.error, false);
@@ -23,7 +60,21 @@
     dom.error.appendChild(U.el('p', null, [U.el('strong', { text: title })]));
     dom.error.appendChild(U.el('p', { text: desc }));
     if (hint) dom.error.appendChild(U.el('p', { text: hint }));
-    dom.error.appendChild(U.el('a', { class: 'btn', href: 'index.html', text: '목록으로 돌아가기' }));
+    if (o.retry) {
+      dom.error.appendChild(U.el('button', {
+        class: 'btn btn-primary',
+        type: 'button',
+        text: '다시 시도',
+        onclick: function () { window.location.reload(); }
+      }));
+    }
+    /* 이 링크도 "목록으로 돌아간다"는 같은 뜻이라 .back-link와 같은 목적지·같은 표식을 쓴다. */
+    dom.error.appendChild(U.el('a', {
+      class: 'btn',
+      href: listHref,
+      text: '목록으로 돌아가기',
+      onclick: markListReturn
+    }));
     document.title = title;
   }
 
@@ -66,7 +117,7 @@
   }
 
   /* 날짜 줄 — 제목 바로 아래 한 줄에 병기한다(계약서 §5-2, 요구사항 #3).
-     "게시 2026.09.13 · 수정 2026.09.15". 구분자 ·는 CSS가 그린다.
+     "게시 2026.09.13  수정 2026.09.15". 구분자는 없다(v4.0) — 라벨과 간격(layout.css)이 경계다.
 
      created가 비어 있을 수 있다 — .md에 `created:` 만 값 없이 남기면 병합 규칙($present)이
      "파일이 그 키에 답했다"로 보고 index.json의 날짜를 덮는다. 그 규칙 자체는 옳다(.md가 진실).
@@ -117,7 +168,10 @@
     document.title = meta.title;
     dom.title.textContent = meta.title;
 
-    if (meta.summary) dom.summary.textContent = meta.summary;
+    /* v4.0(M9, 계약서 §5-2): 요약이 제목과 같은 문자열이면 감춘다 — "캡슐화 / 캡슐화" 두 줄은 한 요소가 같은 말을 두 번 하는 것이다.
+       데이터는 고치지 않는다(에디터가 요약을 제목으로 채워 두는 경우가 있다). 화면에서만 거른다. */
+    var summary = String(meta.summary || '').trim();
+    if (summary && summary !== String(meta.title || '').trim()) dom.summary.textContent = meta.summary;
     else U.setHidden(dom.summary, true);
 
     fillDates(meta);
@@ -165,11 +219,22 @@
     return hasBlock ? blocks : [];
   }
 
+  /* 끝의 콜론은 제목의 일부가 아니라 "다음에 목록이 온다"는 버릇이다 — `핵심 정리:`와 `핵심 정리`를 같은 약속으로 본다.
+     전각 콜론(：)도 한글 입력기에서 섞여 들어오므로 함께 뗀다. */
+  function recapKey(text) {
+    return String(text || '').trim().replace(/\s*[:：]\s*$/, '');
+  }
+
+  /* 카드로 받아 주는 제목들 — 템플릿의 heading + 이미 쓴 글의 별칭(config.js recap.aliases, M10). */
+  function recapTitles() {
+    return [CFG.recap.heading].concat(CFG.recap.aliases || []).map(recapKey).filter(Boolean);
+  }
+
   function findRecapHeading() {
-    var want = CFG.recap.heading;
+    var wants = recapTitles();
     var h2s = U.qsa('h2', dom.body).filter(function (h) { return h.parentNode === dom.body; });
     for (var i = 0; i < h2s.length; i += 1) {
-      if (h2s[i].textContent.trim() === want) return h2s[i];
+      if (wants.indexOf(recapKey(h2s[i].textContent)) !== -1) return h2s[i];
     }
     return null;
   }
@@ -192,6 +257,18 @@
     dom.body.parentNode.insertBefore(aside, dom.body);
   }
 
+  /* 목차·스파이가 쓸 제목 목록을 "지금 문서에 놓인 순서"로 다시 모은다(M7, meeting-07).
+     markdown.js가 준 목록은 원문 순서라, mountRecap()이 요약 절을 맨 앞으로 옮기면 목차 순서와 화면 순서가 어긋난다 —
+     목차 넷째 항목이 화면 맨 위로 튀고, 스파이(pickCurrent)는 "배열의 뒤 = 문서의 아래"를 전제하므로 엉뚱한 항목을 켠다.
+     collectHeadings()를 다시 부르지 않는 이유 — id를 새로 매기면 같은 제목의 -2·-3 접미사가 순서 따라 바뀌어
+     이미 공유된 #h-… 링크가 다른 절로 간다. 요소는 그대로 두고 순서만 문서에서 읽는다. */
+  function headingsInDomOrder(headings) {
+    var byEl = new Map(headings.map(function (h) { return [h.el, h]; }));
+    return U.qsa('h2, h3', dom.post)
+      .map(function (el) { return byEl.get(el); })
+      .filter(Boolean);
+  }
+
   /* ---------- 이전 / 다음 ---------- */
 
   function renderNav(id) {
@@ -204,7 +281,7 @@
       frag.appendChild(U.el('a', {
         class: 'post-nav-item is-' + kind,
         href: 'post.html?id=' + encodeURIComponent(meta.id),
-        'aria-label': label + ' 글: ' + meta.title
+        'aria-label': label + ': ' + meta.title
       }, [
         U.el('span', { class: 'post-nav-label', text: label }),
         U.el('span', { class: 'post-nav-title', text: meta.title })
@@ -213,8 +290,9 @@
 
     /* 기준은 목록의 기본 정렬(고정 글 먼저 · 그다음 최신순)이다. store.neighbors()가 그 순서를 쓴다.
        "이전"은 그 줄에서 뒤쪽(대체로 더 오래된 글), "다음"은 앞쪽. 방향이 뒤집히지 않게 주의. */
-    item(around.prev, 'prev', '이전');
-    item(around.next, 'next', '다음');
+    /* v4.0(M2, 계약서 §5-5): 화살표가 빠지면 라벨 "이전" 한 단어는 무엇의 이전인지 약하다 — "글"을 붙인다. */
+    item(around.prev, 'prev', '이전 글');
+    item(around.next, 'next', '다음 글');
 
     U.clear(dom.nav);
     dom.nav.appendChild(frag);
@@ -443,7 +521,7 @@
     if (!indexMeta) return;
     var keys = driftKeys(indexMeta, meta);
     if (!keys.length) return;
-    U.toast('이 글의 ' + keys.join(', ') + ' 값이 index.json과 다릅니다 — 목록에는 옛 값이 보입니다', 'warn');
+    U.toast('이 글의 ' + keys.join(', ') + ' 값이 index.json과 다릅니다. 목록에는 옛 값이 보입니다', 'warn');
   }
 
   /* ---------- 사이드바 (사양 B) ----------
@@ -487,12 +565,14 @@
     try {
       result = md.renderInto(dom.body, post.body);
     } catch (err) {
-      showError('본문을 그리지 못했습니다', err.message, '새로고침하거나 인터넷 연결을 확인해 주세요.');
+      showError('본문을 그리지 못했습니다', err.message, '새로고침하거나 인터넷 연결을 확인해 주세요.', { retry: true });
       return;
     }
 
-    buildToc(result.headings);
+    /* 요약 카드를 먼저 옮기고, 옮겨진 뒤의 순서로 목차·사이드바 목차를 만든다(M7). id는 renderInto가 이미 붙였다. */
     mountRecap();
+    var headings = headingsInDomOrder(result.headings);
+    buildToc(headings);
     renderRelated(meta);
     renderNav(meta.id);
     noticeIndexDrift(meta);
@@ -503,7 +583,7 @@
     jumpToHash();
 
     /* 사이드바 트리가 먼저 그려졌으면 즉시, 아니면 트리가 끝난 뒤에 끼운다(둘 중 나중 것). */
-    sideReady.then(function () { mountSideToc(result.headings); });
+    sideReady.then(function () { mountSideToc(headings); });
   }
 
   function start() {
@@ -528,6 +608,10 @@
     Blog.admin.init();
 
     var id = U.getQuery().id;
+    /* 목록 주소는 오류 화면보다 먼저 정한다 — 아래 분기가 곧바로 showError()를 부를 수 있다. */
+    postId = id || '';
+    listHref = readListHref();
+    bindBackLink();
 
     /* 사이트명은 본문보다 먼저 자리를 잡아야 한다. 사이드바도 같은 데이터로 그린다 —
        본문(loadPost)과 별개로 굴려서 글이 없거나 본문이 실패해도 분류 트리는 살아 있게 한다
@@ -565,7 +649,7 @@
       } else {
         showError('글을 불러오지 못했습니다',
           (err && err.message) || '알 수 없는 오류가 발생했습니다.',
-          '잠시 후 다시 시도해 주세요.');
+          '잠시 후 다시 시도해 주세요.', { retry: true });
       }
     });
   }

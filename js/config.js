@@ -32,9 +32,6 @@
       fallbackName: '미분류'
     },
 
-    /* 이 일수 이내면 "3일 전" 같은 상대 시간을 만들 수 있다(util.fmtRelative). */
-    recentDays: 7,
-
     debounce: { search: 180, preview: 120, draft: 800 },
 
     storageKeys: {
@@ -49,12 +46,18 @@
       side: 'blogSide',
       /* 인트로 전등을 이 세션에서 이미 봤다는 표시(sessionStorage, 계약서 §3-5).
          theme-init.js에도 같은 문자열이 박혀 있다 — 첫 페인트 전에 막을 아예 안 그리려면 거기서 알아야 한다. */
-      intro: 'blogIntro'
+      intro: 'blogIntro',
+      /* 마지막으로 본 목록 {"search":"?cat=java&q=…","y":1234} (sessionStorage, 계약서 §4-6 ①).
+         app.js가 쓰고 post.js가 읽는다 — 상세의 "목록"이 필터 풀린 전체 목록 맨 위로 떨어지지 않게. */
+      list: 'blogList',
+      /* "목록" 링크로 돌아간다는 한 번짜리 표식(값 = 방금 읽은 글 id, §4-6 ③). post.js가 쓰고 app.js가 읽자마자 지운다.
+         계약서는 키 이름만 정했다 — 두 파일이 문자열을 따로 박지 않도록 여기 둔다. */
+      listReturn: 'blogListReturn'
     },
 
-    /* CDN 고정 버전. HTML의 <script src>와 반드시 일치시킨다(표시·점검용). */
+    /* CDN 고정 버전. HTML의 <script src>와 반드시 일치시킨다(표시·점검용).
+       jQuery는 승인 목록에는 있지만 어느 페이지도 싣지 않는다 — 버전을 적어 두면 쓰는 것처럼 읽혀 빠졌다(m2). */
     cdn: {
-      jquery: '3.7.1',
       marked: '12.0.2',
       highlight: '11.9.0',
       dompurify: '3.1.6'
@@ -62,7 +65,6 @@
 
     /* 관리자 판정 규칙 — 보안이 아니라 UI 노출 스위치다(admin.js 주석 참고). */
     admin: {
-      queryKey: 'admin',
       localHosts: ['localhost', '127.0.0.1', '[::1]', '']
     },
 
@@ -76,9 +78,13 @@
 
     /* 요약 카드(계약서 §5-7-2, meeting-05 A-1·A-11 접점). 약속은 h2 제목 문자열 하나다 —
        post.js는 heading과 같은 절을 카드로 옮기고, editor.js는 template을 "템플릿" 버튼으로 넣는다.
-       두 파일이 같은 문자열을 여기서 읽어야 제목이 어긋나 카드가 안 뜨는 일이 없다. */
+       두 파일이 같은 문자열을 여기서 읽어야 제목이 어긋나 카드가 안 뜨는 일이 없다.
+       aliases는 heading 말고도 카드로 받아 주는 제목이다(M10, meeting-07). 실제 글은 "핵심 정리"로 요약 절을 쓴다 —
+       템플릿 문구 하나만 받으면 기능이 한 번도 켜지지 않는다. 비교 때 끝의 콜론(: ：)은 떼고 본다(post.js recapTitles).
+       template은 heading만 쓴다 — 새 글의 약속은 하나로 유지하고, 별칭은 이미 쓴 글을 받아 주는 쪽이다. */
     recap: {
       heading: '다시 볼 때 이것만',
+      aliases: ['핵심 정리'],
       template: '## 핵심\n\n\n## 다시 볼 때 이것만\n- \n\n## 헷갈린 것\n- \n'
     }
   };

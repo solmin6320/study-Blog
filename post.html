@@ -64,11 +64,10 @@
   <button class="icon-btn side-toggle" id="sideToggle" type="button"
           aria-label="분류 메뉴 열기" aria-expanded="false" aria-controls="side"></button>
   <a class="brand" href="index.html"><span data-site-title>메모 블로그</span></a>
-  <!-- 3항목(글 · 태그 · 쓰기) — v3.9에서 "소개"·about.html 삭제(계약서 §3-3).
-       이 페이지에는 aria-current="page"가 없다 — 글 한 편은 목록이 아니다. 돌아가는 길은 ← 목록이 맡는다. -->
+  <!-- 2항목(글 · 쓰기) — v3.9에 "소개", v4.0에 "태그"(#tags 폐기와 함께) 삭제(계약서 §3-3).
+       이 페이지에는 aria-current="page"가 없다 — 글 한 편은 목록이 아니다. 돌아가는 길은 .back-link("목록")가 맡는다. -->
   <nav class="site-nav" aria-label="주요 메뉴">
     <a class="nav-link" href="index.html">글</a>
-    <a class="nav-link" href="index.html#tags">태그</a>
     <a class="nav-link" href="write.html" data-admin-only hidden>쓰기</a>
   </nav>
   <button class="icon-btn" id="themeToggle" type="button" aria-label="테마 전환" aria-pressed="false"></button>
@@ -94,8 +93,9 @@
      본문 폭은 그대로다(list-page 없음) — 읽기 폭은 넓어질수록 나빠진다. -->
 <main class="site-main" id="main" tabindex="-1">
 
-  <!-- 탈출구는 .post 밖에 둔다. CDN이 막혀 post.js가 .is-loading을 떼지 못해도 살아 있어야 한다. -->
-  <a class="back-link" href="index.html">← 목록</a>
+  <!-- 탈출구는 .post 밖에 둔다. CDN이 막혀 post.js가 .is-loading을 떼지 못해도 살아 있어야 한다.
+       v4.0(M2): "←" 문자를 뺐다 — 방향 쐐기는 CSS ::before가 선으로 그린다(계약서 §5, 원칙 7의 유일한 예외). -->
+  <a class="back-link" href="index.html">목록</a>
 
   <!-- is-loading은 post.js가 렌더를 마치면 떼어낸다. 빈 머리말이 깜빡이는 것을 막기 위함. -->
   <article class="post is-loading" id="post">
@@ -104,7 +104,7 @@
       <p class="post-summary" id="postSummary"></p>
 
       <!-- 순서 고정: 날짜 줄 → 분류·태그 줄 (계약서 §5).
-           구분자 ·는 CSS가 그린다. created와 같은 날이면 post.js가 #postUpdated에 hidden을 붙인다. -->
+           구분자는 없다(v4.0) — "게시"·"수정" 라벨과 간격이 경계다. created와 같은 날이면 post.js가 #postUpdated에 hidden을 붙인다. -->
       <p class="post-dates">
         <time class="post-date" id="postDate"></time>
         <time class="post-updated" id="postUpdated" hidden></time>
@@ -141,7 +141,7 @@
       <ul class="entry-list" id="postRelatedList"></ul>
     </section>
 
-    <nav class="post-nav" id="postNav" aria-label="이전 글 · 다음 글" hidden></nav>
+    <nav class="post-nav" id="postNav" aria-label="이전 글과 다음 글" hidden></nav>
   </article>
 
   <!-- 없는 글 id · 네트워크 실패 · file:// 접근 — post.js가 문구를 바꿔 끼운다.
@@ -164,7 +164,7 @@
 
 <footer class="site-footer">
   <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
-  <p class="footer-meta"><span data-site-title>메모 블로그</span> · <span data-year>2026</span></p>
+  <p class="footer-meta"><span data-year>2026</span></p>
 </footer>
 
 <div class="toast-area" id="toastArea" aria-live="polite"></div>

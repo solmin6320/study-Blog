@@ -26,6 +26,11 @@
   --c-surface-2:   #efeade;   /* 오목한 면(코드 머리띠, 표 헤더, 지우기 버튼) */
   --c-border:      #d9d1c0;   /* 실선 경계 */
   --c-border-soft: #e6e0d2;   /* 구분만 하는 약한 경계 */
+  /* 입력하거나 켜고 끄는 컨트롤의 윤곽(v4.1, 계약서 §2 — UX-§1 color-contrast / WCAG 1.4.11 비텍스트 대비 3:1).
+     --c-border(#d9d1c0)는 바탕 대비 1.4:1이라 빈 검색창·입력칸·꺼진 스위치의 테두리가 "있는 듯 없는 듯"했다 —
+     글자로 이름을 대지 않는 경계(입력칸의 상자, 스위치의 트랙)는 그 자체가 "여기 누를 수 있다"는 정보라 3:1이 바닥이다.
+     실측: --c-bg 3.2:1 / --c-surface 3.5:1. 카드·구분선은 여전히 --c-border(정보가 아니라 구획이다). */
+  --c-border-strong: #908876;
 
   /* ── 색: 글자 ───────────────────────────────────────────────────────────
      기준 바닥은 이제 --c-bg 하나다(메모지 6색이라는 최악의 바닥이 사라졌다).
@@ -66,6 +71,10 @@
   --c-scrim:      #2a251c;    /* 모달 딤 바탕 (알파는 사용처에서 조합) */
   --c-shadow-rgb: 38 30 18;   /* --sh-pop의 색(따뜻한 회갈) */
   --c-selection:  #cfe7e1;
+  /* 인트로 전구의 "빛" 한 곳 전용(v4.0, 계약서 §2·§3-5 — meeting-07 M12). 역할색이 아니다 — 글자·UI에 쓰면 결함.
+     v3.9까지 켜진 전구는 --c-meta(글자 대비용으로 어둡게 잡은 황토)를 밝힌 값이라 바탕보다 어두운 갈색 원판이었다.
+     바탕이 거의 흰 종이색이라 명도로는 이길 수 없다 — 채도 높은 따뜻한 노랑과 글로우로 "빛"을 만든다. */
+  --c-glow:       #f5c04a;
 
   /* ── 코드 하이라이팅 = IntelliJ IDEA (v3.7, 계약서 §5-7-1) ─────────────────
      사용자 요청 "코드를 정리할 때는 실제 IDE처럼 색깔 바뀌게(인텔리제이 - 자바 기준)".
@@ -103,13 +112,21 @@
   /* ── 타이포 ────────────────────────────────────────────────────────────
      외부 웹폰트 금지(승인 대상). 한글 폴백을 명시적으로 넣는다.
      --ff-display는 폐기했다 — --ff-sans와 값이 같은 별칭이라
-     "제목용 폰트가 따로 있다"는 착각만 만들었다. */
-  --ff-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
-             "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕",
-             system-ui, sans-serif;
+     "제목용 폰트가 따로 있다"는 착각만 만들었다.
+     v4.0(M5, 계약서 §2) — 1순위였던 "Pretendard Variable"·Pretendard를 뺐다. @font-face가 0건이고 CSP(font-src 'self')가
+     외부 폰트를 막아 어디서도 로드되지 않았다. 방문자는 OS 기본 폰트를 보고 있었는데 스택은 다른 폰트를 적고 있었고,
+     이름을 남기면 Pretendard가 설치된 사람만 다른 화면을 본다. 모든 방문자가 같은 것을 보는 쪽을 고른다.
+     system-ui가 1순위: 폰트 매칭은 글자 단위라 라틴은 OS 기본(SF Pro / Segoe UI)이, 한글은 다음 한글 글꼴이 맡는다. */
+  --ff-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo",
+             "Malgun Gothic", "맑은 고딕", sans-serif;
+  /* v4.1(계약서 §2): 한글 폴백 둘을 generic monospace "앞"에 둔다. 위의 라틴 고정폭 글꼴(Consolas 등)에는 한글이 없어서
+     한글 글자는 목록 끝의 generic monospace까지 떨어졌고, Windows 한국어 환경에서 그것은 굴림체·돋움체(2칸 고정폭)다 —
+     에디터 본문(.editor-area)과 코드 주석의 한글이 "여 기 에   마 크 다 운"처럼 글자마다 벌어져 보였다(v4.0 실측).
+     D2Coding·Noto Sans Mono CJK가 설치된 사람은 그대로 그것을 쓰고, 없는 사람은 본문과 같은 한글 글꼴로 떨어진다.
+     한글 칸 맞춤은 잃지만 코드의 들여쓰기는 라틴 공백이 맞추므로 손해가 없다. */
   --ff-mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono",
              "Cascadia Mono", Consolas, "D2Coding", "Noto Sans Mono CJK KR",
-             monospace;
+             "Apple SD Gothic Neo", "Malgun Gothic", monospace;
 
   /* 유동 타이포: 360px→1440px 사이 선형 증가. 미디어쿼리 없이 스케일한다.
      --fs-4xl(34→60px)은 폐기했다. 그 크기를 쓰던 유일한 요소가 히어로 제목이었고,
@@ -134,7 +151,16 @@
      IDE 기본(≈1.2)을 따르지 않는 이유 — IDE는 100줄을 한 화면에 넣는 도구, 블로그 코드 블록은 10줄을 읽히는 인용이다. */
   --lh-code:  1.7;
   --ls-tight: -0.02em;
+  /* v4.0(M1, 계약서 §1-2 원칙 7) — 쓰는 곳은 둘뿐이다: .entry-group-label(연도) · .code-lang(언어). 둘 다 라틴·숫자 "토큰"이다.
+     한글은 글자마다 같은 em 상자라 자간을 벌리면 단어가 흩어질 뿐이다. 그 밖의 선언은 결함이다. */
   --ls-wide:  0.06em;
+
+  /* 굵기 축 2단(v4.0 — M6, 계약서 §2). 웹폰트를 싣지 않으므로 한글 폴백(맑은 고딕·Apple SD Gothic Neo)의 굵기는 사실상 둘이다.
+     600·750·800을 적으면 라틴은 그 굵기로, 한글은 700으로 떨어져 한 줄 안에서 두 스크립트의 굵기가 갈린다
+     (base.css의 font-synthesis-weight: none 때문에 합성으로도 메워지지 않는다). 위계는 굵기가 아니라 크기·색·여백이 만든다.
+     css/*에서 font-weight 값이 var(--fw-…)가 아니면 그 줄이 곧 결함이다. */
+  --fw-text: 400;             /* 읽는 글 — 본문·메타·필드 라벨·비활성 내비·태그·개수 */
+  --fw-bold: 700;             /* 구조와 상태 — 제목·강조·버튼·지금 상태인 것·구역 이름·배지 */
 
   /* ── 간격: 4px 배수 ──────────────────────────────────────────────────── */
   --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
@@ -180,8 +206,13 @@
   /* 포커스/상태 글로우 링의 두께. base.css의 outline(2px)보다 한 단계 두꺼워야
      "면 위에 번진 빛"으로 읽히고, 4px을 넘으면 인풋이 부어 보인다. */
   --ring-w: 3px;
-  /* 인풋 계열(.search-input / .field)의 :focus 글로우. 값이 복사되지 않게 토큰으로 잡는다. */
-  --sh-focus: 0 0 0 var(--ring-w) color-mix(in oklab, var(--c-accent) 20%, transparent);
+  /* 인풋 계열(.search-input / .field)의 :focus 링. 값이 복사되지 않게 토큰으로 잡는다.
+     v4.1(계약서 §2 — UX-§1 focus-appearance): 첫 겹에 1px 실선 액센트를 더했다. v4.0까지는 1px 테두리 색 변화 + 20% 번짐뿐이라
+     번짐이 바탕 대비 1.3:1이었고, 포커스의 실체가 "1px 선의 색이 바뀐 것" 하나였다. 이제 테두리 1px + 실선 1px = 2px 액센트(5.8:1)가
+     포커스를 말하고, 바깥 번짐은 그 위의 여운이다. */
+  --sh-focus:
+    0 0 0 1px var(--c-accent),
+    0 0 0 calc(var(--ring-w) + 1px) color-mix(in oklab, var(--c-accent) 22%, transparent);
 
   /* ── 모션 ──────────────────────────────────────────────────────────────
      이징이 하나뿐이다. 진입 애니메이션·무한 루프가 전부 사라져
@@ -255,6 +286,8 @@
      그 위를 덮으면 "확인" 버튼을 못 누른다.
      인트로(v3.6)가 맨 위인 이유 — 3초 동안 페이지 전체를 가리는 막이라 그 아래에 있는 것은
      전부(도킹된 사이드바·로드 실패 토스트까지) 막 뒤에서 기다려야 한다. 끝나면 visibility로 빠진다. */
+  /* 에디터 작업 줄(v4.1, 계약서 §6 .editor-bar — sticky). 본문 위·스크림 아래 — 사이드바 오버레이와 모달이 그 위를 덮어야 한다. */
+  --z-bar:   30;
   --z-scrim: 40;
   --z-side:  50;
   --z-modal: 60;
@@ -276,6 +309,7 @@
   --c-surface-2:   #2a271f;
   --c-border:      #3d392d;
   --c-border-soft: #2e2b22;
+  --c-border-strong: #746d5a; /* 컨트롤 윤곽(라이트 블록 주석). 실측: --c-bg 3.5:1 / --c-surface 3.2:1 */
 
   --c-text:      #ece7da;     /* 순백 금지 — 눈부심과 헤일로를 줄인다 */
   --c-text-dim:  #b6afa0;     /* --c-bg 대비 약 8.3:1 */
@@ -297,6 +331,7 @@
   --c-scrim:      #080705;
   --c-shadow-rgb: 0 0 0;      /* 어두운 배경에선 순수 검정 그림자가 가장 자연스럽다 */
   --c-selection:  #1f4a44;
+  --c-glow:       #f3c35a;    /* 인트로 전구 전용(라이트 블록 주석). 어두운 바탕에선 이 색 그대로가 유리 면이다 */
 
   /* 코드 = Darcula (v3.7). 값의 출처·AA 보정 규칙은 라이트 블록 주석. 대비는 전부 #2B2B2B 기준. */
   --code-bg:     #2b2b2b;     /* Darcula TEXT background */
@@ -364,6 +399,7 @@
 @property --c-surface-2   { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-border      { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-border-soft { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-border-strong { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-text        { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-text-dim    { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-text-mute   { syntax: "<color>"; inherits: true; initial-value: transparent; }
@@ -378,6 +414,7 @@
 @property --c-focus       { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-scrim       { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --c-selection   { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --c-glow        { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --code-bg       { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --code-border   { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --code-text     { syntax: "<color>"; inherits: true; initial-value: transparent; }

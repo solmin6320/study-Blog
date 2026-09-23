@@ -88,27 +88,6 @@
 
   /* ---------- 문자열 ---------- */
 
-  function escapeHtml(str) {
-    return String(str === null || str === undefined ? '' : str)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  /* 문자열 → 32bit 정수. "같은 입력이면 언제나 같은 결과"가 필요할 때 쓴다(난수 대용). */
-  function hashCode(str) {
-    var text = String(str);
-    var h = 5381;
-    for (var i = 0; i < text.length; i += 1) {
-      h = ((h << 5) + h + text.charCodeAt(i)) | 0;
-    }
-    return h;
-  }
-
-  /* 0 이상 1 미만의 결정적 난수. 같은 입력이면 언제나 같은 값. */
-  function hashUnit(str) {
-    return (Math.abs(hashCode(str)) % 10007) / 10007;
-  }
-
   /* 태그 비교 키. 화면에는 사용자가 적은 그대로(CSS) 보여 주되 필터·개수·연관 글은 이 키로 맞춘다 —
      "CSS"와 "css"가 다른 태그로 갈라지면 인덱스에 같은 태그가 두 줄 서고 한쪽 글이 필터에서 빠진다.
      app.js·post.js가 같은 함수를 써야 ?tags= 링크와 인덱스 판정이 어긋나지 않는다(meeting-05 dev 7). */
@@ -250,21 +229,6 @@
     return p ? p.y : '';
   }
 
-  /* recentDays 이내일 때만 "3일 전" 문자열을 돌려준다. 그 밖이면 빈 문자열. */
-  function fmtRelative(iso, nowDate) {
-    var date = toDate(iso);
-    if (!date) return '';
-    var now = nowDate || new Date();
-    var diff = now.getTime() - date.getTime();
-    var minute = 60000, hour = 3600000, day = 86400000;
-    if (diff < 0) return '';                       // 미래 날짜는 상대 표기를 생략한다
-    if (diff >= CFG.recentDays * day) return '';
-    if (diff < minute) return '방금 전';
-    if (diff < hour) return Math.floor(diff / minute) + '분 전';
-    if (diff < day) return Math.floor(diff / hour) + '시간 전';
-    return Math.floor(diff / day) + '일 전';
-  }
-
   /* created와 updated가 같은 순간인지. 같으면 "수정" 표기를 숨긴다(같은 날짜 두 번은 노이즈). */
   function sameMoment(a, b) {
     if (!a || !b) return true;
@@ -375,7 +339,14 @@
      role은 토스트 요소 자신에게 — 오류는 alert(끼어들어 읽힘), 나머지는 status(차례를 기다림).
      #toastArea의 aria-live="polite"와 같은 뜻을 두 번 말하지 않으려면 컨테이너가 아니라 항목에 둔다(계약서 §7, #98). */
 
-  var TOAST_MS = 2600;
+  /* 머무는 시간은 종류별이다(계약서 §8-1, v4.1). 2.6초 하나였을 때 한국어 50자 경고가 끝까지 읽히기 전에 사라졌다 —
+     경고·오류는 할 일이 담긴 문장이라 더 오래 둔다. 포인터·포커스가 떠나면 남은 시간이 아니라 RESUME을 새로 센다:
+     "읽다가 손을 뗐다"는 이미 다 읽었다는 뜻이라 원래 길이를 다시 줄 이유가 없고, 너무 짧으면 떼자마자 사라져 놀란다. */
+  var TOAST_MS = { ok: 3200, warn: 5200, err: 5200 };
+  var TOAST_MS_DEFAULT = 3200;
+  var TOAST_RESUME_MS = 2000;
+  /* 퇴장 transition(--dur-fast 160ms)이 끝난 뒤에 DOM에서 뺀다. 줄이면 사라지는 중간에 잘린다(§8-1). */
+  var TOAST_REMOVE_MS = 400;
 
   function toastArea() {
     var area = document.getElementById('toastArea');
@@ -396,22 +367,59 @@
     area.appendChild(node);
     /* 다음 프레임에 is-visible을 붙여야 CSS transition이 걸린다. */
     window.requestAnimationFrame(function () { node.classList.add('is-visible'); });
-    window.setTimeout(function () {
+    holdToast(node, Object.prototype.hasOwnProperty.call(TOAST_MS, kind) ? TOAST_MS[kind] : TOAST_MS_DEFAULT);
+    return node;
+  }
+
+  /* 포인터가 위에 있거나 안에 포커스가 있는 동안은 사라지지 않는다(WCAG 2.2.1 — 읽는 중에 치우지 않는다).
+     둘을 따로 센다: 포커스가 남은 채 포인터만 떠났는데 타이머가 다시 돌면, 키보드로 보던 사람의 토스트가 사라진다. */
+  function holdToast(node, firstMs) {
+    var timer = 0;
+    var hovered = false;
+    var focused = false;
+    var leaving = false;
+
+    function dismiss() {
+      leaving = true;
       node.classList.remove('is-visible');
       window.setTimeout(function () {
         if (node.parentNode) node.parentNode.removeChild(node);
-      }, 400);
-    }, TOAST_MS);
-    return node;
+      }, TOAST_REMOVE_MS);
+    }
+
+    function schedule(ms) {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(dismiss, ms);
+    }
+
+    function pause() {
+      if (leaving) return;
+      window.clearTimeout(timer);
+    }
+
+    function resume() {
+      if (leaving || hovered || focused) return;
+      schedule(TOAST_RESUME_MS);
+    }
+
+    node.addEventListener('mouseenter', function () { hovered = true; pause(); });
+    node.addEventListener('mouseleave', function () { hovered = false; resume(); });
+    node.addEventListener('focusin', function () { focused = true; pause(); });
+    node.addEventListener('focusout', function (e) {
+      /* 토스트 안의 다른 요소로 옮겨 가는 중이면 아직 안에 있다. */
+      if (e.relatedTarget && node.contains(e.relatedTarget)) return;
+      focused = false;
+      resume();
+    });
+
+    schedule(firstMs);
   }
 
   Blog.util = {
     qs: qs, qsa: qsa, el: el, on: on, append: append, clear: clear, setHidden: setHidden,
-    escapeHtml: escapeHtml, hashCode: hashCode, hashUnit: hashUnit,
     normTag: normTag, slugHeading: slugHeading, slugAscii: slugAscii, clamp: clamp, pad2: pad2,
     sortCats: sortCats, entryCard: entryCard,
-    toDate: toDate, fmtDot: fmtDot, fmtKo: fmtKo, yearOf: yearOf,
-    fmtRelative: fmtRelative, sameMoment: sameMoment,
+    toDate: toDate, fmtDot: fmtDot, fmtKo: fmtKo, yearOf: yearOf, sameMoment: sameMoment,
     nowIsoKst: nowIsoKst, todayStampKst: todayStampKst,
     debounce: debounce, rafThrottle: rafThrottle,
     getQuery: getQuery, setQuery: setQuery,

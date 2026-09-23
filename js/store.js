@@ -33,9 +33,17 @@
     }
   }
 
+  /* 재검증은 "목록" 두 파일(index.json·categories.json)에만 건다(m4, meeting-07).
+     이 둘은 새 글·새 분류가 생겼는지를 말하는 파일이라, 푸시 직후 Pages의 max-age(600초) 동안 옛 목록이
+     보이면 "올렸는데 안 보인다"가 된다. 조건부 요청(304)이라 바뀌지 않았으면 본문은 다시 받지 않는다.
+     .md 본문은 기본 캐시 정책을 따른다 — 방문자가 같은 글을 다시 열 때마다 왕복을 치를 이유가 없고,
+     새 글은 캐시에 없으니 목록에서 곧바로 열린다. 로컬 편집 환경(start.ps1·server/)은 응답 자체가
+     Cache-Control: no-store라 기본 정책이어도 저장 직후 옛 본문을 읽지 않는다. */
+  var REVALIDATE = { cache: 'no-cache' };
+
   function fetchTextStrict(url, opts) {
     guardProtocol();
-    return window.fetch(url, opts || { cache: 'no-cache' })
+    return window.fetch(url, opts)
       .then(function (res) {
         if (res.status === 404) throw fail('notfound', url + ' 파일을 찾을 수 없습니다.');
         if (!res.ok) throw fail('network', url + ' 요청 실패 (HTTP ' + res.status + ')');
@@ -378,7 +386,7 @@
     /* fetchTextStrict는 file:// 에서 동기적으로 throw한다. 호출부가 항상 Promise를 받도록 감싼다. */
     catError = null;
     catPromise = Promise.resolve()
-      .then(function () { return fetchTextStrict(CFG.paths.categories); })
+      .then(function () { return fetchTextStrict(CFG.paths.categories, REVALIDATE); })
       .then(function (text) {
         var json;
         try {
@@ -447,7 +455,7 @@
     return raw || CFG.category.fallbackName;
   }
 
-  /* slug → 글 수. 인덱스의 .index-count와 .is-empty 판정에 쓴다. */
+  /* slug → 글 수. 사이드바의 개수·.is-empty 판정과 목록의 #postList[data-cats](app.js)에 쓴다. */
   function categoryCounts(posts) {
     var counts = Object.create(null);
     (posts || []).forEach(function (post) {
@@ -517,7 +525,7 @@
     /* fetchTextStrict는 file:// 에서 동기적으로 throw한다. 그대로 두면 호출부의 .catch가 아니라
        스크립트 자체가 멈춰서 "로컬 서버로 열어 주세요" 안내가 뜨지 않는다. */
     indexPromise = Promise.resolve()
-      .then(function () { return fetchTextStrict(CFG.paths.index); })
+      .then(function () { return fetchTextStrict(CFG.paths.index, REVALIDATE); })
       .then(function (text) {
         var json;
         try {
@@ -661,8 +669,6 @@
         return post;
       });
   }
-
-  function peekPost(id) { return postCache[id] || null; }
 
   /* 목록의 기본 정렬(고정 글 먼저 · 그다음 최신 게시순)에서의 앞뒤 글.
      created만 보고 정렬하면 목록 맨 위에 있던 고정 글이 "이전/다음"에서는 중간에 끼어 있어,
@@ -836,7 +842,6 @@
     getCategoryError: getCategoryError,
     findMeta: findMeta,
     loadPost: loadPost,
-    peekPost: peekPost,
     neighbors: neighbors,
     loadCategories: loadCategories,
     getCategoriesSync: getCategoriesSync,

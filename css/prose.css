@@ -59,7 +59,7 @@
 .prose h1 {
   margin-block: var(--sp-10) var(--sp-5);
   font-size: var(--fs-3xl);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   line-height: var(--lh-tight);
 }
 
@@ -67,7 +67,7 @@
   margin-block: var(--sp-10) var(--sp-5);
   padding-block-end: var(--sp-3);
   font-size: var(--fs-2xl);
-  font-weight: 750;
+  font-weight: var(--fw-bold);
   line-height: var(--lh-head);
   /* 왼쪽 28px짜리 짧은 액센트 선. background로 그려서
      border를 쓸 때처럼 레이아웃을 건드리지 않는다.
@@ -81,7 +81,7 @@
 .prose h3 {
   margin-block: var(--sp-8) var(--sp-4);
   font-size: var(--fs-xl);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: var(--lh-head);
 }
 
@@ -96,17 +96,17 @@
 .prose h4 {
   margin-block: var(--sp-7) var(--sp-3);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: var(--lh-head);
   color: var(--c-text);
 }
 
+/* v4.0(M1): 넓은 자간을 뗐다 — 한글 제목에서 자간은 단어를 흩을 뿐이다. h4와의 차이는 크기(--fs-md)와 색(mute)이 만든다. */
 .prose h5,
 .prose h6 {
   margin-block: var(--sp-6) var(--sp-3);
   font-size: var(--fs-md);
-  font-weight: 700;
-  letter-spacing: var(--ls-wide);
+  font-weight: var(--fw-bold);
   color: var(--c-text-mute);
 }
 
@@ -125,7 +125,7 @@
 
 .prose strong,
 .prose b {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   /* 본문색과 같으면 굵기만으로 구분된다. 한글 고딕은 굵기 대비가 약해서
      아주 살짝 더 진하게 눌러 줘야 강조로 읽힌다. */
   color: color-mix(in oklab, var(--c-text) 92%, var(--c-accent));
@@ -167,13 +167,15 @@
    ========================================================================= */
 .prose a {
   color: var(--c-accent);
-  font-weight: 500;
+  font-weight: var(--fw-text);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-decoration-color: color-mix(in oklab, var(--c-accent) 36%, transparent);
   text-underline-offset: 0.22em;
+  /* v4.1(UX-§7 motion-consistency): 밑줄 색도 --dur-fast. v4.0까지 이것 하나만 --dur(260)이라 hover 때 글자색(160)이 먼저 바뀌고
+     밑줄이 100ms 뒤따라왔다 — 사이트의 "색 전환 = --dur-fast" 규칙(계약서 §11 표)과 같게. */
   transition:
-    text-decoration-color var(--dur) var(--ease),
+    text-decoration-color var(--dur-fast) var(--ease),
     text-decoration-thickness var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease);
 }
@@ -184,14 +186,21 @@
   text-decoration-thickness: 2px;
 }
 
-/* markdown.js가 외부 링크에 target=_blank를 붙인다. 새 창임을 미리 알린다. */
+/* markdown.js가 외부 링크에 target=_blank를 붙인다. 새 창임을 미리 알린다.
+   v4.1(계약서 §1-2 원칙 7 예외 · §5-7 — UX-§1 icon-context):
+   ① 이 화살표는 원칙 7의 둘째 예외다 — 판별법("지우면 무엇을 잃는가")에 답이 있다: "누르면 이 사이트를 떠나 새 창이 열린다".
+   ② 스크린리더는 생성 콘텐츠를 읽는다 — v4.0은 "북동쪽 화살표"라고 읽었다. CSS 대체 텍스트(content: "…" / "…")로 "새 창"이라 읽힌다.
+      대체 텍스트 문법을 모르는 브라우저는 둘째 선언을 버리고 첫째(화살표만)를 쓴다.
+   ③ U+2060(단어 잇기)을 화살표 앞에 둔다 — 360px에서 "MDN 문서"와 "↗"가 다른 줄로 갈라졌다(실측). 링크 끝 글자와 화살표를 붙여 둔다. */
 .prose a[target="_blank"]::after {
-  content: "↗";
+  content: "\2060↗";
+  content: "\2060↗" / " (새 창)";
   margin-inline-start: 0.15em;
   font-size: .78em;
   vertical-align: 0.15em;
   text-decoration: none;
-  opacity: .65;
+  /* v4.1: .65 → .8. 뜻을 가진 기호가 되었으니(위 ①) 비텍스트 대비 3:1을 넘겨야 한다 — .65에서 약 2.8:1이었다. */
+  opacity: .8;
 }
 
 /* 제목 안 링크는 제목 색을 유지한다(액센트 제목은 위계를 망친다). */
@@ -226,7 +235,7 @@
 /* 마커에 액센트를 줘 스캔할 때 목록 항목의 시작점이 즉시 잡히게 한다. */
 .prose li::marker {
   color: color-mix(in oklab, var(--c-accent) 72%, var(--c-text-mute));
-  font-weight: 600;
+  font-weight: var(--fw-bold);
 }
 
 /* ── 체크리스트(GFM `- [ ]`) ──────────────────────────────────────────────
@@ -353,7 +362,7 @@
   /* 액센트를 6%만 섞어 "그냥 회색 면"이 아니라 이 사이트의 면으로 만든다. */
   background: color-mix(in oklab, var(--c-accent) 6%, var(--c-surface-2));
   border-block-end: 1px solid var(--c-border);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--c-text);
   /* 열 이름은 줄바꿈하지 않는다 — 두 줄이 되면 열 경계가 흐려진다. */
   white-space: nowrap;
@@ -450,12 +459,14 @@
      코드 배경과 같은 계열(라이트 중성 회백, 다크 #303132 근처)이어야 "종이 위의 에디터 창"이 한 덩어리로 읽힌다. */
   background: color-mix(in oklab, var(--code-border) 30%, var(--code-bg));
   font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: var(--ls-wide);
 }
 
+/* v4.0(M1·M3, 계약서 §2·§5-7): 굵기·자간이 둘로 갈린다. 언어 라벨은 라틴 "토큰"(java·SQL)이라 --ls-wide를 쓰는 두 자리 중 하나이고
+   굵기는 --fw-text(메타), 복사 버튼은 누르는 것이라 --fw-bold · 자간 0("복사"는 한글이다). 대문자 강제는 markdown.js에서 뺐다. */
 .code-lang {
   grid-column: 1;
+  font-weight: var(--fw-text);
+  letter-spacing: var(--ls-wide);
   padding: var(--sp-2) var(--sp-4);
   min-inline-size: 0;
   overflow: hidden;
@@ -469,12 +480,13 @@
 
 .code-copy {
   grid-column: 2;
+  font-weight: var(--fw-bold);
   padding-inline: var(--sp-4);
   /* 머리띠 높이를 결정하는 값이다(.code-lang이 stretch로 따라온다).
      --h-control-sm은 pointer:coarse에서 44px로 올라가 모바일에서 복사 버튼이 커진다. */
   min-block-size: var(--h-control-sm);
   color: var(--c-text-dim);
-  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), opacity var(--dur) var(--ease);
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 
 .code-copy:hover {
@@ -486,13 +498,10 @@
 
 .code-copy:focus-visible { outline-offset: -3px; }
 
-/* 터치 기기에는 hover가 없다. 복사 버튼을 hover로만 드러내면 영영 못 누른다.
-   → 기본은 "항상 보임". hover가 되는 기기에서만 평소 흐리게 두었다가 또렷해진다. */
-@media (hover: hover) and (pointer: fine) {
-  .code-copy { opacity: .5; }
-  .code-wrap:hover .code-copy,
-  .code-wrap:focus-within .code-copy { opacity: 1; }
-}
+/* v4.1(계약서 §5-7 — UX-§1 color-contrast · §2 hover-vs-tap): v4.0까지 마우스 기기에서 복사 버튼을 opacity .5로 흐려 두었다가
+   코드 블록에 올리면 또렷하게 했다. 흐린 동안 "복사" 글자의 대비가 7.2 → 약 2.4:1(라이트)로 떨어져 AA에 못 미쳤고,
+   키보드·스크린 확대 사용자는 hover 없이 그 흐린 글자를 읽어야 했다. hover에만 기대는 드러냄을 걷어 낸다 — 늘 또렷하다.
+   머리띠 안의 작은 글자 버튼이라 늘 보여도 코드와 겨루지 않는다. */
 
 /* (v2.3: 여기 있던 `@media (pointer: coarse) { .code-copy { min-block-size: --h-control } }`를
    지웠다. --h-control-sm이 이미 coarse에서 44px로 올라가므로 값이 같은 재선언이었고,
@@ -552,7 +561,7 @@
    HTML/XML 태그·속성. 색을 주지 "않는" 것: 클래스명 · 지역 변수 · 매개변수 · 호출되는 메서드 · 내장 객체 —
    전부 본문색이다. hljs는 선언과 호출을 가르지 않으므로(둘 다 .hljs-title.function_) 함수는 전부 선언색이다.
    굵기·기울임도 IDE를 따른다 — IDE 편집기는 한 굵기다. v3.6까지 키워드·함수·타입에 걸었던 600은 뗐다
-   (키워드가 굵으면 자바 코드의 절반이 굵다). 주석 기울임은 IntelliJ Light의 설정(FONT_TYPE 2)이다.
+   (키워드가 굵으면 자바 코드의 절반이 굵다). 주석 기울임(IntelliJ Light FONT_TYPE 2)은 v4.0(m7)에 뗐다 — 아래 .hljs-comment.
    주석까지 코드 배경 대비 4.5:1을 넘긴다 — IDE 원본이 못 미치는 값은 tokens.css에서 "AA 보정"했다.
    ========================================================================= */
 .hljs { background: transparent; color: var(--code-text); }
@@ -568,7 +577,9 @@
 .hljs-quote,
 .hljs-regexp      { color: var(--hl-string); }
 
-.hljs-comment     { color: var(--hl-comment); font-style: italic; }
+/* v4.0(m7, 계약서 §5-7-1): 기울임을 뗐다. 한글 폰트엔 이탤릭이 없어 브라우저가 글자를 기울여 합성한다 — 한글 주석이 비스듬히 뭉개졌다.
+   주석은 색(--hl-comment)만으로 이미 구별된다. */
+.hljs-comment     { color: var(--hl-comment); }
 
 .hljs-number      { color: var(--hl-number); }
 
@@ -606,8 +617,8 @@
 .hljs-selector-pseudo { color: var(--hl-selector); }
 
 /* 마크다운 안의 마크다운 — 제목은 굵게(코드가 아니라 문서 구조라 굵기가 정보다) */
-.hljs-section     { color: var(--hl-title); font-weight: 700; }
-.hljs-strong      { font-weight: 700; }
+.hljs-section     { color: var(--hl-title); font-weight: var(--fw-bold); }
+.hljs-strong      { font-weight: var(--fw-bold); }
 .hljs-emphasis    { font-style: italic; }
 
 /* diff: 글자색만 바꾸면 줄 단위 변화가 안 보인다. 줄 전체에 옅은 면을 깐다. */
@@ -684,7 +695,7 @@
 }
 
 .prose summary {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   cursor: pointer;
   /* 기본 마커는 브라우저마다 위치가 제각각이라 직접 그린다. */
   list-style: none;
@@ -729,13 +740,15 @@
 /* ============================================================================
    10. 미리보기 패널 안의 .prose
    write.html은 좁은 칸에 같은 규칙을 쓴다. 여백만 압축해 두 배 스크롤을 막는다.
+   v4.1(계약서 §6): 압축은 "나란히" 보기에서만. "미리보기만"은 창이 상세 화면의 칼럼 폭(--w-prose)으로 가운데 서므로(layout.css §8)
+   여백까지 상세와 같아야 "보이는 대로 저장된다"가 글자 그대로 참이 된다 — 제목 위 여백이 다르면 같은 글이 다른 길이로 보인다.
    ========================================================================= */
-.preview-pane .prose h1,
-.preview-pane .prose h2 { margin-block-start: var(--sp-7); }
-.preview-pane .prose h3 { margin-block-start: var(--sp-6); }
-.preview-pane .prose .code-wrap,
-.preview-pane .prose .table-wrap,
-.preview-pane .prose img { margin-block: var(--sp-5); }
+.editor-split[data-mode="split"] .preview-pane .prose h1,
+.editor-split[data-mode="split"] .preview-pane .prose h2 { margin-block-start: var(--sp-7); }
+.editor-split[data-mode="split"] .preview-pane .prose h3 { margin-block-start: var(--sp-6); }
+.editor-split[data-mode="split"] .preview-pane .prose .code-wrap,
+.editor-split[data-mode="split"] .preview-pane .prose .table-wrap,
+.editor-split[data-mode="split"] .preview-pane .prose img { margin-block: var(--sp-5); }
 
 /* ============================================================================
    11. 좁은 화면 보정 — 360px에서 가로 스크롤이 생기면 실패다.

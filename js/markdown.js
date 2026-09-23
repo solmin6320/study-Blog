@@ -72,7 +72,7 @@
      그래도 남는 것은 CSP(script-src)가 한 번 더 막는다. style 속성은 CSP(style-src 'self')에도 걸리므로 살균에서 미리 뗀다. */
   function renderFragment(markdown) {
     if (!configure()) {
-      throw new Error('marked / DOMPurify 로드 실패 — CDN 스크립트를 확인하세요.');
+      throw new Error('marked / DOMPurify 로드 실패. CDN 스크립트를 확인하세요.');
     }
     var rawHtml = window.marked.parse(String(markdown || ''));
     return window.DOMPurify.sanitize(rawHtml, {
@@ -94,7 +94,7 @@
     html: 'HTML', xml: 'HTML', css: 'CSS', scss: 'SCSS', json: 'JSON', md: 'Markdown',
     markdown: 'Markdown', bash: 'Bash', sh: 'Shell', shell: 'Shell', sql: 'SQL',
     python: 'Python', py: 'Python', java: 'Java', yaml: 'YAML', yml: 'YAML',
-    diff: 'Diff', plaintext: 'TEXT', text: 'TEXT'
+    diff: 'Diff', plaintext: 'text', text: 'text'
   });
 
   function langOf(codeEl) {
@@ -127,7 +127,9 @@
       var wrap = U.el('div', { class: 'code-wrap' });
       pre.parentNode.insertBefore(wrap, pre);
 
-      var label = lang ? (LANG_LABEL[lang] || lang.toUpperCase()) : 'TEXT';
+      /* v4.0(M3, 계약서 §5-7): 강제 대문자 금지. 이름표에 있는 언어는 고유 표기(Java · SQL — 고유명사의 대소문자는 장식이 아니다),
+         없는 언어는 적힌 그대로(kotlin), 언어가 없으면 text. KOTLIN·TEXT 같은 ALL-CAPS 데이터 라벨은 FD 클리셰⑤다. */
+      var label = lang ? (LANG_LABEL[lang] || lang) : 'text';
       wrap.appendChild(U.el('span', { class: 'code-lang', 'aria-hidden': 'true', text: label }));
 
       var button = U.el('button', {
@@ -195,7 +197,8 @@
   function tableLabel(wrap, ordinal) {
     var context = contextTextFor(wrap);
     if (context.length > TABLE_LABEL_MAX) context = context.slice(0, TABLE_LABEL_MAX - 1).trim() + '…';
-    return '표 ' + ordinal + (context ? ' · ' + context : '');
+    /* v4.0: 가운뎃점 대신 쉼표 — 스크린리더가 "·"를 "가운뎃점"으로 읽거나 건너뛰어 두 말이 붙는다. 쉼표는 숨을 한 번 쉰다. */
+    return '표 ' + ordinal + (context ? ', ' + context : '');
   }
 
   /* 넘치는 표에만 스크롤 지역 표식(role·tabindex·이름)을 준다.
@@ -263,6 +266,14 @@
     });
   }
 
+  /* 본문 이미지(m3, meeting-07).
+     lazy·async — 긴 글의 아래쪽 그림이 첫 화면의 글자보다 먼저 대역폭을 먹지 않게 한다.
+     width/height는 주지 않는다. 마크다운(![alt](src))에는 크기가 없고, 알아내려면 그림을 미리 받아야 해서
+     lazy가 아낀 것을 도로 쓴다. 자리 이동(CLS)은 lazy 덕에 대부분 화면 밖에서 일어난다 —
+     크기를 꼭 고정해야 하는 그림은 작성자가 <img width height>로 직접 쓰면 살균을 통과해 그대로 남는다.
+     alt가 없으면 alt=""(장식)로 둔다. 속성이 아예 없으면 스크린리더가 파일 이름을 대신 읽는다.
+     관리자에게 경고하지 않는 이유 — 이 블로그의 그림은 대개 본문이 이미 말한 것을 보여 주는 보조라 장식 판정이
+     맞는 경우가 많고, 글을 열 때마다 토스트·콘솔이 울리면 진짜 경고(index.json 어긋남)가 묻힌다. */
   function enhanceImages(root) {
     U.qsa('img', root).forEach(function (img) {
       img.setAttribute('loading', 'lazy');
@@ -292,11 +303,28 @@
     return list;
   }
 
+  /* 본문의 `# 제목`(h1)은 h2로 내린다(M8, meeting-07).
+     페이지의 h1은 글 제목(#postTitle) 하나다 — 본문 h1이 남으면 제목 계층이 둘로 갈라지고,
+     목차(collectHeadings)는 h2·h3만 모으므로 그 절이 목차에서 통째로 빠진다.
+     글 파일은 고치지 않는다(.md가 진실). 화면에서만 내린다. 에디터 미리보기도 같은 경로라 "보이는 대로"가 유지된다.
+     옮기는 속성은 이미 살균을 통과한 값뿐이라 새로 열리는 통로가 없다. */
+  function demoteH1(root) {
+    U.qsa('h1', root).forEach(function (h1) {
+      var h2 = document.createElement('h2');
+      Array.prototype.forEach.call(h1.attributes, function (attr) { h2.setAttribute(attr.name, attr.value); });
+      while (h1.firstChild) h2.appendChild(h1.firstChild);
+      h1.parentNode.replaceChild(h2, h1);
+    });
+  }
+
   /* 렌더 + 후처리를 한 번에. 반환값의 headings로 TOC를 만든다. */
   function renderInto(container, markdown, options) {
     var opts = options || {};
     U.clear(container);
-    container.appendChild(renderFragment(markdown));
+    /* 문서에 붙이기 전 조각에서 내린다 — 붙인 뒤 바꾸면 제목 수만큼 레이아웃을 다시 한다. */
+    var frag = renderFragment(markdown);
+    demoteH1(frag);
+    container.appendChild(frag);
 
     enhanceTables(container);
     enhanceCodeBlocks(container);

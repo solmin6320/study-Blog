@@ -15,11 +15,8 @@
 
   var THEME_KEY = CFG.storageKeys.theme;
 
-  /* CSS 쪽은 base.css 끝의 @media (prefers-reduced-motion: reduce) 블록이 전부 처리한다.
-     이건 그 판정을 JS에서도 물어볼 수 있게 남겨 둔 창구다(타이머·스크롤 같은 CSS 밖의 동작용). */
-  function prefersReducedMotion() {
-    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }
+  /* (v4.0 meeting-07 m2: prefersReducedMotion() 삭제 — 호출 0건. 감속 모션은 base.css의 @media (prefers-reduced-motion) 블록이
+     전부 처리하고, JS 쪽 유일한 시간 의존(initIntro)은 CSS가 막을 display:none으로 두는 것을 getComputedStyle로 읽는다.) */
 
   /* ---------- 테마 ----------
      첫 적용은 <head> 인라인 스크립트가 한다(FOUC 방지). 여기서는 토글과 동기화만 담당. */
@@ -76,8 +73,13 @@
      .intro 자신의 animationend(v3.9: 2250ms — --hold-intro 500)를 받아 hidden을 붙이고 sessionStorage에 "봤다"고 적는다.
      다음 로드에서는 theme-init.js가 첫 페인트 전에 html[data-intro="done"]을 붙여 막을 없앤다.
 
-     여기서 data-intro를 붙이지 않는다 — 첫 방문에서 붙이면 본문 진입 애니메이션(intro-arrive)이
-     선택자 html:not([data-intro="done"])에서 빠져 그 프레임에 끊긴다.
+     v4.0(meeting-07 C4) — 건너뛰기와 inert. 첫 방문 2.25초 동안 헤더·본문은 opacity 0인데 Tab은 그 안으로 들어갔고
+     (포커스가 보이지 않는 곳에 앉는다 — WCAG 2.4.11), 그 시간을 끝낼 방법이 없었다. 이제:
+       · 막이 떠 있는 동안 body의 다른 자식 전부에 inert — Tab 정지점은 #introSkip 하나다.
+       · 끝내는 길 셋(버튼 · Esc · 그냥 기다리기)이 전부 finish()로 모인다.
+       · finish()는 data-intro="done"도 붙인다. v3.9는 "첫 방문에서 붙이면 intro-arrive가 그 프레임에 끊긴다"며 붙이지 않았는데,
+         자연 종료(animationend 2250ms)는 intro-arrive가 끝나는 시각과 같아 끊길 것이 없고, 건너뛰기에서는 "즉시 끊기"가 바로 원하는 일이다 —
+         이 속성이 없으면 버튼을 눌러도 본문은 제 시각(1650ms)까지 투명하다.
      테마 토글(applyTheme)과 접점 0 — 테마에는 전등도 애니메이션도 없다(사용자 요청). */
 
   var INTRO_KEY = (CFG.storageKeys && CFG.storageKeys.intro) || 'blogIntro';
@@ -96,27 +98,59 @@
     var intro = document.getElementById('intro');
     if (!intro) return; /* index.html이 아니다 */
 
+    var skip = document.getElementById('introSkip');
+    var inerted = [];
     var done = false;
-    function finish() {
+
+    function onKey(e) {
+      if (e.key !== 'Escape' && e.key !== 'Esc') return;
+      e.preventDefault();
+      finish(true);
+    }
+
+    /* moveFocus: 사용자가 끝냈을 때(버튼·Esc) 또는 버튼에 포커스가 있던 채로 막이 걷힐 때만 #main으로 옮긴다 —
+       버튼이 사라지면 포커스가 <body>로 떨어져 다음 Tab이 페이지 맨 앞으로 되돌아간다. 사용자가 아무것도 시작하지 않은
+       경우(reduced-motion·재방문)에는 옮기지 않는다 — 페이지를 열자마자 포커스가 튀면 스크린리더가 헤더를 건너뛴다. */
+    function finish(moveFocus) {
       if (done) return;
       done = true;
+      var hadFocus = intro.contains(document.activeElement);
       intro.hidden = true;
+      inerted.forEach(function (node) { node.removeAttribute('inert'); });
+      inerted = [];
+      document.removeEventListener('keydown', onKey);
+      document.documentElement.setAttribute('data-intro', 'done');
       try { window.sessionStorage.setItem(INTRO_KEY, '1'); } catch (err) { /* 저장 실패는 무시 — 다음 방문에 한 번 더 볼 뿐 */ }
+      if (moveFocus || hadFocus) {
+        var main = document.getElementById('main');
+        if (main) main.focus();
+      }
     }
 
     /* 같은 세션에서 이미 봤거나(theme-init이 data-intro="done"), reduced-motion으로 CSS가 막을
-       display:none으로 두었으면 animationend가 나지 않는다 — 즉시 마감. */
+       display:none으로 두었으면 animationend가 나지 않는다 — 즉시 마감(포커스는 그대로). */
     var style = window.getComputedStyle(intro);
     if (document.documentElement.getAttribute('data-intro') === 'done' || style.display === 'none') {
-      finish();
+      finish(false);
       return;
     }
 
-    /* animationend는 버블링한다 — .intro-bulb::after의 intro-bulb-on이 2.4초에 먼저 올라온다.
+    /* 막이 떠 있는 동안 나머지 전부를 inert로 — 포커스·클릭·접근성 트리에서 통째로 빠진다(계약서 §3-5).
+       이미 inert인 것은 건드리지 않는다(되돌릴 때 원래 상태를 지키기 위해 우리가 붙인 것만 기억한다). */
+    Array.prototype.forEach.call(document.body.children, function (node) {
+      if (node === intro || node.tagName === 'SCRIPT' || node.hasAttribute('inert')) return;
+      node.setAttribute('inert', '');
+      inerted.push(node);
+    });
+
+    document.addEventListener('keydown', onKey);
+    if (skip) skip.addEventListener('click', function () { finish(true); });
+
+    /* animationend는 버블링한다 — .intro-bulb::after의 intro-bulb-on이 먼저 올라온다.
        그걸 받아 hidden을 붙이면 전구가 켜지는 순간 막이 사라져 화면이 튄다. 막 자신의 것만 받는다. */
     intro.addEventListener('animationend', function (e) {
       if (e.target !== intro) return;
-      finish();
+      finish(false);
     });
 
     /* 안전망: 백그라운드 탭 등에서 이벤트가 새도 막이 남지 않게. CSS보다 500ms 길게.
@@ -124,7 +158,7 @@
     var delay = parseCssTime(style.animationDelay);
     var duration = parseCssTime(style.animationDuration);
     var total = (isNaN(delay) || isNaN(duration)) ? INTRO_FALLBACK_MS : delay + duration + 500;
-    window.setTimeout(finish, total);
+    window.setTimeout(function () { finish(false); }, total);
   }
 
   /* ---------- 모달 ----------
@@ -440,9 +474,12 @@
       closeSide(false);
     });
 
-    /* Esc: 오버레이에서만. 모달이 위에 떠 있으면 모달의 Esc가 우선이다. */
+    /* Esc: 오버레이에서만. 모달이 위에 떠 있으면 모달의 Esc가 우선이다.
+       v4.0(meeting-07 m8): 사이드바가 오버레이로 열려 있지 않으면(닫힘·도킹) 아무것도 하지 않는다 — preventDefault도 없다.
+       write.html 본문의 Esc("다음 Tab은 나가기", editor.js)와 같은 키라, 여기가 손대지 않아야 한쪽만 일어난다.
+       반대로 오버레이가 떠 있으면 editor.js가 isSideOverlay()를 보고 비켜선다. 한글 조합 중 Esc는 IME의 것이다. */
     U.on(document, 'keydown', function (e) {
-      if (e.key !== 'Escape' || openModalState || !isOverlay()) return;
+      if (e.key !== 'Escape' || e.isComposing || openModalState || !isOverlay()) return;
       e.preventDefault();
       closeSide(true);
     });
@@ -590,8 +627,8 @@
 
     /* 현재 페이지 내비게이션 표시 — v3.4(계약서 §3-3): 상태는 aria-current="page" 하나다.
        .is-active 클래스 토글은 폐기됐다(CSS가 더 이상 읽지 않는다 — 붙여 두면 계약서에 없는 클래스가 된다).
-       "태그"(index.html#tags)는 split('?')[0]가 'index.html#tags'로 남아 here와 달라 저절로 빠지고,
-       post.html에서 "글"이 page를 받지 않는 것도 here === 'post.html' 판정이 보장한다. */
+       post.html에서 "글"이 page를 받지 않는 것은 here === 'post.html' 판정이 보장한다.
+       (v4.0: "태그"(index.html#tags) 항목은 앵커 대상과 함께 폐기 — 계약서 §3-3.) */
     var here = window.location.pathname.split('/').pop() || 'index.html';
     U.qsa('.site-nav .nav-link').forEach(function (link) {
       var target = (link.getAttribute('href') || '').split('?')[0];
@@ -612,12 +649,13 @@
     initIntro: initIntro,
     applyTheme: applyTheme,
     currentTheme: currentTheme,
-    prefersReducedMotion: prefersReducedMotion,
     modal: modal,
     closeModal: closeModal,
     toast: U.toast,
     /* v3.2 사이드바. initSide는 initShell이 부르지만, 셸을 따로 초기화하는 페이지를 위해 함께 내놓는다. */
     initSide: initSide,
-    renderSide: renderSide
+    renderSide: renderSide,
+    /* v4.0(m8): 사이드바가 "오버레이"로 떠 있는가(열림 && 도킹 아님). Esc의 주인을 정할 때 editor.js가 묻는다. */
+    isSideOverlay: isOverlay
   };
 })(window, document);
