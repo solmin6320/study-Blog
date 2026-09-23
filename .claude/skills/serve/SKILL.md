@@ -7,6 +7,26 @@ description: 로컬 에디터 서버(FastAPI, Docker)를 켜고 끄고 상태를
 
 규약은 `docs/api.md`. 코드는 `server/`(pm-integrator 소유). Docker Desktop이 켜져 있어야 한다.
 
+## 0. 첫 기동 전 — 커밋 신원 확인 (건너뛰지 않는다)
+
+자동 커밋(api.md §2-1)이 기본으로 켜져 있지만, **신원이 없으면 저장할 때마다 커밋이 건너뛰어진다** — 저장은 되고 응답은 `git.committed:false, reason:"커밋 신원 없음"`. 그러면 덮어쓴 글을 되돌릴 이력이 없다(meeting-08 D2). 컨테이너는 호스트의 **전역** git 설정을 못 본다.
+
+```bash
+P="C:/Users/user/Downloads/기술 블로그/기술 블로그"
+( cd "$P" && git config --local --get user.name; git config --local --get user.email )   # 저장소 로컬 설정
+( cd "$P" && grep -E '^BLOG_GIT_(NAME|EMAIL)=' .env 2>/dev/null )                         # 또는 .env
+```
+둘 다 비어 있으면 **사용자에게 묻고**(에이전트가 이메일을 지어내지 않는다) 둘 중 하나로 한 번 적는다:
+```bash
+# (가) 저장소 로컬 설정 — 호스트의 git과 컨테이너가 함께 본다
+cd "$P" && git config user.name "<이름>" && git config user.email "<커밋에 쓰는 이메일>"
+# (나) .env (프로젝트 루트, .gitignore됨 · 정적 서빙 허용 목록 밖이라 /.env는 404 — api.md §1)
+BLOG_GIT_NAME=<이름>
+BLOG_GIT_EMAIL=<커밋에 쓰는 이메일>
+```
+- 2026-09-23 현재 이 PC는 둘 다 없다(`git config --local` 빈 출력, `.env` 없음).
+- 끄려면 `.env`에 `BLOG_AUTO_COMMIT=0`. `.env`를 바꾼 뒤에는 `docker compose up -d`로 재기동(환경 변수는 기동 때 읽힌다).
+
 ## 켜기
 
 ```bash
@@ -15,14 +35,8 @@ netstat -ano | grep :5500          # 비어 있어야 한다. start.ps1이 떠 �
 docker compose up -d --build       # 첫 실행은 이미지 빌드(1~2분). 이후는 수 초
 curl -s http://localhost:5500/api/health
 ```
-기대: `{"ok":true,"version":"1.1.0"}` — 수 ms. `git` 상태를 보려면 `curl -s 'http://localhost:5500/api/health?git=1'`(느릴 수 있음).
-
-- **자동 커밋**(api.md §2-1)이 기본으로 켜져 있다. 커밋 신원은 `.env`(프로젝트 루트, `.gitignore`됨)에 한 번 적는다:
-  ```
-  BLOG_GIT_NAME=김솔민
-  BLOG_GIT_EMAIL=<커밋에 쓰는 이메일>
-  ```
-  없으면 저장은 되지만 응답 `git.committed:false`(reason: 신원 없음). 끄려면 `.env`에 `BLOG_AUTO_COMMIT=0`. 바꾼 뒤 `docker compose up -d`로 재기동.
+기대: `{"ok":true,"version":"1.2.0"}` — 수 ms. `git` 상태를 보려면 `curl -s 'http://localhost:5500/api/health?git=1'`(느릴 수 있음).
+첫 저장 뒤 응답(또는 에디터 상태줄)에 `커밋 abc1234`가 붙는지 본다. `커밋 실패: 커밋 신원 없음`이면 §0으로 돌아간다.
 
 - 사용자가 직접 글을 쓸 때는 `-d` 없이 `docker compose up`(포그라운드) → `Ctrl+C`로 끝.
 - `server/*.py`를 고쳤으면 `docker compose restart`(코드는 볼륨 마운트라 재빌드 불필요). `requirements.txt`를 바꿨을 때만 `--build`.

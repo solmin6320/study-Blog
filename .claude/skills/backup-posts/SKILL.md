@@ -9,14 +9,18 @@ description: 학습 블로그의 글 데이터를 백업하고 무결성을 검�
 
 ## 1. 무결성 검증 (백업보다 먼저)
 
+글은 `posts/<분류>/<id>.md`에 있다(평면 `posts/*.md`는 옛 구조). 아래 명령은 둘 다 본다.
+**이 스킬은 읽기와 백업만 한다.** 문제를 찾아도 `.md`·`index.json`을 고치지 않는다 — 글 본문·frontmatter는 사용자 것이고, `index.json` 정합성 수정은 frontend-dev 몫(사용자 통보 + 단독 커밋)이다(CLAUDE.md "posts/의 소유 범위").
+
 ### 개수 일치
 ```bash
-ls posts/*.md | wc -l
+ls posts/*.md posts/*/*.md 2>/dev/null | wc -l
 grep -o '"id"' posts/index.json | wc -l
 ```
 다르면 **둘 중 하나가 유실**된 것이다. 어느 쪽이 빠졌는지 찾는다:
 ```bash
-for f in posts/*.md; do
+for f in posts/*.md posts/*/*.md; do
+  [ -f "$f" ] || continue
   id=$(basename "$f" .md)
   grep -q "\"$id\"" posts/index.json || echo "index.json에 없음: $id"
 done
@@ -24,7 +28,8 @@ done
 
 ### id ↔ 파일명 일치
 ```bash
-for f in posts/*.md; do
+for f in posts/*.md posts/*/*.md; do
+  [ -f "$f" ] || continue
   fname=$(basename "$f" .md)
   fid=$(grep -m1 '^id:' "$f" | sed 's/^id:[[:space:]]*//' | tr -d '\r')
   [ "$fname" = "$fid" ] || echo "불일치: 파일=$fname / frontmatter=$fid"
@@ -34,7 +39,8 @@ done
 
 ### 날짜 규칙
 ```bash
-grep -H '^created:\|^updated:' posts/*.md
+grep -H '^created:\|^updated:' posts/*/*.md
+# index.json과 .md의 시각이 다르면(드리프트) .md가 진실이다 — 보고만 한다(meeting-08 D15)
 ```
 - `updated`가 `created`보다 이른 글이 있는가 (논리적 오류)
 - 미래 날짜가 있는가
@@ -42,14 +48,16 @@ grep -H '^created:\|^updated:' posts/*.md
 
 ### 중복·필수 필드
 ```bash
-grep -h '^id:' posts/*.md | sort | uniq -d          # 중복 id
-grep -L '^title:' posts/*.md                         # 제목 없는 글
-grep -L '^summary:' posts/*.md                       # 요약 없는 글(목록 카드가 빈다)
+grep -h '^id:' posts/*/*.md | sort | uniq -d        # 중복 id
+grep -L '^title:' posts/*/*.md                       # 제목 없는 글
+grep -L '^summary:' posts/*/*.md                     # 요약 없는 글
 ```
 
-### JSON 문법
+### JSON 문법 (Python·Node 없음 — PowerShell 내장 파서)
 ```bash
-python -c "import json;json.load(open('posts/index.json',encoding='utf-8'));print('JSON OK')"
+for j in posts/index.json posts/categories.json; do
+  powershell.exe -NoProfile -Command "try { Get-Content -Raw -Encoding UTF8 '$j' | ConvertFrom-Json | Out-Null; 'JSON OK: $j' } catch { 'JSON 오류: $j - ' + \$_.Exception.Message }"
+done
 ```
 깨져 있으면 **목록 화면이 통째로 안 뜬다.** 최우선으로 고친다.
 

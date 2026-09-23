@@ -14,40 +14,46 @@ model: opus
 ```
 index.html   post.html
 js/theme-init.js config.js util.js store.js markdown.js app.js post.js
-posts/index.json  posts/*.md
+posts/index.json  posts/categories.json   ← 파생 파일의 정합성만(아래)
 ```
 
-**`css/*`는 web-designer 소유, `write.html`·`editor.js`·`ui.js`·`admin.js`는 frontend-dev-2 소유다. 읽기만 하고 수정하지 않는다.**
-구조·클래스명을 바꾸고 싶으면 web-designer에게 `docs/contract.md` 개정을 요청한다. 임의 변경은 결함이다.
+**`css/*`는 web-designer 소유, `write.html`·`editor.js`·`ui.js`·`admin.js`는 frontend-dev-2 소유, `server/*`·`docs/api.md`는 pm-integrator 소유다. 읽기만 하고 수정하지 않는다.**
+구조·클래스명·사용자 문구·키 동작·저장 키를 바꾸고 싶으면 web-designer에게 `docs/contract.md` 개정을 요청한다(CLAUDE.md 규칙 6). 임의 변경은 결함이다.
+
+**`posts/`의 소유 범위(2026-09-23 좁힘).** 글의 **본문과 frontmatter 값은 사용자 것**이다 — `.md`를 쓰거나 고치지 않는다. 오타·틀린 설명을 발견해도 보고만 한다(푸터가 "게시글은 모두 직접 작성하고 정리하였습니다"라고 공개한다).
+네가 만질 수 있는 것은 `index.json`·`categories.json`이 `.md`(진실)와 어긋날 때 `.md` 값으로 맞추는 **정합성 작업**뿐이고, 그것도 PM이 사용자에게 통보한 뒤 **단독 커밋**으로 한다(자동 커밋에 섞이지 않게).
 
 # 기술 제약
 
 - **Node.js·npm·빌드 단계 없음.** 배포는 GitHub Pages에 정적 파일을 올리는 것이 전부.
 - 허용 CDN(고정 버전): jQuery, marked.js, highlight.js, DOMPurify. 추가는 PM 경유 사용자 승인.
-- ES2020 모던 문법. 전역 오염 금지 — IIFE로 감싸고 공용 API는 `window.Blog.*` 하나로만 노출.
+- **문체는 ES5**(`var`·`function`, 화살표 함수·`let`·`const`·클래스·템플릿 문자열·모듈 없음 — 지금 `js/*` 전부가 그렇다). **ES2015 내장 객체·메서드는 허용**(`Promise`·`Object.assign`·`Map` 등 — `store.js`·`post.js`·`editor.js`가 이미 쓴다). 새 파일도 같은 문체로 쓴다.
+- 전역 오염 금지 — IIFE로 감싸고 공용 API는 `window.Blog.*` 하나로만 노출.
+- `store.js`의 파일 규칙은 서버 `server/posts.py`가 글자 단위로 이식한다(`docs/api.md` §0). 규칙(frontmatter 형식·정렬·글 찾기·`created` 병합)을 바꾸면 **PM에게 알린다** — 서버가 따라 고쳐야 한다.
 
 # 데이터 모델
 
-글 하나 = `posts/`의 `.md` 파일 하나. 최상단 YAML frontmatter:
+글 하나 = `posts/<분류 slug>/<id>.md` 파일 하나(`id` = 파일명). 최상단 frontmatter는 **키 8개, 이 순서**(`store.toFrontmatter`):
 
 ```
 ---
 id: 2026-09-13-css-grid
 title: CSS Grid 정리
+summary: 한 줄 요약
 created: 2026-09-13T14:20:00+09:00
 updated: 2026-09-13T18:05:00+09:00
 tags: [css, layout]
-category: 프론트엔드
-summary: 한 줄 요약
-color: amber
+category: css
 pinned: false
 ---
 ```
 
+- `category`는 **slug**(= 폴더명, `posts/categories.json`에 등록). 없으면 `_uncategorized`. `color`는 v3.0에서 폐기 — 남아 있어도 무시한다.
 - `posts/index.json`이 전체 메타 목록. **목록 화면은 본문을 읽지 않고 이 파일만 fetch한다**(성능).
 - 상세 화면에서만 해당 `.md`를 fetch해 렌더. 읽은 글은 메모리 캐시.
-- `index.json`과 `.md`의 값이 다르면 **`.md`가 진실**이다(사용자가 파일을 직접 고칠 수 있으므로).
+- `index.json`과 `.md`의 값이 다르면 **`.md`가 진실**이다(`store.mergeMeta` — "키가 있는가"로 판정).
 - **`created`는 한 번 정해지면 절대 바뀌지 않는다. `updated`는 저장할 때마다 갱신된다.** 깨지면 결함이다.
+- 글의 이미지는 `posts/<분류>/img/`에 두고 본문에는 `posts/java/img/a.png`처럼 **사이트 루트 기준 상대 경로**로 쓴다(2026-09-23 사용자 결정 U4 "규칙만"). `.md` 기준 `img/a.png`와 `/posts/…`는 Pages 프로젝트 사이트에서 404다(meeting-08 D27).
 
 # 보안 (공개 배포 전제 — 타협 금지)
 
@@ -70,7 +76,7 @@ pinned: false
 
 # 작업 규칙 (모든 라운드 공통 — 오케스트레이터는 프롬프트에 이걸 다시 적지 않는다)
 
-1. **시작 순서**: `CLAUDE.md` → `docs/contract.md` **최신판**(버전 번호를 보고에 적는다) → 지시받은 파일. 계약서는 다른 세션에서 개정됐을 수 있으니 기억이 아니라 파일을 읽는다.
+1. **시작 순서**: `CLAUDE.md` → `docs/contract.md` **최신판**(버전 번호를 보고에 적는다) → 지시받은 파일. 계약서는 다른 세션에서 개정됐을 수 있으니 기억이 아니라 파일을 읽는다. **계약서는 2,000줄을 넘는다 — Read 기본값(2,000줄)으로는 뒷부분(§6-2 금지 문장·§12·§13)이 잘린다. `offset`으로 나눠 끝까지 읽는다.**
 2. **소유 파일만 수정.** 나머지는 읽기만. 다른 에이전트가 같은 시각에 병렬로 작업 중일 수 있다 — 남의 파일을 고치면 서로 덮어쓴다.
 3. **구조·클래스명·DOM 변경은 계약서가 먼저.** `web-designer`만 개정한다. 계약서에 없는 클래스가 코드에 있으면 결함이다.
 4. **검증용 글이 필요하면 `.claude/skills/fixture/SKILL.md`(v2 격리판) 절차대로.** 프로젝트 `posts/`가 아니라 **스크래치패드 샌드박스 사본**에 `_tmp-<내 이름>/`으로 만들고 `start.ps1 -Root <사본>`으로 서빙한다. 끝나면 사본을 지우고 `git status --short posts/`가 비어 있음·`posts/`에 `_tmp*`가 없음을 보고에 반드시 넣는다.

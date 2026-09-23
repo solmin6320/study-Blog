@@ -30,13 +30,15 @@ _JS_WS = r"\s\ufeff"
 
 
 class PostsError(Exception):
-    """HTTP 계층이 상태 코드로 옮기는 오류. code는 docs/api.md §3의 값."""
+    """HTTP 계층이 상태 코드로 옮기는 오류. code는 docs/api.md §3의 값.
+    extra는 오류 객체에 code·message와 나란히 실리는 필드(409 exists의 path, 409 stale의 currentUpdated 등 — api.md §3-1)."""
 
-    def __init__(self, status: int, code: str, message: str):
+    def __init__(self, status: int, code: str, message: str, **extra: Any):
         super().__init__(message)
         self.status = status
         self.code = code
         self.message = message
+        self.extra = extra
 
 
 # ---------- 시각 (util.js nowIsoKst) ----------
@@ -584,6 +586,30 @@ class Repo:
         대소문자까지 정확히 같은 파일만 '있다'로 친다(exists_exact)."""
         return [p for p in self.candidates(post_id, hint, cats, trusted) if self.exists_exact(p)]
 
+    def find_anywhere(self, post_id: str, exclude_stem: str = "") -> list[Path]:
+        """서버 전용(store.js에 없음) — `ifNew`·`previousId`의 409 exists 판정용(api.md §2 PUT 동작 3).
+        posts/ 바로 아래와 **모든** 하위 폴더 한 단계(등록되지 않은 폴더·_uncategorized·_tmp* 포함)에서
+        `<id>.md`를 **대소문자 무시**로 찾는다. 화면이 찾는 순서(candidates)보다 넓게 본다 — 여기서 놓치면 새 글이
+        다른 글을 덮어쓴다(meeting-08 D1). 대소문자만 다른 파일도 NTFS에서는 같은 파일이라 '있다'로 친다.
+        exclude_stem: 이름이 정확히 `<exclude_stem>.md`인 파일은 뺀다(id 바꾸기에서 옛 파일 자신)."""
+        want = f"{post_id}.md".lower()
+        skip = f"{exclude_stem}.md" if exclude_stem else ""
+        folders = [self.posts_dir]
+        try:
+            folders += sorted(p for p in self.posts_dir.iterdir() if p.is_dir())
+        except OSError:
+            pass
+        out: list[Path] = []
+        for folder in folders:
+            try:
+                names = os.listdir(folder)
+            except OSError:
+                continue
+            for n in sorted(names):
+                if n.lower() == want and n != skip and (folder / n).is_file():
+                    out.append(folder / n)
+        return out
+
     def trusted_lookup(self, declared: str, hint: str, cats: list[dict] | None) -> bool:
         """store.loadPost — `declared`(index.json의 category)가 있고, 힌트가 없거나
         `categorySlug(hint) === categorySlug(declared)`이면 전수 탐색을 접는다."""
@@ -631,7 +657,8 @@ def _string_field(payload: dict, key: str, default: str = "") -> str:
 
 
 def validate_post_payload(post_id: str, payload: Any) -> dict:
-    """PUT /api/posts/{id} 본문 검증. 통과하면 {title, summary, created, tags, category, pinned, body, previous_id}."""
+    """PUT /api/posts/{id} 본문 검증. 통과하면
+    {title, summary, created, tags, category, pinned, body, previous_id, if_new, expected_updated}."""
     if not isinstance(payload, dict):
         raise PostsError(400, "bad_request", "요청 본문은 JSON 객체여야 합니다.")
     body_id = payload.get("id")
@@ -656,6 +683,16 @@ def validate_post_payload(post_id: str, payload: Any) -> dict:
     previous_id = _string_field(payload, "previousId")
     if previous_id and not is_safe_id(previous_id):
         raise PostsError(400, "bad_id", "previousId가 파일명 규칙에 맞지 않습니다.")
+    # v1.2 선택 필드(api.md §2 PUT 표). 빠지면 v1.1과 같은 동작(upsert)이다.
+    if_new = payload.get("ifNew", False)
+    if if_new is None:
+        if_new = False
+    if not isinstance(if_new, bool):
+        raise PostsError(400, "bad_request", "ifNew는 true/false여야 합니다.")
+    expected_updated = _js_trim(_string_field(payload, "expectedUpdated"))
+    if if_new and (previous_id or expected_updated):
+        raise PostsError(400, "bad_request",
+                         "ifNew는 previousId·expectedUpdated와 함께 보낼 수 없습니다(새 글에는 옛 id도 기준 버전도 없습니다).")
     return {
         "title": title,
         "summary": _string_field(payload, "summary"),
@@ -665,4 +702,6 @@ def validate_post_payload(post_id: str, payload: Any) -> dict:
         "pinned": pinned,
         "body": body,
         "previous_id": previous_id,
+        "if_new": if_new,
+        "expected_updated": expected_updated,
     }
