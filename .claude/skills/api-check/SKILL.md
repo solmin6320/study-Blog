@@ -16,7 +16,8 @@ description: 로컬 에디터 서버의 저장 API를 픽스처 글로 왕복 �
 
 ```bash
 P="C:/Users/user/Downloads/기술 블로그/기술 블로그"
-S="<내 스크래치패드>/sandbox-api"
+S="<내 스크래치패드>/sandbox-api"     # 이 이름 하나 — pm/오케스트레이터 중 한 명만 돌린다. /fixture §0의 sandbox-<에이전트 이름>은 건드리지 않는다
+case "$S" in */sandbox-api) ;; *) echo "경로 확인: $S"; exit 1;; esac
 rm -rf "$S" && git clone --quiet "$P" "$S"
 ( cd "$P" && tar --exclude=.git --exclude='posts/_tmp*' --exclude='*.bak*' -cf - . ) | ( cd "$S" && tar -xf - )   # 미커밋 server/* 포함
 ( cd "$S" && git add -A . )          # 클론의 index를 작업 트리와 맞춘다(autocrlf 스탯 착시 제거)

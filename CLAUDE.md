@@ -35,11 +35,12 @@
 개발 투입은 `/round-start`, 회의는 `/blog-meeting`. 회의록은 `docs/meeting-NN.md`에 남긴다.
 사용자 결정은 날짜와 함께 `docs/HANDOFF.md` §9 "사용자 결정 기록" 표에 남긴다 — 회의록에만 두면 다음 회의에서 증발한다(meeting-08 D9).
 
-## 스킬 (32개 — 프로젝트 24 + 디자인 8)
+## 스킬 (33개 — 프로젝트 25 + 디자인 8)
 
 반복 작업은 스킬로 고정해 프롬프트 토큰을 아낀다. 에이전트 투입 시 공통 머리말(읽을 파일·소유권·픽스처·포트·보고 형식)은 **에이전트 정의의 "작업 규칙"에 있으므로 프롬프트에 다시 쓰지 않는다.**
 
 **매 라운드 반복**
+- `/resume-work` — 멈춘 작업 이어하기: 저장소 상태 확인 → 스킬 안의 "다음 할 일" 목록대로 → 끝날 때 목록 갱신
 - `/sync` — 다른 세션이 푸시한 작업 받아오기 (fetch → 비교 → stash → pull)
 - `/round-start` — 게이트 질문("사용자에게 보이는 것, 또는 입력의 결과가 바뀌는가?") → web-designer 선행 → dev 2인 병렬 투입. 프롬프트는 할 일만
 - `/resume-agent` — 한도·필터로 끊긴 에이전트를 새로 띄우지 않고 재개
@@ -89,7 +90,7 @@ posts/       index.json + categories.json + <분류>/*.md   (이미지는 <분�
 docs/        contract.md(계약서), api.md(서버 규약), meeting-NN.md(회의록), HANDOFF.md(인수인계)
 start.bat / start.ps1   start.bat은 Docker가 있으면 compose, 없으면 start.ps1(정적 미리보기 — 저장 API 없음, 글 저장 불가)
 server/      FastAPI 로컬 에디터 서버 (app.py 엔트리, posts.py 파일 규칙) — Dockerfile·docker-compose.yml로 실행. 규약은 docs/api.md
-.claude/     agents/ 4인 정의, skills/ 32개
+.claude/     agents/ 4인 정의, skills/ 33개
 ```
 
 ## 글 추가 흐름 (서버 단일 — v3.9에서 내보내기 폐지)
