@@ -32,7 +32,13 @@
    v4.2(계약서 §6-2 — 사용자 원문 "코드 블록 부분 괄호 쓰면 IDE 처럼 괄호 닫히는거 까지 같이 보여줘" / "게시글 작성 부분을 좀 더
    고도화(코드 블록을 특히나)"): 펜스 안 자동 닫기·건너뛰기·쌍 지우기(onPairKey · onPairBackspace) · 펜스 안 Ctrl/Cmd+/ 주석 토글
    (toggleComment — 접두는 펜스 언어) · 줄 복제 Ctrl/Cmd+D(duplicateLines) · 줄 이동 Alt+Shift+↑/↓(moveLines) · 선택 없는 Shift+Tab이
-   줄을 통째로 선택하던 덫 제거 · 코드 블록 언어 기억(blogCodeLang — insertCodeBlock · `//언어` · 펜스 여는 줄). */
+   줄을 통째로 선택하던 덫 제거 · 코드 블록 언어 기억(blogCodeLang — insertCodeBlock · `//언어` · 펜스 여는 줄).
+   v4.3(계약서 §6-0·§6-1·§6-2, docs/api.md v1.2 — meeting-08 D1·D17~D21): 덮어쓰기 차단 — id 사전 확인(분류 PUT보다 먼저) ·
+   자동 id 접미사 -2~-9 · 손 id는 #fIdError(접힌 세부 설정을 연다) · PUT 의도 필드(새 글 ifNew / 디스크 글 expectedUpdated) ·
+   409를 error.code로 가름(exists · stale 모달 · conflict만 "손으로 정리") · 200 + isNew:false 경고 모달 /
+   줄 시작 = lineStartAt() 하나 · 언어 글자 대소문자(친 그대로) · 선택 있는 Tab은 선택을 옮기기만 · 주석 표 확장 + 모르는 언어는
+   무동작·토스트 · 툴바 코드 블록은 코드 안에서 넣지 않음 · Ctrl+S 글자 판정 = keyIs · "코드 블록 안" = Blog.markdown.codeRanges/codeAt
+   (에디터 안 판정 사본 삭제) · 언어 기억 키 = CFG.storageKeys.codeLang. */
 (function (window, document) {
   'use strict';
 
@@ -59,18 +65,23 @@
      퀴즈 스니펫은 §5-7-3의 것. */
   var QUIZ_SNIPPET = '<details>\n<summary>Q. </summary>\n\n답\n\n</details>\n';
 
-  /* 줄 첫머리 `//`(+언어) — 계약서 §6-2. 언어는 [a-z0-9+#-]{1,20}. */
-  var FENCE_TRIGGER_RE = /^\/\/([a-z0-9+#-]{1,20})?$/;
-  var FENCE_LINE_RE = /^```/gm;
+  /* 줄 첫머리 `//`(+언어) — 계약서 §6-2. 언어는 [A-Za-z0-9+#-]{1,20}(v4.3 D18 — 대소문자를 가리지 않고 받고 친 그대로 쓴다.
+     글쓴이는 ```Java 로 친다 — §0-4 H1). 대소문자를 접는 것은 비교(주석 표)뿐이다. */
+  var FENCE_TRIGGER_RE = /^\/\/([A-Za-z0-9+#-]{1,20})?$/;
+  /* (FENCE_LINE_RE 삭제 — v4.3 #169. "코드 블록 안"의 판정은 Blog.markdown.codeRanges/codeAt 하나다. 에디터에 사본을 두지 않는다.) */
 
   /* v4.2(계약서 §6-2): 코드 블록 언어 기억 — 툴바 "코드 블록"이 이 언어로 펜스를 열고 언어 글자를 선택해 둔다.
      갱신하는 곳은 셋: `//언어` 단축(maybeFence) · 펜스 여는 줄에 친 언어(learnFenceLang) · (읽기만) insertCodeBlock.
-     config.js가 아니라 여기 둔다 — 에디터만 읽고 쓰는 값이다. localStorage가 막혀도(시크릿 모드 등) 기본값으로 계속 간다. */
-  var CODE_LANG_KEY = 'blogCodeLang';
+     localStorage가 막혀도(시크릿 모드 등) 기본값으로 계속 간다.
+     v4.3(#175): 키의 자리는 config.js storageKeys.codeLang(계약서 §3-2 저장 키 표 — 키 목록을 한 곳에 모은다). 값은 'blogCodeLang' 그대로라
+     옛 기억이 그대로 읽힌다. config.js에 값이 없을 때만 문자열로 폴백한다. */
+  var CODE_LANG_KEY = (CFG.storageKeys && CFG.storageKeys.codeLang) || 'blogCodeLang';
   var CODE_LANG_DEFAULT = 'java';
-  var CODE_LANG_RE = /^[a-z0-9+#-]{1,20}$/;
-  /* 펜스 여는 줄 전체가 "```언어"(뒤 공백만 허용)일 때만 배운다. 정보 문자열이 더 붙은 줄은 사용자가 손수 쓴 것이라 건드리지 않는다. */
-  var FENCE_OPEN_LANG_RE = /^```([a-z0-9+#-]{1,20})[ \t]*$/;
+  /* v4.3(D18): 친 그대로 저장한다(Java는 Java로). "같은 값"도 글자 그대로 — 대소문자가 다르면 사용자가 표기를 바꾼 것이다. */
+  var CODE_LANG_RE = /^[A-Za-z0-9+#-]{1,20}$/;
+  /* 펜스 여는 줄 전체가 "```언어"(뒤 공백만 허용)일 때만 배운다. 정보 문자열이 더 붙은 줄은 사용자가 손수 쓴 것이라 건드리지 않는다.
+     v4.3: 대문자(```Java)도 배운다. */
+  var FENCE_OPEN_LANG_RE = /^```([A-Za-z0-9+#-]{1,20})[ \t]*$/;
 
   var dom = {};
   var state = {
@@ -89,6 +100,8 @@
     originalId: '',
     originalCategory: '',
     originalPath: '',     // 실제로 읽어 온 경로. 분류를 바꾸면 "이 파일을 지우라"고 알려 줘야 한다.
+    originalUpdated: '',  // v4.3(api.md v1.2): 이 화면이 아는 디스크의 updated — 불러올 때 읽은 값, 저장 200 뒤에는 응답 meta.updated.
+                          // 디스크 글을 저장할 때 expectedUpdated로 보낸다(다른 곳에서 먼저 저장됐으면 서버가 409 stale). 모르면 ''(보내지 않는다)
     idTouched: false,     // 사용자가 id를 직접 건드렸으면 자동 생성을 멈춘다
     modeTouched: false,   // 보기 모드를 손수 바꿨으면 화면 폭 변화가 덮어쓰지 않는다
     viewChoice: '',       // v4.1: 손수 고른 보기(write/split/preview). 좁아져 split이 write로 내려갔다가 넓어지면 이 값으로 돌아온다
@@ -408,7 +421,7 @@
   }
 
   /* ---------- 칸 아래 오류 (v4.1 — 계약서 §6-0 "오류 규칙") ----------
-     제목·분류·새 분류·본문 넷의 검증 오류는 토스트가 아니라 그 칸 바로 아래 한 줄(.field-error)이다. 토스트는 문제의 칸에서 멀고
+     제목·분류·새 분류·본문 넷(v4.3: + 파일 id #fIdError — 다섯)의 검증 오류는 토스트가 아니라 그 칸 바로 아래 한 줄(.field-error)이다. 토스트는 문제의 칸에서 멀고
      몇 초 뒤 사라지며 칸에는 아무 표시도 남기지 않았다. 토스트는 칸과 무관한 결과(저장 성공·서버 오류·분류를 만들었다)만 말한다.
        보이기: 문구 → hidden 해제 → 칸에 aria-invalid="true" → 칸의 aria-describedby에 오류 id 추가(기존 catNewHint·bodyHint는 둔다)
                → 포커스를 그 칸으로. 이미 포커스가 있으면 blur 뒤 focus — 포커스가 "새로" 들어와야 스크린리더가 설명(오류)을 읽는다.
@@ -432,6 +445,9 @@
     field.setAttribute('aria-invalid', 'true');
     var ids = tokenList(field, 'aria-describedby');
     if (ids.indexOf(errEl.id) === -1) { ids.push(errEl.id); setTokens(field, 'aria-describedby', ids); }
+    /* v4.3(§6-0 예외): 파일 id 칸은 접힌 세부 설정(.editor-more) 안이다 — 닫힌 details 안의 칸은 포커스를 받지 못하고(body로 샌다)
+       오류 줄도 보이지 않는다. 포커스 "전에" 연다. 여는 것만 한다 — 오류가 지워져도 다시 접지 않는다(방금 그 칸을 고치는 중이다). */
+    if (field === dom.id && dom.more && !dom.more.open) dom.more.open = true;
     if (document.activeElement === field) field.blur();
     field.focus();
     /* focus()는 칸만 화면에 들인다. 본문 오류 줄은 창의 바닥(키 큰 textarea 아래)이라 칸이 보여도 줄은 화면 밖일 수 있다 —
@@ -457,7 +473,19 @@
     clearFieldError(dom.title, dom.titleErr);
     clearFieldError(dom.category, dom.categoryErr);
     clearFieldError(dom.body, dom.bodyErr);
+    clearFieldError(dom.id, dom.idErr);
     clearNewCatError();
+  }
+
+  /* ---------- 줄 시작 (v4.3 — 계약서 §6-2 "줄 시작", meeting-08 D17) ----------
+     위치 p의 줄 시작 = p보다 앞(0 ~ p−1)에 있는 마지막 줄바꿈 바로 다음 자리. 그런 줄바꿈이 없으면 0.
+     그래서 p = 0이면 언제나 0이고, 줄 시작은 절대 p보다 뒤가 아니다.
+     예전 관용구 lastIndexOf('\n', p − 1) + 1은 p = 0에서 틀렸다 — JS가 음수 시작 위치를 0으로 잘라 0번 글자를 검사하므로,
+     문서가 줄바꿈으로 시작하면 줄 시작이 1(커서보다 뒤)이 됐다(Shift+Tab이 다른 줄을 고침 · H2 IndexSizeError · 줄 이동이 빈 줄을 만듦 ·
+     계기판 1행 0열). 줄 시작이 필요한 곳은 전부 이 함수를 부른다 — 같은 식을 새로 복사하지 않는다. */
+  function lineStartAt(value, p) {
+    if (!(p > 0)) return 0;
+    return value.lastIndexOf('\n', p - 1) + 1;
   }
 
   /* ---------- 계기판 (v4.1 — 계약서 §6-0 "작업 줄의 JS") ----------
@@ -494,7 +522,7 @@
     var line = 1;
     var at = value.indexOf('\n');
     while (at !== -1 && at < pos) { line += 1; at = value.indexOf('\n', at + 1); }
-    var col = pos - (value.lastIndexOf('\n', pos - 1) + 1) + 1;
+    var col = pos - lineStartAt(value, pos) + 1;
     var text = line + '행 ' + col + '열';
     if (end > start) text += ', ' + (end - start).toLocaleString('ko-KR') + '자 선택';
     setText(dom.caret, text);
@@ -524,7 +552,11 @@
 
   function refreshAutoId() {
     if (state.idTouched || state.mode === 'edit') return;
-    dom.id.value = buildId(dom.title.value, null);
+    var next = buildId(dom.title.value, null);
+    if (dom.id.value === next) return;
+    dom.id.value = next;
+    /* v4.3: 자동 id의 접미사가 소진돼 #fIdError가 떠 있었다면 제목을 고쳐 id가 바뀐 지금은 뜻을 잃었다. */
+    clearFieldError(dom.id, dom.idErr);
   }
 
   /* ---------- 상태 표시 ---------- */
@@ -837,7 +869,7 @@
      같은 가족의 다른 표기면 겹쳐 붙이지 않고 갈아끼운다. */
   function linePrefix(prefix, family) {
     var value = dom.body.value;
-    var start = value.lastIndexOf('\n', dom.body.selectionStart - 1) + 1;
+    var start = lineStartAt(value, dom.body.selectionStart);
     var end = dom.body.selectionEnd;
     var lineEnd = value.indexOf('\n', end);
     if (lineEnd === -1) lineEnd = value.length;
@@ -895,12 +927,24 @@
 
   /* v4.2(계약서 §6-2): 마지막으로 쓴 언어로 펜스를 열고(기본 java) 언어 글자를 선택해 둔다 — 그대로 두면 그 언어, 치면 덮어쓴다.
      선택이 없으면 가운데는 빈 줄이다(v4.1까지의 `// 코드` 자리표시는 언어를 바꾸면 틀린 주석이 되고, 쓰기 전에 지워야 했다).
-     펜스는 줄 첫머리여야 펜스다 — 줄 중간에서 누르면 앞에 줄바꿈 하나를 둔다(펜스는 문단을 끊을 수 있어 빈 줄까지는 필요 없다). */
+     펜스는 줄 첫머리여야 펜스다 — 줄 중간에서 누르면 앞에 줄바꿈 하나를 둔다(펜스는 문단을 끊을 수 있어 빈 줄까지는 필요 없다).
+     v4.3(D3 · FD2-5 · FD2-13):
+       ① 선택의 시작이나 끝이 코드 블록 안이거나 선택이 펜스 줄을 걸치면 넣지 않는다 — 토스트만, 글·선택은 그대로.
+          v4.2는 넣어서 바깥 블록을 닫았고, 원래 닫는 펜스가 고아가 되어 그 아래 문서 전체가 코드가 됐다.
+       ② 선택이 다음 줄 0열에서 끝나면(줄 단위 선택 — lineSpan과 같은 모양) 끝의 줄바꿈 하나는 코드에 넣지 않고 닫는 펜스 뒤로 보낸다
+          — 코드 끝에 빈 줄이 생기지 않는다(펜스 뒤의 줄바꿈이 그 자리를 대신한다). */
+  var CODE_BLOCK_INSIDE_TEXT = '이미 코드 블록 안이에요. 블록 밖에서 눌러 주세요';
+
   function insertCodeBlock() {
     var start = dom.body.selectionStart;
     var end = dom.body.selectionEnd;
     var value = dom.body.value;
+    if (codeRangeAt(value, start) || codeRangeAt(value, end) || fenceLineIn(value, start, end)) {
+      U.toast(CODE_BLOCK_INSIDE_TEXT);
+      return;
+    }
     var selected = value.slice(start, end);
+    if (end > start && selected.charAt(selected.length - 1) === '\n') selected = selected.slice(0, -1);
     var lang = codeLang();
     var lead = (start > 0 && value.charAt(start - 1) !== '\n') ? '\n' : '';
     var fence = lead + '```' + lang + '\n' + selected + '\n```\n';
@@ -908,7 +952,7 @@
     replaceRange(start, end, fence, langAt, langAt + lang.length);
   }
 
-  /* 기억한 언어. 값이 규칙([a-z0-9+#-]{1,20})에 안 맞으면(손으로 고친 저장소 등) 기본값. */
+  /* 기억한 언어. 값이 규칙([A-Za-z0-9+#-]{1,20})에 안 맞으면(손으로 고친 저장소 등) 기본값. 친 그대로 돌려준다(v4.3). */
   function codeLang() {
     var saved = null;
     try { saved = window.localStorage.getItem(CODE_LANG_KEY); } catch (err) { saved = null; }
@@ -925,18 +969,19 @@
   }
 
   /* 커서가 펜스 "여는" 줄에 있고 그 줄이 ```언어 꼴이면 그 언어를 기억한다(툴바가 선택해 둔 언어를 덮어쓴 경우 등).
-     싼 검사(줄 첫 세 글자)를 먼저 한다 — 거의 모든 입력은 거기서 끝나고, 펜스 줄에서만 insideFence(문서 앞부분 훑기)를 부른다.
-     닫는 줄(``` 위 펜스 줄 수가 홀수)은 배우지 않는다. */
+     싼 검사(줄 첫 세 글자)를 먼저 한다 — 거의 모든 입력은 거기서 끝나고, 펜스 줄에서만 codeRanges(문서 훑기, 메모 1칸)를 부른다.
+     v4.3: "여는 줄"은 codeRanges가 블록을 연 줄(range.open)이다 — 닫는 줄·코드 안의 ```java 글자(백틱 4개 펜스 안)는 배우지 않는다.
+     ~~~로 연 줄은 모양이 ```가 아니라 배우지 않는다(툴바는 ```로 연다). ```Java 처럼 대문자도 친 그대로 배운다. */
   function learnFenceLang() {
     var pos = dom.body.selectionStart;
     if (pos !== dom.body.selectionEnd) return;
     var value = dom.body.value;
-    var ls = value.lastIndexOf('\n', pos - 1) + 1;
+    var ls = lineStartAt(value, pos);
     if (value.slice(ls, ls + 3) !== '```') return;
     var le = value.indexOf('\n', pos);
     if (le === -1) le = value.length;
     var m = FENCE_OPEN_LANG_RE.exec(value.slice(ls, le));
-    if (!m || insideFence(value.slice(0, ls))) return;
+    if (!m || !opensCodeAt(value, ls)) return;
     rememberCodeLang(m[1]);
   }
 
@@ -1144,7 +1189,8 @@
      사용자 원문(2026-09-20): "메모 쓸 때 // 2개 치면 코드를 쓸 수 있는 블록으로 만들어(단축키)".
      줄 첫머리(공백 0개)에 `//` 또는 `//java`를 치고 Enter/Space를 누르면 그 줄이 ```lang 펜스 3줄이 되고
      커서는 가운데 빈 줄에 놓인다. 판정은 input 이벤트에서 한다 — keydown은 IME·붙여넣기·모바일 키보드에서
-     `/`가 안 오는 경우가 있다. 이미 펜스 블록 안(커서 위쪽 줄 첫머리 ``` 줄이 홀수)이면 코드 안의 주석이므로 건드리지 않는다.
+     `/`가 안 오는 경우가 있다. 그 줄이 이미 코드 블록 안의 코드 줄이면(v4.3: Blog.markdown.codeAt — ~~~ · 목록 안 펜스 · 백틱 4개
+     펜스도 코드다) 코드 안의 주석이므로 건드리지 않는다.
 
      바꾸는 방법: replaceRange(execCommand insertText). 계약서는 setRangeText를 적었지만 Chromium은 setRangeText가
      되돌리기 스택을 통째로 비운다(2026-09-21 헤드리스 Chrome·Edge 실측: 직후 execCommand('undo')가 false).
@@ -1164,9 +1210,60 @@
     return false;
   }
 
-  function insideFence(before) {
-    var hits = before.match(FENCE_LINE_RE);
-    return Boolean(hits) && hits.length % 2 === 1;
+  /* ---------- 코드 블록 안 = Blog.markdown.codeRanges (v4.3 #169 — 계약서 §6-2, meeting-08 D3) ----------
+     "펜스 안"은 이 에디터 전체에서 렌더러와 같은 답 하나다 — `//` · 짝 · Ctrl+/ · Enter ①②③⑤ · 툴바 코드 블록 · 언어 기억이 이것을 쓴다.
+     v4.2까지는 "커서 위쪽의 줄 첫머리 ``` 줄 수가 홀수"(insideFence)였고, 붙여 넣은 ~~~ · 목록 안 펜스 · 백틱 4개 펜스 · 줄 첫머리 인라인
+     ```x``` 에서 marked와 갈렸다. 판정은 markdown.js(frontend-dev)의 스캐너가 가진다 — 여기는 부르기만 한다(사본 금지, R-D).
+     돌려받는 range는 얼려진 공유 객체다 — 읽기만 한다. markdown.js가 옛 버전이라 함수가 없으면 "밖"으로 친다(규칙이 꺼질 뿐 글은 안전하다). */
+  function codeRangeAt(value, p) {
+    return (md && typeof md.codeAt === 'function') ? md.codeAt(value, p) : null;
+  }
+
+  function allCodeRanges(value) {
+    return (md && typeof md.codeRanges === 'function') ? md.codeRanges(value) : [];
+  }
+
+  /* 에디터의 "펜스 안"(§6-2 — 한 문장): 걸친 줄 [ls, le)에 대해 r = codeAt(value, ls)가 있고 (le < r.bodyEnd 또는 닫히지 않은 블록)이면 안.
+     곧 걸친 줄 전부가 "한" 블록의 코드 줄이다. 여는·닫는 펜스 줄 자체는 codeAt이 null이라 밖이다.
+     닫히지 않은 블록(close === bodyEnd)은 목록·인용이 끝나 닫힌 블록도 같은 모양이라 le ≤ bodyEnd까지만 안으로 친다 —
+     진짜로 닫히지 않은 블록은 bodyEnd가 문서 끝이라 결과가 같고, 컨테이너가 닫은 블록은 그 뒤 줄까지 코드로 번지지 않는다. 돌려주는 값은 range 또는 null. */
+  function codeLinesRange(value, ls, le) {
+    var r = codeRangeAt(value, ls);
+    if (!r) return null;
+    if (le < r.bodyEnd || (r.close === r.bodyEnd && le <= r.bodyEnd)) return r;
+    return null;
+  }
+
+  /* 선택(a, b — 없으면 커서 줄)이 걸친 줄이 전부 한 블록의 코드 줄이면 그 range. 짝·쌍 지우기·툴바 코드 블록이 쓴다.
+     (v4.2의 지역 codeAt(a, b)는 Blog.markdown.codeAt과 이름이 겹쳐 inCode로 바꿨다 — 계약 §12-19 #169.) */
+  function inCode(a, b) {
+    var value = dom.body.value;
+    var span = lineSpan(value, a, b);
+    return codeLinesRange(value, span.start, span.end);
+  }
+
+  /* ls가 codeRanges의 어느 블록을 "여는" 줄의 시작인가(언어 기억 ②의 "여는 줄"). */
+  function opensCodeAt(value, ls) {
+    var ranges = allCodeRanges(value);
+    for (var k = 0; k < ranges.length; k += 1) {
+      if (ranges[k].open === ls) return true;
+      if (ranges[k].open > ls) break;
+    }
+    return false;
+  }
+
+  /* 선택(없으면 커서 줄)이 걸친 줄 가운데 펜스 줄(여는 줄 · 닫는 줄)이 있는가 — 툴바 코드 블록의 가드(§6-2 툴바 코드 블록 행 ①).
+     span은 줄 단위라, 펜스 줄의 시작이 [span.start, span.end] 안에 있으면 그 줄을 걸친 것이다. 닫는 줄은 닫힌 블록(close > bodyEnd)에만 있다. */
+  function fenceLineIn(value, a, b) {
+    var span = lineSpan(value, a, b);
+    var ranges = allCodeRanges(value);
+    for (var k = 0; k < ranges.length; k += 1) {
+      var r = ranges[k];
+      if (r.open > span.end) break;
+      if (r.open >= span.start) return true;
+      if (r.close > r.bodyEnd && r.bodyEnd >= span.start && r.bodyEnd <= span.end) return true;
+    }
+    return false;
   }
 
   function maybeFence(e) {
@@ -1178,10 +1275,10 @@
     if (!isFenceTrigger(e, value, pos)) return false;
 
     var lineEnd = pos - 1;                                   // 확정 글자(Enter/Space)의 위치
-    var lineStart = value.lastIndexOf('\n', lineEnd - 1) + 1;
+    var lineStart = lineStartAt(value, lineEnd);
     var m = FENCE_TRIGGER_RE.exec(value.slice(lineStart, lineEnd));
     if (!m) return false;
-    if (insideFence(value.slice(0, lineStart))) return false;
+    if (codeRangeAt(value, lineStart)) return false;         // v4.3: 그 줄이 코드 줄이면 코드 안의 주석이다
 
     var lang = m[1] || '';
     var open = '```' + lang + '\n';
@@ -1283,17 +1380,19 @@
   /* ④ — 접두사 = 표시자 + 공백 한 칸. `- [ ] ` 체크박스·`1)` 변형은 이번엔 다루지 않는다. */
   var LIST_LINE_RE = /^([ \t]*)([-*+] |\d+\. |> )(.*)$/;
 
-  /* 현재 줄의 before(줄 시작~커서)·after(커서~줄 끝)와 펜스 안 여부. 규칙 표의 정의 그대로. */
+  /* 현재 줄의 before(줄 시작~커서)·after(커서~줄 끝)와 펜스 안 여부. 규칙 표의 정의 그대로.
+     v4.3: "펜스 안" = 커서 줄이 codeRanges의 코드 줄(§6-2 Enter 공통 전제). ④(목록 이어쓰기)는 펜스 밖이 조건이라
+     코드 안의 `- `·`> `로 시작하는 줄에 더는 붙지 않는다(v4.2 결함). */
   function lineAtCaret(pos) {
     var value = dom.body.value;
-    var lineStart = value.lastIndexOf('\n', pos - 1) + 1;
+    var lineStart = lineStartAt(value, pos);
     var lineEnd = value.indexOf('\n', pos);
     if (lineEnd === -1) lineEnd = value.length;
     return {
       start: lineStart,
       before: value.slice(lineStart, pos),
       after: value.slice(pos, lineEnd),
-      fenced: insideFence(value.slice(0, lineStart))
+      fenced: Boolean(codeLinesRange(value, lineStart, lineEnd))
     };
   }
 
@@ -1363,25 +1462,15 @@
      선택이 걸친 줄들의 [첫 줄 시작, 끝 줄 끝) — 끝 줄의 줄바꿈은 빼고. 선택이 다음 줄 0열에서 끝나면(Shift+↓로 줄을 고른 흔한 모양)
      그 줄은 "걸친" 줄이 아니다 — IDE 관행 그대로 뺀다. 선택이 없으면 커서가 있는 줄 하나. */
   function lineSpan(value, a, b) {
-    var start = value.lastIndexOf('\n', a - 1) + 1;
+    var start = lineStartAt(value, a);
     var last = (b > a && value.charAt(b - 1) === '\n') ? b - 1 : b;
     var end = value.indexOf('\n', last);
     if (end === -1) end = value.length;
     return { start: start, end: end };
   }
 
-  /* [ls, le) 줄들이 전부 한 코드 블록 "안"의 코드 줄인가. 위쪽 펜스 줄 수가 홀수(insideFence — §6-2 `//` 규칙과 같은 함수)이고,
-     걸친 줄 가운데 펜스 줄(``` 로 시작)이 하나도 없어야 한다 — 펜스를 여는/닫는 줄 자체에서는 짝·주석 규칙이 발동하지 않는다. */
-  function codeLines(ls, le) {
-    var value = dom.body.value;
-    if (/^```/m.test(value.slice(ls, le))) return false;
-    return insideFence(value.slice(0, ls));
-  }
-
-  function codeAt(a, b) {
-    var span = lineSpan(dom.body.value, a, b);
-    return codeLines(span.start, span.end);
-  }
+  /* (v4.2의 codeLines · 지역 codeAt(a, b) — "위쪽 펜스 줄 수가 홀수"의 사본 — 은 v4.3 #169에서 삭제. 위 "코드 블록 안" 절의
+     codeLinesRange · inCode · fenceLineIn이 Blog.markdown.codeRanges로 같은 질문에 답한다.) */
 
   /* ---------- 코드 블록 안의 짝 (v4.2, 계약서 §6-2 — 사용자 원문 "코드 블록 부분 괄호 쓰면 IDE 처럼 괄호 닫히는거 까지 같이 보여줘") ----------
      펜스 안에서만. 펜스 밖은 v3.9 그대로 아무것도 하지 않는다 — 마크다운의 [텍스트](url)·(괄호 속 문장)과 충돌한다.
@@ -1412,7 +1501,7 @@
     var a = dom.body.selectionStart;
     var b = dom.body.selectionEnd;
     var value = dom.body.value;
-    if (!codeAt(a, b)) return false;
+    if (!inCode(a, b)) return false;
 
     if (a !== b) {
       /* 선택 감싸기 — 여는 글자만. 닫는 글자(`)` 등)는 기본 동작(선택을 그 글자로 바꾼다)이다. */
@@ -1448,13 +1537,15 @@
     var value = dom.body.value;
     var open = value.charAt(pos - 1);
     if (PAIR_OPEN_KEYS.indexOf(open) === -1 || value.charAt(pos) !== AUTO_PAIRS[open]) return false;
-    if (!codeAt(pos, pos)) return false;
+    if (!inCode(pos, pos)) return false;
     e.preventDefault();
     replaceRange(pos - 1, pos + 1, '', pos - 1, pos - 1);
     return true;
   }
 
-  /* ---------- 줄 편집 도구 (v4.2 — 주석 토글이 쓴다) ----------
+  /* ---------- 줄 편집 도구 (v4.2 — 주석 토글이 쓴다 · v4.3: 선택 있는 Tab/Shift+Tab도) ----------
+     선택은 §6-2 "편집 뒤 선택" 규칙으로 옮긴다: p < at 그대로 · p ≥ at + del이면 ins − del만큼(삽입 자리와 같은 p는 삽입 글자 뒤로) ·
+     지워진 글자 안이면 그 편집 바로 뒤. 한 줄의 편집이 여럿이면 앞의 것부터 누적(mapCol).
      edits[i] = i번째 줄에 할 편집 목록 [{ at: 열, del: 지울 글자 수, ins: 넣을 글 }] (열 오름차순, 겹치지 않음).
      새 텍스트를 만들고, 옛 커서·선택 위치를 새 위치로 옮겨 replaceRange 한 번으로 바꾼다(= undo 한 단계). */
   function mapCol(col, list) {
@@ -1501,38 +1592,59 @@
     replaceRange(span.start, span.end, text, map(a), map(b));
   }
 
-  /* ---------- 주석 토글 Ctrl/Cmd+/ (v4.2, 펜스 안) ----------
-     접두는 그 코드 블록을 연 펜스 줄의 언어로 정한다.
-       //         java js javascript ts typescript c cpp cs csharp kotlin kt go rust swift scss dart php — 그리고 언어 없음·모르는 언어
-       #          python py bash sh shell yaml yml ruby rb r toml dockerfile
-       --         sql
-       <!-- -->   html xml md markdown (감싸기)
+  /* ---------- 주석 토글 Ctrl/Cmd+/ (v4.2, 펜스 안 · v4.3 표 확장) ----------
+     접두는 그 코드 블록을 연 펜스 줄의 언어를 소문자로 바꿔 아래 표에서 찾는다(```Java도 java로 — D18). 표는 계약서 §6-2 "주석 토글".
+       //         java js javascript ts typescript c cpp cs csharp kotlin kt go rust swift scss dart php jsx tsx groovy gradle scala less
+       #          python py bash sh shell yaml yml ruby rb r toml dockerfile powershell ps1 ps perl pl makefile make properties conf nginx gitignore zsh
+       --         sql lua haskell hs
+       ;          ini
+       REM        bat cmd batch dos (:: 가 아닌 이유 — 괄호 블록 안의 :: 는 cmd가 잘못 읽는다)
+       %          tex latex matlab
+       <!-- -->   html xml md markdown svg vue (감싸기)
        슬래시별   css (감싸기 — 슬래시별로 열고 별슬래시로 닫는다. 이 주석 안에는 그 닫는 표시를 쓸 수 없어 말로 적는다)
-     줄 접두: 비지 않은 줄들의 최소 들여쓰기 뒤에 "// "를 넣는다. 비지 않은 줄이 전부 이미 주석이면 푼다(접두 + 뒤 공백 하나). 빈 줄은 건드리지 않는다.
+     v4.3(D20): 표에 없는 언어 · 언어 없는 블록 · 주석 문법이 없는 언어(json text …)는 글을 바꾸지 않고 키만 먹고 토스트로 이유를 말한다.
+     v4.2의 "모르면 //"는 PowerShell 블록에 `// Get-Item`을 조용히 썼다 — 틀린 주석은 코드를 깨고 눈에 잘 띄지 않는다.
+     줄 접두: 비지 않은 줄들의 최소 들여쓰기 뒤에 "표시 "를 넣는다. 비지 않은 줄이 전부 이미 주석이면 푼다(접두 + 뒤 공백 하나). 빈 줄은 건드리지 않는다.
      감싸기: 첫 비지 않은 줄의 들여쓰기 뒤에 "<!-- ", 마지막 비지 않은 줄 끝에 " -->". 이미 그렇게 감싸여 있으면 푼다.
      빈 줄 하나에서 누르면 주석 표시만 넣고 커서를 그 안에 둔다. */
-  var COMMENT_HASH = ['python', 'py', 'bash', 'sh', 'shell', 'yaml', 'yml', 'ruby', 'rb', 'r', 'toml', 'dockerfile'];
-  var COMMENT_WRAP = {
-    html: ['<!--', '-->'], xml: ['<!--', '-->'], md: ['<!--', '-->'], markdown: ['<!--', '-->'],
-    css: ['/*', '*/']
-  };
+  var COMMENT_STYLES = (function () {
+    var table = Object.create(null);
+    function lines(mark, langs) { langs.forEach(function (l) { table[l] = { line: mark }; }); }
+    function wraps(open, close, langs) { langs.forEach(function (l) { table[l] = { open: open, close: close }; }); }
+    lines('//', ['java', 'js', 'javascript', 'ts', 'typescript', 'c', 'cpp', 'cs', 'csharp', 'kotlin', 'kt', 'go', 'rust',
+      'swift', 'scss', 'dart', 'php', 'jsx', 'tsx', 'groovy', 'gradle', 'scala', 'less']);
+    lines('#', ['python', 'py', 'bash', 'sh', 'shell', 'yaml', 'yml', 'ruby', 'rb', 'r', 'toml', 'dockerfile',
+      'powershell', 'ps1', 'ps', 'perl', 'pl', 'makefile', 'make', 'properties', 'conf', 'nginx', 'gitignore', 'zsh']);
+    lines('--', ['sql', 'lua', 'haskell', 'hs']);
+    lines(';', ['ini']);
+    lines('REM', ['bat', 'cmd', 'batch', 'dos']);
+    lines('%', ['tex', 'latex', 'matlab']);
+    wraps('<!--', '-->', ['html', 'xml', 'md', 'markdown', 'svg', 'vue']);
+    wraps('/*', '*/', ['css']);
+    return table;
+  })();
 
+  /* 표에 없으면 null(= 무동작). 표는 프로토타입 없는 객체지만 hasOwnProperty로 한 번 더 막는다 — 언어가 "constructor" 같은
+     이름이면 기본 객체의 것을 집는다(markdown.js LANG_LABEL에서 실제로 났던 결함). */
   function commentStyle(lang) {
-    if (COMMENT_HASH.indexOf(lang) !== -1) return { line: '#' };
-    if (lang === 'sql') return { line: '--' };
-    /* hasOwnProperty — 언어가 "constructor" 같은 이름이면 Object.prototype의 것을 집는다(markdown.js LANG_LABEL에서 실제로 났던 결함) */
-    if (Object.prototype.hasOwnProperty.call(COMMENT_WRAP, lang)) return { open: COMMENT_WRAP[lang][0], close: COMMENT_WRAP[lang][1] };
-    return { line: '//' };
+    var key = String(lang || '').toLowerCase();
+    return (key && Object.prototype.hasOwnProperty.call(COMMENT_STYLES, key)) ? COMMENT_STYLES[key] : null;
   }
 
-  /* 커서 위쪽에서 마지막 펜스 줄 = 지금 블록을 연 줄(codeLines가 "안"임을 이미 확인했다). 정보 문자열의 첫 낱말이 언어다. */
-  function fenceLangAbove(ls) {
-    var before = dom.body.value.slice(0, ls);
-    var re = /^```[ \t]*([^\s`]*)/gm;
-    var m;
-    var lang = '';
-    while ((m = re.exec(before)) !== null) lang = m[1];
-    return lang.toLowerCase();
+  /* (v4.2 fenceLangAbove — 위쪽 펜스 줄을 다시 훑던 사본 — 는 v4.3 #169에서 삭제. 언어는 그 블록의 range.lang이다:
+     정보 문자열의 첫 낱말, 친 그대로(`Java`). 토스트는 이 표기를 그대로 말하고, 비교는 commentStyle이 소문자로 한다.) */
+
+  /* 무동작 토스트(기본 종류). `<lang>은`의 조사는 받침과 무관하게 `은`으로 고정한다(계약 — 영문 표기라 받침 판정이 흔들린다). */
+  function commentUnknownText(lang) {
+    return lang ? lang + '은 주석 표시를 몰라 넣지 않았어요' : '언어가 없는 코드 블록이라 주석 표시를 정할 수 없어요';
+  }
+
+  /* 줄이 들여쓰기 뒤에 이 표시로 "시작"하는가. 글자로 끝나는 표시(REM)는 낱말 경계까지 본다 — `REMOTE=1`은 주석이 아니다. */
+  function startsWithMark(line, at, mark) {
+    if (line.slice(at, at + mark.length) !== mark) return false;
+    if (!/[A-Za-z]$/.test(mark)) return true;
+    var after = line.charAt(at + mark.length);
+    return after === '' || after === ' ' || after === '\t';
   }
 
   function indentLen(line) { return /^[ \t]*/.exec(line)[0].length; }
@@ -1541,10 +1653,7 @@
   function lineCommentEdits(lines, mark) {
     var filled = lines.filter(function (l) { return !isBlankLine(l); });
     var min = Math.min.apply(null, filled.map(indentLen));
-    var undo = filled.every(function (l) {
-      var i = indentLen(l);
-      return l.slice(i, i + mark.length) === mark;
-    });
+    var undo = filled.every(function (l) { return startsWithMark(l, indentLen(l), mark); });
     return lines.map(function (l) {
       if (isBlankLine(l)) return [];
       if (!undo) return [{ at: min, del: 0, ins: mark + ' ' }];
@@ -1583,14 +1692,18 @@
     return edits;
   }
 
-  /* 처리했으면 true(= 호출부가 preventDefault). 펜스 밖이면 false — 브라우저 기본으로 흘려보낸다. */
+  /* 처리했으면 true(= 호출부가 preventDefault). 펜스 밖이면 false — 브라우저 기본으로 흘려보낸다.
+     표에 없는 언어·언어 없는 블록도 true다(키는 먹는다 — 브라우저 기본 Ctrl+/로 새지 않게). 글은 그대로, 토스트가 이유를 말한다. */
   function toggleComment() {
     var value = dom.body.value;
     var a = dom.body.selectionStart;
     var b = dom.body.selectionEnd;
     var span = lineSpan(value, a, b);
-    if (!codeLines(span.start, span.end)) return false;
-    var style = commentStyle(fenceLangAbove(span.start));
+    var range = codeLinesRange(value, span.start, span.end);
+    if (!range) return false;
+    var lang = range.lang || '';
+    var style = commentStyle(lang);
+    if (!style) { U.toast(commentUnknownText(lang)); return true; }
     var lines = value.slice(span.start, span.end).split('\n');
 
     if (lines.every(isBlankLine)) {
@@ -1628,7 +1741,7 @@
     var block = value.slice(span.start, span.end);
     if (dir < 0) {
       if (span.start === 0) return;
-      var ps = value.lastIndexOf('\n', span.start - 2) + 1;
+      var ps = lineStartAt(value, span.start - 1);        // 위 줄의 시작(span.start − 1은 위 줄 끝의 줄바꿈)
       var prev = value.slice(ps, span.start - 1);
       var up = prev.length + 1;
       replaceRange(ps, span.end, block + '\n' + prev, a - up, b - up);
@@ -1643,11 +1756,13 @@
   }
 
   /* Ctrl/Cmd 조합의 글자 판정. 한글 자판이 켜져 있으면 브라우저에 따라 e.key가 'ㅇ'처럼 올 수 있어 물리 키(e.code)로 한 번 더 본다.
-     e.key가 라틴 글자면 그것만 믿는다 — 드보락 같은 배열에서 e.code는 다른 글자다. */
+     e.key가 라틴 글자 하나면 그것만 믿는다 — 드보락 같은 배열에서 e.code는 다른 글자다.
+     v4.3(D21): 라틴 글자가 아닌 값 전부(한글 낱자 · IME가 준 'Process' · 'Unidentified')가 물리 키 판정으로 간다 — v4.2는 한 글자만
+     봐서 'Process'로 온 Ctrl+S가 브라우저 "페이지 저장"으로 샜다. 문서 Ctrl+S도 이 함수를 쓴다(§6-2 Ctrl+S 행). */
   function keyIs(e, ch) {
     var k = String(e.key || '');
-    if (k.toLowerCase() === ch) return true;
-    return k.length === 1 && !/[a-z]/i.test(k) && e.code === 'Key' + ch.toUpperCase();
+    if (/^[A-Za-z]$/.test(k)) return k.toLowerCase() === ch;
+    return e.code === 'Key' + ch.toUpperCase();
   }
 
   function onBodyKeydown(e) {
@@ -1691,7 +1806,7 @@
       /* v4.2: 선택 없는 Shift+Tab — 현재 줄 첫머리의 공백(최대 2칸)만 지우고 커서는 같은 글자 앞에 남긴다.
          v4.1까지는 아래 여러 줄 갈래를 타서 줄 전체가 선택된 채 끝났다 — 이어서 글자를 치면 그 줄이 통째로 사라졌다. */
       if (start === end) {
-        var ls0 = value.lastIndexOf('\n', start - 1) + 1;
+        var ls0 = lineStartAt(value, start);
         var lead = /^ {1,2}/.exec(value.slice(ls0, ls0 + 2));
         if (lead) {
           var col = start - ls0;
@@ -1701,14 +1816,18 @@
         teachTab();
         return;
       }
-      /* 선택이 걸친 줄마다(lineSpan — 다음 줄 0열에서 끝난 선택은 그 줄을 빼는 IDE 관행) 넣기/빼기, 선택은 그 줄들 전체로. */
+      /* 선택이 걸친 줄마다(lineSpan — 다음 줄 0열에서 끝난 선택은 그 줄을 빼는 IDE 관행) 첫머리에 2칸 넣기 / 최대 2칸 빼기.
+         v4.3(D19, §6-2 "편집 뒤 선택"): 선택은 원래 선택의 두 끝을 편집에 따라 옮긴 것이다 — 넓히지도 줄 전체로 바꾸지도 않는다
+         (applyLineEdits의 map. `bar`만 골라 Tab이면 `bar`가 선택된 채 남는다). v4.2까지는 줄 전체가 선택돼, 이어서 한 글자를 치면
+         줄이 통째로 사라졌다. 바뀌는 글자가 없으면 applyLineEdits가 글도 선택도 건드리지 않는다. */
       var span = lineSpan(value, start, end);
-      var block = value.slice(span.start, span.end);
-      var next = block.split('\n').map(function (line) {
-        if (e.shiftKey) return line.replace(/^ {1,2}/, '');
-        return '  ' + line;
-      }).join('\n');
-      if (next !== block) replaceRange(span.start, span.end, next, span.start, span.start + next.length);
+      var lines = value.slice(span.start, span.end).split('\n');
+      var edits = lines.map(function (line) {
+        if (!e.shiftKey) return [{ at: 0, del: 0, ins: '  ' }];
+        var cut = /^ {1,2}/.exec(line);
+        return cut ? [{ at: 0, del: cut[0].length, ins: '' }] : [];
+      });
+      applyLineEdits(span, lines, edits, start, end);
       teachTab();
       return;
     }
@@ -2019,7 +2138,8 @@
      #btnDelete — (m9) 디스크에 있는 글을 열었고 서버 판정이 끝났을 때만 보인다. 서버 없음·저장 중·삭제 중·잠김이면 disabled.
                  v4.1: 자리는 세부 설정(.editor-more)의 마지막 — 저장(작업 줄 오른쪽 끝)과 다른 덩어리다(§6-1).
      #editorMoreSummary — v4.1(#145): 접힌 세부 설정이 안에 무엇이 있는지 말한다. 삭제가 보이면 "파일 id와 글 삭제", 아니면 "파일 id".
-                 details의 open은 건드리지 않는다(사용자가 연 것은 사용자가 닫는다). */
+                 details의 open은 건드리지 않는다(사용자가 연 것은 사용자가 닫는다). 유일한 예외(v4.3)는 #fIdError를 보일 때
+                 여는 것 — showFieldError가 한다. */
   function syncActionButtons() {
     var busy = state.saving || state.deleting || state.locked;
     if (dom.saveBtn) dom.saveBtn.disabled = !state.server || busy;
@@ -2088,11 +2208,19 @@
     });
   }
 
-  /* 오류 본문은 항상 { error: { code, message } } 다(api.md §3). 형식이 어긋난 응답도 사람이 읽을 문장으로. */
+  /* 오류 본문은 항상 { error: { code, message, …추가 필드 } } 다(api.md §3). 분기는 code로 한다 — 409가 세 종류다. */
+  function apiErrorCode(json) {
+    return json && json.error && json.error.code ? String(json.error.code) : '';
+  }
+
+  /* 형식이 어긋난 응답도 사람이 읽을 문장으로.
+     v4.3(§6-1 · api.md v1.2 §3): "파일을 손으로 정리" 꼬리는 409 conflict(와 code 없는 409 — v1.1 서버)에만 붙인다.
+     exists·stale은 사람이 파일을 만질 일이 아니다 — 저장 경로에서는 이 함수까지 오지 않고 doSave의 갈래가 먼저 받는다. */
   function apiErrorMessage(res, json, what) {
     var msg = json && json.error && json.error.message ? String(json.error.message) : '';
     if (!msg) msg = what + ' 실패 (HTTP ' + res.status + ')';
-    if (res.status === 409) msg += '. 파일을 손으로 정리한 뒤 다시 시도해 주세요';
+    var code = apiErrorCode(json);
+    if (res.status === 409 && (code === 'conflict' || !code)) msg += '. 파일을 손으로 정리한 뒤 다시 시도해 주세요';
     return msg;
   }
 
@@ -2106,30 +2234,117 @@
     if (!on && !dom.saveBtn.disabled && document.activeElement === document.body) dom.saveBtn.focus();
   }
 
+  /* ---------- 덮어쓰기 차단 (v4.3 — 계약서 §6-1 "저장 순서와 409", docs/api.md v1.2 §4-3, meeting-08 D1) ----------
+     자동 id는 한글을 지운다(util.slugAscii) — 같은 날 `Java 정리`·`Java 복습`이 모두 YYYY-MM-DD-java다(§0-4 H6). v4.2까지는 저장 전
+     존재 확인도, 서버의 의도 확인도 없어 새 글이 옛 글을 소리 없이 덮고 옛 글의 created를 물려받았다(절대 규칙 4 위반 경로).
+     서버 409가 필수 방어선이고 이 사전 확인은 보조다 — 단 분류 PUT보다 먼저 한다(409가 분류 PUT 뒤에 나면 빈 분류가 남는다).
+     사용자가 짓지 않은 이름(자동 id)은 에디터가 비키되(-2~-9 접미사) 알리고, 사용자가 친 이름(손 id)은 바꾸지 않고 칸(#fIdError)에서 묻는다.
+       새 글   = 디스크에 한 번도 저장되지 않은 글(!state.onDisk). 첫 200 뒤에는 onDisk가 켜져 다시는 새 글이 아니다
+                 — 같은 화면의 재저장이 ifNew를 또 보내면 서버가 방금 제가 쓴 파일을 "이미 있는 글"로 본다(409 exists).
+       자동 id = 새 글이고, id 칸을 건드리지 않았거나 비워 두었다(비우면 저장할 때 새로 만든다 — #fIdError 문구 그대로).
+       손 id   = 그 밖(사용자가 친 id, 또는 수정 중에 바꾼 id). */
+  var ID_SUFFIX_MAX = 9;
+
+  /* 저장될 id를 미리 계산한다 — buildMeta와 같은 규칙(normalizeId). 게시일 확인 모달(ensureCreated)이 넘길 값도 "지금 시각"이라 날짜가 같다. */
+  function prospectiveId(form) {
+    var created = (state.mode === 'edit' && state.created) ? state.created : U.nowIsoKst();
+    return normalizeId(form.id, form.title, created);
+  }
+
+  function isRenaming(id) {
+    return Boolean(state.onDisk && state.originalId && id !== state.originalId);
+  }
+
+  /* 자동 접미사 — 원래 id 뒤에 -2 … -9를 붙여 index에 없는 첫 값. 서버가 409 exists로 거절한 값 다음부터 이어 센다(ctx.n).
+     다 찼으면 ''. 접미사는 영문 소문자·숫자·하이픈 안이라 isSafeId를 통과한다. */
+  function nextSuffixId(ctx) {
+    for (var n = ctx.n + 1; n <= ID_SUFFIX_MAX; n += 1) {
+      var cand = ctx.base + '-' + n;
+      if (!store.findMeta(cand)) {
+        ctx.n = n;
+        ctx.suffixed = true;
+        return cand;
+      }
+    }
+    ctx.n = ID_SUFFIX_MAX;
+    return '';
+  }
+
+  /* #fIdError 문구 셋(§6-0 오류 규칙 — 글자 그대로). path가 비면(index에만 있고 파일이 없다 — api.md v1.2 §3-1) `index.json에만 있음`. */
+  function showIdTaken(path, renaming) {
+    var where = path ? String(path) : 'index.json에만 있음';
+    var text = renaming
+      ? '이 id의 글이 이미 있습니다(' + where + '). 다른 id를 적거나 원래 id(' + state.originalId + ')로 되돌려 주세요.'
+      : '이 id의 글이 이미 있습니다(' + where + '). 다른 id를 적거나 칸을 비워 두세요. 비우면 저장할 때 새로 만듭니다.';
+    showFieldError(dom.id, dom.idErr, text);
+  }
+
+  function showIdExhausted() {
+    showFieldError(dom.id, dom.idErr, '같은 날 같은 제목의 글이 많아 id를 정하지 못했어요. 파일 id를 직접 적어 주세요.');
+  }
+
+  /* 저장 순서 ② — 새 글이거나 수정 중 id를 바꿨을 때만. index는 캐시가 아니라 새로 받는다(다른 탭이 방금 저장했을 수 있다).
+     index를 못 읽으면 건너뛴다(서버 409가 막는다). 결과: 저장을 이어 갈 ctx 또는 null(= 멈춤, 칸에 오류를 이미 보였다). */
+  function precheckId(form) {
+    var id = prospectiveId(form);
+    var renaming = isRenaming(id);
+    var ctx = { base: id, n: 1, suffixed: false, auto: !state.onDisk && (!state.idTouched || !form.id), renaming: renaming };
+    if (state.onDisk && !renaming) return Promise.resolve(ctx);
+    return promised(function () { return store.loadIndex(true); }).then(function (data) {
+      state.indexData = data;
+      var hit = store.findMeta(id);
+      if (!hit) return ctx;
+      if (!ctx.auto) {
+        showIdTaken(postPathOf(hit.id, hit.category), renaming);
+        return null;
+      }
+      var next = nextSuffixId(ctx);
+      if (!next) { showIdExhausted(); return null; }
+      dom.id.value = next;                   // 세부 설정을 열면 실제 파일 이름이 보인다
+      return ctx;
+    }, function () { return ctx; });
+  }
+
   function saveToServer() {
     /* C2: 로드 전·삭제 중에는 저장하지 않는다. Ctrl+S 경로는 bind()의 keydown이 먼저 안내한다. */
     if (state.locked || state.deleting) return;
     /* disabled 버튼은 클릭이 나지 않지만, 키(Ctrl+S)와 프로그램 호출은 여기까지 온다. 같은 안내를 한다(§6-1). */
     if (!state.server) { U.toast(SERVER_OFF_TEXT, 'warn'); return; }
     if (state.saving) return;
-    /* 검증 → 분류 → 게시일 확인 순서(api.md §4-3). */
-    if (!validate(readForm())) return;
-    ensureUsableCategory(function () { ensureCreated(doSave); });
+    /* 순서(§6-1 "저장 순서"): ① 폼 검증 → ② id 존재 사전 확인 → ③ 분류·게시일 확인 → ④ 새 분류 PUT → ⑤ 글 PUT.
+       ②는 index를 새로 받는 동안 저장 버튼을 잠근다(두 번 눌러 두 벌 보내지 않게). 확인 모달(③) 동안에는 푼다 — 취소하면 그대로 끝난다. */
+    var form = readForm();
+    if (!validate(form)) return;
+    setSaving(true);
+    precheckId(form).then(function (ctx) {
+      setSaving(false);
+      if (!ctx) return;
+      ensureUsableCategory(function () {
+        ensureCreated(function (createdOverride) { doSave(createdOverride, ctx); });
+      });
+    });
   }
 
-  function doSave(createdOverride) {
+  function doSave(createdOverride, ctx) {
     var built = buildMeta(createdOverride);
     var form = built.form;
     var meta = built.meta;
     /* buildMeta가 id 칸을 정리한 "뒤"의 화면 스냅샷. onSaved가 저장 중 입력 여부를 이것과 비교한다. */
     var sent = readForm();
+    if (!ctx) ctx = { base: meta.id, n: 1, suffixed: false, auto: false, renaming: isRenaming(meta.id) };
+    ctx.renaming = isRenaming(meta.id);
 
-    /* PUT 본문 = 메타 8개 + body. created는 서버가 디스크 값으로 판정한다 — 새 글이면 무시하고 now,
-       기존 글이면 디스크 값 유지. 클라이언트가 보낸 created가 진실이 되는 유일한 경우는
-       디스크의 글에 created가 전혀 없을 때뿐이고, 그 값은 ensureCreated()가 사용자에게 확인받은 것이다. */
+    /* PUT 본문 = 메타 8개 + body + 의도 필드(api.md v1.2 §4-3 — 보내지 않으면 서버는 v1.1처럼 소리 없이 덮어쓴다).
+       created는 서버가 디스크 값으로 판정한다 — 새 글이면 무시하고 now, 기존 글이면 디스크 값 유지. 클라이언트가 보낸 created가
+       진실이 되는 유일한 경우는 디스크의 글에 created가 전혀 없을 때뿐이고, 그 값은 ensureCreated()가 사용자에게 확인받은 것이다.
+         새 글(디스크에 한 번도 없었다) → ifNew: true. previousId·expectedUpdated와 함께 보내면 400이라 셋은 배타다.
+         디스크의 글 → expectedUpdated: 이 화면이 아는 디스크 updated(모르면 보내지 않는다). 수정 중 id를 바꿨으면 previousId도. */
     var payload = Object.assign({}, meta, { body: form.body });
-    if (state.mode === 'edit' && state.originalId && state.originalId !== meta.id) {
-      payload.previousId = state.originalId;
+    if (!state.onDisk) {
+      payload.ifNew = true;
+    } else {
+      if (state.originalUpdated) payload.expectedUpdated = state.originalUpdated;
+      if (ctx.renaming) payload.previousId = state.originalId;
     }
 
     /* 새 분류가 있으면 글보다 먼저 등록한다. 순서가 바뀌면 글이 미등록 분류로 저장된다(api.md §4-3). */
@@ -2155,17 +2370,32 @@
       });
     }
 
-    job.then(function () {
-      return apiPut('/api/posts/' + encodeURIComponent(meta.id), payload);
-    }).then(function (res) {
-      return readJson(res).then(function (json) {
-        if (!res.ok) throw mkErr('api', apiErrorMessage(res, json, '저장'));
-        if (!json || !json.ok || !json.meta) throw mkErr('api', '서버 응답을 읽을 수 없습니다. 서버 로그를 확인해 주세요');
-        onSaved(json, needCats, sent);
-      });
-    }).catch(function (err) {
-      if (err && err.code === 'api') {
-        /* 서버가 거절했다(4xx/5xx). 초안·dirty는 그대로 — 사용자가 고쳐서 다시 누른다. */
+    function onDone(json, sentPayload) {
+      onSaved(json, needCats, sent, { ifNew: sentPayload.ifNew === true, suffixed: ctx.suffixed });
+    }
+
+    /* 글 PUT 한 번 + 응답 갈래(§6-1 "응답별 화면"). 200은 onDone, 나머지는 failSave가 받는다. */
+    function attempt(p) {
+      putPost(p, ctx).then(function (json) { onDone(json, p); }, failSave);
+    }
+
+    function failSave(err) {
+      var code = err && err.code;
+      if (code === 'id-taken' || code === 'id-exhausted') {
+        /* 409 exists — 손 id(또는 접미사 소진). 칸에서 묻는다: 세부 설정을 열고 #fIdError + 포커스. 토스트 없음. */
+        setSaving(false);
+        if (code === 'id-taken') showIdTaken(err.path, ctx.renaming);
+        else showIdExhausted();
+        setStatus('저장하지 못했어요. 임시저장본은 그대로 있습니다', true);
+        return;
+      }
+      if (code === 'stale') {
+        setSaving(false);
+        confirmStale(err.info || {}, err.payload);
+        return;
+      }
+      if (code === 'api') {
+        /* 서버가 거절했다(4xx/5xx — conflict는 "손으로 정리" 꼬리가 붙어 있다). 초안·dirty는 그대로 — 사용자가 고쳐서 다시 누른다. */
         setSaving(false);
         U.toast(err.message, 'err');
         setStatus('저장하지 못했어요. 임시저장본은 그대로 있습니다', true);
@@ -2177,6 +2407,72 @@
       setSaving(false);
       U.toast('서버가 꺼졌습니다. start.bat(Docker)를 실행한 뒤 다시 연결하세요', 'err');
       setStatus('서버 연결이 끊겼어요. 임시저장본은 그대로 있습니다', true);
+    }
+
+    /* 409 stale — 이 화면에서 연 뒤 다른 탭·편집기·손이 그 글을 저장했다(또는 지웠다). 덮어쓸지 사용자가 겨냥해서 고른다.
+       `덮어쓰기`(= 다시 만들기) → 같은 글 PUT을 expectedUpdated "없이" 한 번 더(previousId는 그대로). 에디터가 스스로 빼고 보내는 일은 없다.
+       `취소`·Esc·✕ → 아무것도 보내지 않는다. 포커스: 덮어쓰기(danger)는 ui.modal의 초기 포커스 후보가 아니라 `취소`가 받는다. */
+    function confirmStale(info, sentPayload) {
+      var gone = info.currentUpdated === null;
+      var go = false;
+      Blog.ui.modal({
+        title: gone ? '다른 곳에서 지워진 글이에요' : '다른 곳에서 먼저 저장된 글이에요',
+        text: gone
+          ? '이 화면에서 연 뒤에 이 글이 다른 곳에서 지워지거나 옮겨졌습니다. 지금 화면의 내용으로 다시 만들 수 있습니다.'
+          : '이 화면에서 연 뒤에 다른 탭이나 편집기에서 이 글이 저장됐습니다. 지금 화면의 내용으로 덮어쓰면 그쪽에서 고친 내용은 사라집니다.',
+        actions: gone
+          ? [{ label: '다시 만들기', variant: 'primary', onClick: function () { go = true; } }, { label: '취소', variant: 'ghost' }]
+          : [{ label: '덮어쓰기', variant: 'danger', onClick: function () { go = true; } }, { label: '취소', variant: 'ghost' }],
+        onClose: function () {
+          if (!go) {
+            setStatus('저장하지 않았어요. 임시저장본은 그대로 있습니다', true);
+            return;
+          }
+          if (!state.server) { U.toast(SERVER_OFF_TEXT, 'warn'); return; }
+          var again = Object.assign({}, sentPayload || payload);
+          delete again.expectedUpdated;
+          setSaving(true);
+          setStatus('서버에 저장하는 중…');
+          attempt(again);
+        }
+      });
+    }
+
+    job.then(function () { attempt(payload); }, failSave);
+  }
+
+  /* 글 PUT 하나와 그 응답의 갈래. 200이면 json으로 풀리고, 아니면 코드가 붙은 오류로 거부된다(네트워크 실패는 fetch의 거부 그대로).
+     409 exists + 자동 id → 다음 접미사로 id를 바꿔 "글 PUT만" 다시(분류는 이미 저장됐다). -9까지 차면 id-exhausted.
+     409 exists + 손 id → id-taken(path = error.path — null이면 index에만 있다). 409 stale → stale(추가 필드와 보낸 본문을 싣는다).
+     그 밖 → api(apiErrorMessage — conflict·code 없는 409에만 "손으로 정리" 꼬리). */
+  function putPost(payload, ctx) {
+    return apiPut('/api/posts/' + encodeURIComponent(payload.id), payload).then(function (res) {
+      return readJson(res).then(function (json) {
+        if (res.ok) {
+          if (!json || !json.ok || !json.meta) throw mkErr('api', '서버 응답을 읽을 수 없습니다. 서버 로그를 확인해 주세요');
+          return json;
+        }
+        var code = apiErrorCode(json);
+        var err;
+        if (res.status === 409 && code === 'exists') {
+          if (ctx.auto) {
+            var next = nextSuffixId(ctx);
+            if (!next) throw mkErr('id-exhausted', '');
+            dom.id.value = next;
+            return putPost(Object.assign({}, payload, { id: next }), ctx);
+          }
+          err = mkErr('id-taken', '');
+          err.path = json.error.path || '';
+          throw err;
+        }
+        if (res.status === 409 && code === 'stale') {
+          err = mkErr('stale', '');
+          err.info = json.error;
+          err.payload = payload;
+          throw err;
+        }
+        throw mkErr('api', apiErrorMessage(res, json, '저장'));
+      });
     });
   }
 
@@ -2191,14 +2487,18 @@
 
   /* 200 — 디스크 저장이 확인됐다. 초안을 지워도 된다.
      응답의 meta가 실제로 쓴 값이므로 화면 상태는 응답으로 덮는다(created를 클라이언트가 계산하지 않는다).
-     sentForm은 PUT에 실은 폼 스냅샷 — 저장 중에 더 친 글자가 있는지 이것과 비교한다. */
-  function onSaved(json, savedCats, sentForm) {
+     sentForm은 PUT에 실은 폼 스냅샷 — 저장 중에 더 친 글자가 있는지 이것과 비교한다.
+     info(v4.3) = { ifNew: 이번 PUT에 ifNew를 실었나, suffixed: 자동 접미사를 썼나 } — 결과 알림을 고른다(§6-1 "응답별 화면"). */
+  function onSaved(json, savedCats, sentForm, info) {
     var saved = json.meta;
     var oldSlot = state.slot;
     state.created = saved.created || state.created;
     state.originalId = saved.id;
     state.originalCategory = saved.category || '';
     state.originalPath = json.path || postPathOf(saved.id, saved.category);
+    /* v4.3(api.md v1.2): 다음 저장의 expectedUpdated는 이 응답의 meta.updated다 — 방금 이 화면이 쓴 디스크 버전. */
+    state.originalUpdated = saved.updated ? String(saved.updated) : '';
+    clearFieldError(dom.id, dom.idErr);
 
     /* 이제 이 글은 디스크에 있다. 새 글이었어도 "수정 모드"가 맞다 — 제목을 고쳐도 id가
        따라 바뀌지 않고(refreshAutoId), 다시 저장하면 같은 파일을 덮어쓴다. id 칸에 서버가 확정한 값을 되비친다. */
@@ -2237,7 +2537,13 @@
       U.el('a', { href: 'post.html?id=' + encodeURIComponent(saved.id), text: '글 보기' }), ' 또는 ',
       U.el('a', { href: 'index.html', text: '목록으로' })];
     setStatusNodes(status, false);
-    U.toast(json.isNew ? '새 글을 저장했습니다' : '저장했습니다', 'ok');
+    /* v4.3 결과 알림은 하나만:
+       ifNew를 보냈는데 isNew:false — 서버가 ifNew를 모르는 옛 버전(v1.1)이라 기존 파일을 고쳤다. 확인 모달이 결과를 말한다(토스트 없음).
+       자동 접미사를 썼다 — 조용히 비키지 않고 새 id를 알린다(`새 글을 저장했습니다`를 대신한다).
+       그 밖 — v4.1 그대로. */
+    if (info && info.ifNew && json.isNew === false) warnOverwrote(json);
+    else if (info && info.suffixed) U.toast('같은 id의 글이 있어 새 id로 저장했습니다: ' + saved.id, 'ok');
+    else U.toast(json.isNew ? '새 글을 저장했습니다' : '저장했습니다', 'ok');
 
     /* 저장 중에 더 친 글자는 아직 디스크에 없다. 저장이 끝난 지금 dirty로 올리고 새 슬롯에 초안을 확정한다. */
     if (sentForm && !sameForm(Object.assign({}, sentForm, { id: saved.id }), readForm())) {
@@ -2246,6 +2552,21 @@
     }
 
     refreshSideAfterSave();
+  }
+
+  /* v4.3(§6-1 "200 + isNew:false" — 이중 안전장치): 새 글로 보냈는데 서버가 기존 파일을 고쳤다고 답했다. 파일은 실제로 써졌으니
+     상태줄은 `저장됨: …` 그대로이고, 무엇이 사라졌는지와 되찾을 길을 모달(확인 하나)로 말한다. 2행은 자동 커밋 여부로 갈린다. */
+  function warnOverwrote(json) {
+    var git = json && json.git;
+    var path = (json && json.path) || state.originalPath;
+    Blog.ui.modal({
+      title: '같은 id의 글을 덮어썼어요',
+      text: path + '에 있던 글이 지금 쓴 글로 바뀌었습니다. 저장 서버가 새 글 확인을 모르는 옛 버전입니다.\n'
+        + ((git && git.committed === true)
+          ? '옛 글이 커밋돼 있었다면 커밋 ' + String(git.hash || '').slice(0, 7) + ' 이전 이력에서 되찾을 수 있습니다.'
+          : '자동 커밋이 없어 이 화면에서는 되돌릴 수 없습니다. 백업이나 git 이력을 확인해 주세요.'),
+      actions: [{ label: '확인', variant: 'primary' }]
+    });
   }
 
   /* v3.9(§6-1 저장 피드백, meeting-06 "그 밖에"): 서버가 쓴 최신 index.json·categories.json을 다시 받아 사이드바를 다시 그린다 —
@@ -2707,6 +3028,9 @@
     loadPostAny(id, categoryHintFor(id)).then(function (post) {
       /* created는 원본 그대로 보존한다. 갱신되는 값은 updated뿐이다. */
       state.created = post.meta.created;
+      /* v4.3(api.md v1.2 §4-3): 이 화면이 본 디스크 버전. 저장할 때 expectedUpdated로 보낸다 — 그사이 다른 곳에서 저장됐으면 409 stale.
+         값은 store.loadPost의 병합 결과(서버가 비교하는 값과 같은 규칙). 비어 있으면 보내지 않는다(비교 생략). */
+      state.originalUpdated = post.meta.updated ? String(post.meta.updated) : '';
       state.originalPath = post.path || postPathOf(id, post.meta.category);
       state.originalCategory = catFromPath(state.originalPath) || post.meta.category || '';
 
@@ -2729,6 +3053,7 @@
       applyDraftIfNewer();
     }).catch(function (err) {
       state.onDisk = false;
+      state.originalUpdated = '';             // 값을 모른다 — 디스크에 없는 글로 다룬다(저장은 ifNew, 있으면 409 exists가 막는다)
       state.slot = id;
       markReady();
       setStatus('불러오지 못했습니다', false);
@@ -2884,7 +3209,11 @@
     U.on(dom.pinned, 'change', onEdit);
 
     U.on(dom.title, 'input', refreshAutoId);
-    U.on(dom.id, 'input', function () { state.idTouched = true; onEdit(); });
+    U.on(dom.id, 'input', function () {
+      state.idTouched = true;
+      clearFieldError(dom.id, dom.idErr);                  // v4.3: 다른 칸과 같다 — 고치면 사라진다(세부 설정은 다시 접지 않는다)
+      onEdit();
+    });
 
     bindCategory();
 
@@ -2911,9 +3240,11 @@
        연결됨 → 저장. 서버 없음·확인 중 → preventDefault + 토스트(#editorServer와 같은 문자열, §6-1).
        disabled 버튼은 클릭 이벤트가 나지 않지만 키는 여기 keydown에서 잡는다.
        모달이 떠 있는 동안에는 아무것도 하지 않는다 — 확인창의 질문(게시일 확인 등)을 건너뛴 셈이 되기 때문.
-       브라우저의 "페이지 저장"만은 그대로 막는다(눌린 사실을 없던 일로 만드는 편이 헷갈리지 않는다). */
+       브라우저의 "페이지 저장"만은 그대로 막는다(눌린 사실을 없던 일로 만드는 편이 헷갈리지 않는다).
+       v4.3(D21): 글자 판정은 keyIs — 한글 자판에서 e.key가 'ㄴ'·'Process'로 와도 물리 키 KeyS로 잡는다(가장 위험한 키가 가장 먼저 새던 자리).
+       보조키 조건(Ctrl 또는 Cmd)은 v3.9 그대로 — Alt·Shift 조건을 더하지 않는다. */
     U.on(document, 'keydown', function (e) {
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return;
+      if (!(e.ctrlKey || e.metaKey) || !keyIs(e, 's')) return;
       e.preventDefault();
       if (document.body.classList.contains('modal-open')) return;
       /* C2: 불러오는 중·삭제 중에는 저장하지 않는다(폼이 잠겨 있다). 눌린 사실은 말해 준다 — 조용히 무시하면 저장된 줄 안다. */
@@ -3042,6 +3373,9 @@
     dom.categoryErr = document.getElementById('fCategoryError');
     dom.newCatErr = document.getElementById('fNewCatError');
     dom.bodyErr = document.getElementById('fBodyError');
+    /* v4.3(D1): 다섯째 오류 줄 — 같은 id의 글이 이미 있을 때. 칸이 접힌 세부 설정 안이라 보일 때 details를 연다(showFieldError). */
+    dom.idErr = document.getElementById('fIdError');
+    dom.more = document.getElementById('editorMore');
     /* v3.9(계약서 §6-1): 저장 버튼은 항상 보이고 disabled로 시작, 서버 표시·다시 연결은 hidden으로 시작 — 판정 전 "확인 중". */
     dom.saveBtn = document.getElementById('btnSave');
     dom.server = document.getElementById('editorServer');

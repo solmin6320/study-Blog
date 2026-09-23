@@ -113,9 +113,11 @@
   <h1 class="sr-only">글 쓰기</h1>
 
   <!-- 배포 도메인(관리자 판정 false)에서는 admin.js가 아래 .editor(data-admin-only)를 DOM에서 통째로 지우고
-       editor.js는 이 문단의 hidden만 푼다. 에디터는 초기화조차 하지 않는다 — 자동저장·단축키·beforeunload도 붙지 않는다.
-       사용자 요구: 배포 버전은 보기만 가능해야 한다. 글은 posts/ 폴더에 넣어 커밋하는 것이 유일한 경로다.
-       (판정은 hostname 하나다 — js/admin.js. 쿼리·localStorage로 켜는 길은 없다.) -->
+       editor.js lockForVisitor()는 이 문단의 hidden만 푼다(사이드바·사이트명은 다른 페이지처럼 그린다). 폼 리스너(자동저장·단축키·
+       beforeunload)는 하나도 붙지 않는다. 사용자 요구: 배포 버전은 보기만 가능해야 한다.
+       글을 쓰는 길은 로컬의 이 화면 하나다 — start.bat(Docker)의 에디터 서버가 posts/에 쓰고 커밋한다(docs/api.md). 공개는 /ship.
+       (판정은 hostname 하나다 — js/admin.js. 쿼리·localStorage로 켜는 길은 없다. 보안 장치가 아니라 화면 노출 스위치다.)
+       아래 문단의 문구는 meeting-08 WD-17(이월)이 다룬다 — 계약 개정 전에는 바꾸지 않는다. -->
   <div class="editor-visitor" id="editorVisitor" hidden>
     <p>이 페이지는 로컬에서만 동작합니다. 글은 posts/ 폴더에 넣어 배포합니다. <a href="index.html">글 목록으로</a></p>
   </div>
@@ -146,7 +148,7 @@
              autocomplete="off" spellcheck="false" maxlength="120">
       <!-- 칸 아래 오류(계약서 §6-0 "오류 규칙"). editor.js showFieldError()가 문구를 넣고 hidden을 풀며, 칸에 aria-invalid와
            aria-describedby(이 id)를 붙이고 포커스를 옮긴다 — 포커스가 새로 들어올 때 스크린리더가 설명(오류)을 읽는다.
-           그래서 오류 줄 자신에게는 role="alert"·aria-live가 없다(포커스 이동과 겹치면 두 번 읽힌다). 넷 모두 같은 규칙. -->
+           그래서 오류 줄 자신에게는 role="alert"·aria-live가 없다(포커스 이동과 겹치면 두 번 읽힌다). 다섯(제목·분류·새 분류·본문·파일 id) 모두 같은 규칙. -->
       <p class="field-error" id="fTitleError" hidden></p>
 
       <!-- 수정 모드(?id=)에서만 editor.js가 문구를 채우고 hidden을 푼다.
@@ -201,7 +203,8 @@
 
       <!-- 세부 설정(v4.1): 드물게 쓰는 기술 값(파일 id)과 되돌릴 수 없는 동작(글 삭제)을 접어 둔다.
            summary 문구는 editor.js syncActionButtons()가 정한다 — 삭제 버튼이 보이면 "파일 id와 글 삭제", 아니면 "파일 id".
-           open은 JS가 건드리지 않는다(사용자가 연 것은 사용자가 닫는다). summary·삭제 버튼에는 title이 없다(단축키 없음). -->
+           open은 JS가 건드리지 않는다(사용자가 연 것은 사용자가 닫는다). 예외 하나(v4.3): #fIdError를 보일 때 여는 것만 —
+           닫힌 details 안의 칸은 포커스를 받지 못한다(§6-0 오류 규칙). summary·삭제 버튼에는 title이 없다(단축키 없음). -->
       <details class="editor-more" id="editorMore">
         <summary id="editorMoreSummary">파일 id</summary>
         <div class="field-group">
@@ -209,6 +212,8 @@
           <input class="field" id="fId" type="text" placeholder="비워 두면 자동으로 만듭니다"
                  autocomplete="off" spellcheck="false" aria-describedby="fIdHint">
           <p class="field-hint" id="fIdHint">비워 두면 저장할 때 날짜와 제목으로 만듭니다. 영문 소문자, 숫자, 하이픈을 씁니다. 수정 중에 바꾸면 저장할 때 파일 이름이 바뀝니다.</p>
+          <!-- v4.3(D1): 같은 id의 글이 이미 있을 때. 도움말 "뒤" — 규칙(도움말)을 먼저 읽고 무엇이 어긋났는지(오류)를 읽는다 -->
+          <p class="field-error" id="fIdError" hidden></p>
         </div>
         <!-- v4.0 m9 수정 모드 삭제 → v4.1 자리 확정: 저장(작업 줄 오른쪽 끝)과 다른 덩어리에, 빨간 글자 + 옅은 테두리(hover에서만 채움).
              hidden으로 시작 — editor.js가 디스크의 글을 열었고 서버 판정이 끝났을 때만 보이고, 서버 없음·불러오는 중·저장 중이면 disabled.
@@ -221,7 +226,7 @@
          저장이 줄의 오른쪽 끝을 지키고, 본문을 쓰는 내내 "저장됐나 / 저장하기"가 보인다. -->
     <div class="editor-bar" id="editorBar">
       <!-- 보기 방식: 셋이 한꺼번에 보이고 지금 것이 aria-pressed="true". 1024px 미만에서 "나란히"는 CSS가 감추고 editor.js가 "작성"으로 바꾼다.
-           title 없음(단축키 없음 — §6-2 "여기 없는 단축 입력을 만들지 않는다"). -->
+           title 없음 — 단축키가 없는 버튼이다(§6 title 규칙). 보기 방식 단축키를 두지 않는 근거는 §6-0 "하지 않는 것". -->
       <div class="view-switch" role="group" aria-label="보기 방식">
         <button class="view-btn" type="button" data-view="write" aria-pressed="false">작성</button>
         <button class="view-btn" type="button" data-view="split" aria-pressed="true">나란히</button>
