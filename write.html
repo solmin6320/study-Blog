@@ -279,8 +279,9 @@
         <!-- 탈출 방법을 모르면 없는 기능이다(T3-1 · WCAG 2.1.2). Tab은 여기서 들여쓰기로 쓰이므로 포커스를 밖으로 빼는 방법을 세 겹으로 알린다:
                ① placeholder(빈 화면)  ② 아래 숨은 설명(aria-describedby · 스크린리더)  ③ 첫 Tab 때 작업 줄의 #editorStatus(editor.js teachTab)
              v3.9: "Ctrl+S 저장"은 고정 문구. 마지막 문장은 Enter 규칙(§6-2 "Shift+Enter가 탈출구다") 그대로.
-             v4.1: placeholder는 한 문장 — 쓰기 시작하면 사라지는 자리에 단축키 나열을 담지 않는다(Ctrl+B·Ctrl+S는 title과 #bodyHint가 말한다). -->
-        <p class="sr-only" id="bodyHint">Tab은 들여쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S 저장. 줄 첫머리에 //를 치고 Enter 또는 Space를 누르면 코드 블록이 됩니다. 코드 블록 안에서 Enter는 들여쓰기를 이어 가고, 목록 줄에서 Enter는 다음 항목을 만듭니다. 그냥 줄만 바꾸려면 Shift+Enter.</p>
+             v4.1: placeholder는 한 문장 — 쓰기 시작하면 사라지는 자리에 단축키 나열을 담지 않는다(Ctrl+B·Ctrl+S는 title과 #bodyHint가 말한다).
+             v4.2: 코드 블록 편의(짝·Ctrl+/·Ctrl+D·Alt+Shift+화살표)를 #bodyHint가 말한다 -->
+        <p class="sr-only" id="bodyHint">Tab은 들여쓰기, Shift+Tab은 내어쓰기입니다. 포커스를 다음 항목으로 옮기려면 Esc를 누른 뒤 Tab을 누르세요. Ctrl+B 굵게, Ctrl+I 기울임, Ctrl+S 저장, Ctrl+D 줄 복제, Alt+Shift+위쪽 또는 아래쪽 화살표 줄 이동. 줄 첫머리에 //를 치고 Enter 또는 Space를 누르면 코드 블록이 됩니다. 코드 블록 안에서는 여는 괄호와 따옴표를 치면 닫는 짝이 함께 들어가고, Ctrl+/는 주석을 넣거나 뺍니다. 코드 블록 안에서 Enter는 들여쓰기를 이어 가고, 목록 줄에서 Enter는 다음 항목을 만듭니다. 그냥 줄만 바꾸려면 Shift+Enter.</p>
         <textarea class="editor-area" id="fBody" spellcheck="false" autocomplete="off" aria-required="true" aria-describedby="bodyHint"
                   placeholder="마크다운으로 씁니다. 줄 첫머리 // 는 코드 블록, Tab은 들여쓰기(빠져나가려면 Esc 뒤 Tab)."></textarea>
         <p class="field-error" id="fBodyError" hidden></p>
@@ -296,6 +297,7 @@
 
 <footer class="site-footer">
   <p class="footer-note">&copy; 이 사이트는 학습 블로그를 목적으로 바이브 코딩 제작하였습니다</p>
+  <p class="footer-note">게시글은 모두 직접 작성하고 정리하였습니다</p>
   <p class="footer-meta"><span data-year>2026</span></p>
 </footer>
 

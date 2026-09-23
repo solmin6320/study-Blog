@@ -28,7 +28,11 @@
    v4.1(계약서 §6-0·§6-1 — 에디터 재설계): 보기 방식 세 칸 스위치(setViewMode · aria-pressed) · 칸 아래 오류(showFieldError ·
    clearFieldError — 검증 오류를 토스트로 말하지 않는다) · 계기판(updateMeter · updateCaret) · 나란히 보기의 미리보기 따라가기
    (syncPreviewScroll) · 연결됨 표시 숨김 · 세부 설정 요약 문구 · 복구 모달을 고르지 않고 닫으면 "결정 보류"(holdDraft — 옛 초안을
-   보류 슬롯으로 옮기고 상태줄에 복구/버리기를 남긴다). */
+   보류 슬롯으로 옮기고 상태줄에 복구/버리기를 남긴다).
+   v4.2(계약서 §6-2 — 사용자 원문 "코드 블록 부분 괄호 쓰면 IDE 처럼 괄호 닫히는거 까지 같이 보여줘" / "게시글 작성 부분을 좀 더
+   고도화(코드 블록을 특히나)"): 펜스 안 자동 닫기·건너뛰기·쌍 지우기(onPairKey · onPairBackspace) · 펜스 안 Ctrl/Cmd+/ 주석 토글
+   (toggleComment — 접두는 펜스 언어) · 줄 복제 Ctrl/Cmd+D(duplicateLines) · 줄 이동 Alt+Shift+↑/↓(moveLines) · 선택 없는 Shift+Tab이
+   줄을 통째로 선택하던 덫 제거 · 코드 블록 언어 기억(blogCodeLang — insertCodeBlock · `//언어` · 펜스 여는 줄). */
 (function (window, document) {
   'use strict';
 
@@ -58,6 +62,15 @@
   /* 줄 첫머리 `//`(+언어) — 계약서 §6-2. 언어는 [a-z0-9+#-]{1,20}. */
   var FENCE_TRIGGER_RE = /^\/\/([a-z0-9+#-]{1,20})?$/;
   var FENCE_LINE_RE = /^```/gm;
+
+  /* v4.2(계약서 §6-2): 코드 블록 언어 기억 — 툴바 "코드 블록"이 이 언어로 펜스를 열고 언어 글자를 선택해 둔다.
+     갱신하는 곳은 셋: `//언어` 단축(maybeFence) · 펜스 여는 줄에 친 언어(learnFenceLang) · (읽기만) insertCodeBlock.
+     config.js가 아니라 여기 둔다 — 에디터만 읽고 쓰는 값이다. localStorage가 막혀도(시크릿 모드 등) 기본값으로 계속 간다. */
+  var CODE_LANG_KEY = 'blogCodeLang';
+  var CODE_LANG_DEFAULT = 'java';
+  var CODE_LANG_RE = /^[a-z0-9+#-]{1,20}$/;
+  /* 펜스 여는 줄 전체가 "```언어"(뒤 공백만 허용)일 때만 배운다. 정보 문자열이 더 붙은 줄은 사용자가 손수 쓴 것이라 건드리지 않는다. */
+  var FENCE_OPEN_LANG_RE = /^```([a-z0-9+#-]{1,20})[ \t]*$/;
 
   var dom = {};
   var state = {
@@ -880,13 +893,51 @@
     replaceRange(start, end, built, urlAt, urlAt + url.length);
   }
 
+  /* v4.2(계약서 §6-2): 마지막으로 쓴 언어로 펜스를 열고(기본 java) 언어 글자를 선택해 둔다 — 그대로 두면 그 언어, 치면 덮어쓴다.
+     선택이 없으면 가운데는 빈 줄이다(v4.1까지의 `// 코드` 자리표시는 언어를 바꾸면 틀린 주석이 되고, 쓰기 전에 지워야 했다).
+     펜스는 줄 첫머리여야 펜스다 — 줄 중간에서 누르면 앞에 줄바꿈 하나를 둔다(펜스는 문단을 끊을 수 있어 빈 줄까지는 필요 없다). */
   function insertCodeBlock() {
     var start = dom.body.selectionStart;
     var end = dom.body.selectionEnd;
-    var selected = dom.body.value.slice(start, end) || '// 코드';
-    var fence = '```js\n' + selected + '\n```\n';
-    var langAt = start + 3;
-    replaceRange(start, end, fence, langAt, langAt + 2);
+    var value = dom.body.value;
+    var selected = value.slice(start, end);
+    var lang = codeLang();
+    var lead = (start > 0 && value.charAt(start - 1) !== '\n') ? '\n' : '';
+    var fence = lead + '```' + lang + '\n' + selected + '\n```\n';
+    var langAt = start + lead.length + 3;
+    replaceRange(start, end, fence, langAt, langAt + lang.length);
+  }
+
+  /* 기억한 언어. 값이 규칙([a-z0-9+#-]{1,20})에 안 맞으면(손으로 고친 저장소 등) 기본값. */
+  function codeLang() {
+    var saved = null;
+    try { saved = window.localStorage.getItem(CODE_LANG_KEY); } catch (err) { saved = null; }
+    return (saved && CODE_LANG_RE.test(saved)) ? saved : CODE_LANG_DEFAULT;
+  }
+
+  var codeLangMemo = null;   // 방금 쓴 값 — 펜스 줄에서 타자마다 같은 값을 다시 쓰지 않게
+
+  function rememberCodeLang(lang) {
+    var v = String(lang || '');
+    if (!CODE_LANG_RE.test(v) || v === codeLangMemo) return;
+    codeLangMemo = v;
+    try { window.localStorage.setItem(CODE_LANG_KEY, v); } catch (err) { /* 기억 못 해도 기본값으로 계속 간다 */ }
+  }
+
+  /* 커서가 펜스 "여는" 줄에 있고 그 줄이 ```언어 꼴이면 그 언어를 기억한다(툴바가 선택해 둔 언어를 덮어쓴 경우 등).
+     싼 검사(줄 첫 세 글자)를 먼저 한다 — 거의 모든 입력은 거기서 끝나고, 펜스 줄에서만 insideFence(문서 앞부분 훑기)를 부른다.
+     닫는 줄(``` 위 펜스 줄 수가 홀수)은 배우지 않는다. */
+  function learnFenceLang() {
+    var pos = dom.body.selectionStart;
+    if (pos !== dom.body.selectionEnd) return;
+    var value = dom.body.value;
+    var ls = value.lastIndexOf('\n', pos - 1) + 1;
+    if (value.slice(ls, ls + 3) !== '```') return;
+    var le = value.indexOf('\n', pos);
+    if (le === -1) le = value.length;
+    var m = FENCE_OPEN_LANG_RE.exec(value.slice(ls, le));
+    if (!m || insideFence(value.slice(0, ls))) return;
+    rememberCodeLang(m[1]);
   }
 
   /* ---------- 표 ----------
@@ -1152,6 +1203,8 @@
       } finally {
         fencing = false;
       }
+      /* v4.2: `//언어`는 "이 언어를 쓰겠다"는 가장 분명한 신호다 — 툴바 "코드 블록"이 다음부터 이 언어로 연다. 언어 없는 `//`는 기억을 바꾸지 않는다. */
+      if (lang) rememberCodeLang(lang);
     }, 0);
     return true;
   }
@@ -1160,6 +1213,7 @@
     if (fencing) return;                                     // execCommand가 일으킨 중첩 input
     clearFieldError(dom.body, dom.bodyErr);                  // v4.1: 한 글자 치면 "본문이 비어 있어요"가 사라진다
     maybeFence(e);                                           // 판정만 — 치환은 다음 태스크(위 주석)
+    learnFenceLang();                                        // v4.2: 펜스 여는 줄에 친 언어를 기억(툴바 "코드 블록"의 다음 기본값)
     onEdit();
     renderPreview();
   }
@@ -1216,8 +1270,8 @@
   }
 
   /* ---------- Enter · 닫는 괄호 (v3.9, 계약서 §6-2 "Enter 규칙 표" ①~⑤) ----------
-     기준은 VS Code의 언어 무관 기본 동작(autoIndent: full). 언어별 규칙(`:` 뒤 +1단 등)·자동 닫기 괄호는 넣지 않는다 —
-     마크다운의 [텍스트](url)과 충돌하고 type-over 상태를 textarea에서 추적할 수 없다.
+     기준은 VS Code의 언어 무관 기본 동작(autoIndent: full). 언어별 규칙(`:` 뒤 +1단 등)은 넣지 않는다.
+     자동 닫기 괄호는 v4.2부터 **펜스 안에서만** 한다(아래 "코드 블록 안의 짝") — 펜스 밖은 마크다운의 [텍스트](url)과 충돌해 그대로 안 한다.
      실행 경로는 replaceRange(execCommand) — Enter 한 번 = undo 한 단계(setRangeText는 undo 스택을 비운다, 라운드 6 실측).
      keydown 안에서 preventDefault 뒤 곧바로 실행한다(진행 중인 편집 명령이 없으므로 `//` 규칙처럼 미룰 필요가 없다).
 
@@ -1305,6 +1359,297 @@
     return true;
   }
 
+  /* ---------- 줄 범위 (v4.2 — 주석 토글 · 줄 복제 · 줄 이동 · Tab 줄 들여쓰기가 함께 쓴다) ----------
+     선택이 걸친 줄들의 [첫 줄 시작, 끝 줄 끝) — 끝 줄의 줄바꿈은 빼고. 선택이 다음 줄 0열에서 끝나면(Shift+↓로 줄을 고른 흔한 모양)
+     그 줄은 "걸친" 줄이 아니다 — IDE 관행 그대로 뺀다. 선택이 없으면 커서가 있는 줄 하나. */
+  function lineSpan(value, a, b) {
+    var start = value.lastIndexOf('\n', a - 1) + 1;
+    var last = (b > a && value.charAt(b - 1) === '\n') ? b - 1 : b;
+    var end = value.indexOf('\n', last);
+    if (end === -1) end = value.length;
+    return { start: start, end: end };
+  }
+
+  /* [ls, le) 줄들이 전부 한 코드 블록 "안"의 코드 줄인가. 위쪽 펜스 줄 수가 홀수(insideFence — §6-2 `//` 규칙과 같은 함수)이고,
+     걸친 줄 가운데 펜스 줄(``` 로 시작)이 하나도 없어야 한다 — 펜스를 여는/닫는 줄 자체에서는 짝·주석 규칙이 발동하지 않는다. */
+  function codeLines(ls, le) {
+    var value = dom.body.value;
+    if (/^```/m.test(value.slice(ls, le))) return false;
+    return insideFence(value.slice(0, ls));
+  }
+
+  function codeAt(a, b) {
+    var span = lineSpan(dom.body.value, a, b);
+    return codeLines(span.start, span.end);
+  }
+
+  /* ---------- 코드 블록 안의 짝 (v4.2, 계약서 §6-2 — 사용자 원문 "코드 블록 부분 괄호 쓰면 IDE 처럼 괄호 닫히는거 까지 같이 보여줘") ----------
+     펜스 안에서만. 펜스 밖은 v3.9 그대로 아무것도 하지 않는다 — 마크다운의 [텍스트](url)·(괄호 속 문장)과 충돌한다.
+       자동 닫기  ( [ { " ' `  → 짝을 함께 넣고 커서는 사이. 선택이 있으면 감싸고 선택은 안쪽 그대로.
+                  선택이 없을 때는 다음 글자가 끝·공백·) ] } ; , . 일 때만(글자 앞에서 여는 괄호를 치면 대개 그 글자를 감쌀 생각이다).
+                  따옴표는 앞 글자가 단어 글자(문자·숫자·_)이거나 같은 따옴표면 짝을 넣지 않는다(don't · 이미 연 따옴표 뒤).
+       건너뛰기   ) ] } " ' `  → 커서 바로 뒤가 같은 글자면 넣지 않고 커서만 한 칸.
+                  textarea는 "내가 넣은 짝"을 추적할 수 없어 IDE처럼 자동 삽입분만 가리지 않는다 — 바로 뒤가 같은 글자면 언제나 건너뛴다.
+       쌍 지우기  (|) [|] {|} "|" '|' `|` 에서 Backspace → 둘 다.
+     전부 replaceRange(execCommand) 한 번 — Ctrl+Z 한 번에 한 동작이 돌아간다. 건너뛰기는 글을 바꾸지 않으므로 되돌릴 것도 없다.
+     백틱 셋으로 펜스를 닫을 때: ` → `|` → (건너뛰기) ``| → (앞 글자가 백틱이라 짝 없음) ```| — 그대로 닫힌다. */
+
+  var AUTO_PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
+  var PAIR_OPEN_KEYS = '([{"\'`';
+  var OVERTYPE_KEYS = ')]}"\'`';
+  var QUOTE_KEYS = '"\'`';
+  var PAIR_NEXT_OK = ')]};,.';
+  /* 단어 글자 = 유니코드 문자·숫자·밑줄. \p{…}를 모르는 옛 엔진에서는 정규식 리터럴이 파일째 문법 오류가 되므로 생성자로 만들고 실패하면 근사치. */
+  var WORD_CHAR_RE = (function () {
+    try { return new RegExp('[\\p{L}\\p{N}_]', 'u'); } catch (err) {
+      return /[A-Za-z0-9_À-ɏͰ-ϿЀ-ӿ぀-ヿ㄰-㆏一-鿿가-힣]/;
+    }
+  })();
+
+  /* 여는 글자·닫는 글자 키. 처리했으면 true(preventDefault 포함). 아니면 false — 호출부가 다음 규칙(⑤)이나 기본 동작으로 흘려보낸다. */
+  function onPairKey(e) {
+    var key = e.key;
+    var a = dom.body.selectionStart;
+    var b = dom.body.selectionEnd;
+    var value = dom.body.value;
+    if (!codeAt(a, b)) return false;
+
+    if (a !== b) {
+      /* 선택 감싸기 — 여는 글자만. 닫는 글자(`)` 등)는 기본 동작(선택을 그 글자로 바꾼다)이다. */
+      if (PAIR_OPEN_KEYS.indexOf(key) === -1) return false;
+      e.preventDefault();
+      replaceRange(a, b, key + value.slice(a, b) + AUTO_PAIRS[key], a + 1, b + 1);
+      return true;
+    }
+
+    /* 건너뛰기가 먼저다 — 따옴표는 여는 글자이자 닫는 글자라, "|" 에서 " 는 짝을 더 넣지 않고 넘어가야 한다. */
+    if (OVERTYPE_KEYS.indexOf(key) !== -1 && value.charAt(a) === key) {
+      e.preventDefault();
+      setSelection(a + 1, a + 1);
+      return true;
+    }
+
+    if (PAIR_OPEN_KEYS.indexOf(key) === -1) return false;
+    var next = value.charAt(a);
+    if (next !== '' && !/\s/.test(next) && PAIR_NEXT_OK.indexOf(next) === -1) return false;
+    if (QUOTE_KEYS.indexOf(key) !== -1) {
+      var prev = value.charAt(a - 1);
+      if (prev === key || (prev !== '' && WORD_CHAR_RE.test(prev))) return false;
+    }
+    e.preventDefault();
+    replaceRange(a, a, key + AUTO_PAIRS[key], a + 1, a + 1);
+    return true;
+  }
+
+  /* 빈 쌍 사이의 Backspace → 둘 다 지운다. 선택 없음·보조키 없음은 호출부가 걸렀다. */
+  function onPairBackspace(e) {
+    var pos = dom.body.selectionStart;
+    if (pos < 1) return false;
+    var value = dom.body.value;
+    var open = value.charAt(pos - 1);
+    if (PAIR_OPEN_KEYS.indexOf(open) === -1 || value.charAt(pos) !== AUTO_PAIRS[open]) return false;
+    if (!codeAt(pos, pos)) return false;
+    e.preventDefault();
+    replaceRange(pos - 1, pos + 1, '', pos - 1, pos - 1);
+    return true;
+  }
+
+  /* ---------- 줄 편집 도구 (v4.2 — 주석 토글이 쓴다) ----------
+     edits[i] = i번째 줄에 할 편집 목록 [{ at: 열, del: 지울 글자 수, ins: 넣을 글 }] (열 오름차순, 겹치지 않음).
+     새 텍스트를 만들고, 옛 커서·선택 위치를 새 위치로 옮겨 replaceRange 한 번으로 바꾼다(= undo 한 단계). */
+  function mapCol(col, list) {
+    var shift = 0;
+    for (var i = 0; i < list.length; i += 1) {
+      var ed = list[i];
+      if (col < ed.at) break;
+      if (col >= ed.at + ed.del) { shift += ed.ins.length - ed.del; continue; }
+      return ed.at + shift + ed.ins.length;            // 지워진 글자 안에 있던 위치 → 그 편집 바로 뒤
+    }
+    return col + shift;
+  }
+
+  function applyLineEdits(span, lines, edits, a, b) {
+    var oldStarts = [];
+    var newStarts = [];
+    var at = span.start;
+    var nat = span.start;
+    var out = lines.map(function (line, i) {
+      var res = '';
+      var last = 0;
+      (edits[i] || []).forEach(function (ed) {
+        res += line.slice(last, ed.at) + ed.ins;
+        last = ed.at + ed.del;
+      });
+      res += line.slice(last);
+      oldStarts.push(at);
+      newStarts.push(nat);
+      at += line.length + 1;
+      nat += res.length + 1;
+      return res;
+    });
+    var text = out.join('\n');
+    if (text === lines.join('\n')) return;             // 바뀐 게 없으면 되돌리기 단계·dirty를 만들지 않는다
+    var grow = text.length - (span.end - span.start);
+    function map(p) {
+      if (p < span.start) return p;
+      if (p > span.end) return p + grow;
+      for (var i = lines.length - 1; i >= 0; i -= 1) {
+        if (p >= oldStarts[i]) return newStarts[i] + mapCol(p - oldStarts[i], edits[i] || []);
+      }
+      return p;
+    }
+    replaceRange(span.start, span.end, text, map(a), map(b));
+  }
+
+  /* ---------- 주석 토글 Ctrl/Cmd+/ (v4.2, 펜스 안) ----------
+     접두는 그 코드 블록을 연 펜스 줄의 언어로 정한다.
+       //         java js javascript ts typescript c cpp cs csharp kotlin kt go rust swift scss dart php — 그리고 언어 없음·모르는 언어
+       #          python py bash sh shell yaml yml ruby rb r toml dockerfile
+       --         sql
+       <!-- -->   html xml md markdown (감싸기)
+       슬래시별   css (감싸기 — 슬래시별로 열고 별슬래시로 닫는다. 이 주석 안에는 그 닫는 표시를 쓸 수 없어 말로 적는다)
+     줄 접두: 비지 않은 줄들의 최소 들여쓰기 뒤에 "// "를 넣는다. 비지 않은 줄이 전부 이미 주석이면 푼다(접두 + 뒤 공백 하나). 빈 줄은 건드리지 않는다.
+     감싸기: 첫 비지 않은 줄의 들여쓰기 뒤에 "<!-- ", 마지막 비지 않은 줄 끝에 " -->". 이미 그렇게 감싸여 있으면 푼다.
+     빈 줄 하나에서 누르면 주석 표시만 넣고 커서를 그 안에 둔다. */
+  var COMMENT_HASH = ['python', 'py', 'bash', 'sh', 'shell', 'yaml', 'yml', 'ruby', 'rb', 'r', 'toml', 'dockerfile'];
+  var COMMENT_WRAP = {
+    html: ['<!--', '-->'], xml: ['<!--', '-->'], md: ['<!--', '-->'], markdown: ['<!--', '-->'],
+    css: ['/*', '*/']
+  };
+
+  function commentStyle(lang) {
+    if (COMMENT_HASH.indexOf(lang) !== -1) return { line: '#' };
+    if (lang === 'sql') return { line: '--' };
+    /* hasOwnProperty — 언어가 "constructor" 같은 이름이면 Object.prototype의 것을 집는다(markdown.js LANG_LABEL에서 실제로 났던 결함) */
+    if (Object.prototype.hasOwnProperty.call(COMMENT_WRAP, lang)) return { open: COMMENT_WRAP[lang][0], close: COMMENT_WRAP[lang][1] };
+    return { line: '//' };
+  }
+
+  /* 커서 위쪽에서 마지막 펜스 줄 = 지금 블록을 연 줄(codeLines가 "안"임을 이미 확인했다). 정보 문자열의 첫 낱말이 언어다. */
+  function fenceLangAbove(ls) {
+    var before = dom.body.value.slice(0, ls);
+    var re = /^```[ \t]*([^\s`]*)/gm;
+    var m;
+    var lang = '';
+    while ((m = re.exec(before)) !== null) lang = m[1];
+    return lang.toLowerCase();
+  }
+
+  function indentLen(line) { return /^[ \t]*/.exec(line)[0].length; }
+  function isBlankLine(line) { return !/\S/.test(line); }
+
+  function lineCommentEdits(lines, mark) {
+    var filled = lines.filter(function (l) { return !isBlankLine(l); });
+    var min = Math.min.apply(null, filled.map(indentLen));
+    var undo = filled.every(function (l) {
+      var i = indentLen(l);
+      return l.slice(i, i + mark.length) === mark;
+    });
+    return lines.map(function (l) {
+      if (isBlankLine(l)) return [];
+      if (!undo) return [{ at: min, del: 0, ins: mark + ' ' }];
+      var i = indentLen(l);
+      return [{ at: i, del: mark.length + (l.charAt(i + mark.length) === ' ' ? 1 : 0), ins: '' }];
+    });
+  }
+
+  function wrapCommentEdits(lines, open, close) {
+    var first = -1;
+    var last = -1;
+    lines.forEach(function (l, i) {
+      if (isBlankLine(l)) return;
+      if (first === -1) first = i;
+      last = i;
+    });
+    var edits = lines.map(function () { return []; });
+    var fl = lines[first];
+    var ll = lines[last];
+    var fi = indentLen(fl);
+    var lr = ll.replace(/[ \t]+$/, '').length;          // 마지막 줄의 끝 공백을 뺀 길이
+    var wrapped = fl.slice(fi, fi + open.length) === open &&
+      lr >= close.length && ll.slice(lr - close.length, lr) === close &&
+      (first !== last || lr - close.length >= fi + open.length);
+    if (!wrapped) {
+      edits[first].push({ at: fi, del: 0, ins: open + ' ' });
+      edits[last].push({ at: lr, del: 0, ins: ' ' + close });
+      return edits;
+    }
+    var openDel = open.length + (fl.charAt(fi + open.length) === ' ' ? 1 : 0);
+    var closeAt = lr - close.length;
+    var floor = first === last ? fi + openDel : 0;       // 한 줄이면 여는 표시를 지운 자리 앞으로 넘어가지 않는다
+    if (closeAt - 1 >= floor && ll.charAt(closeAt - 1) === ' ') closeAt -= 1;
+    edits[first].push({ at: fi, del: openDel, ins: '' });
+    edits[last].push({ at: closeAt, del: lr - closeAt, ins: '' });
+    return edits;
+  }
+
+  /* 처리했으면 true(= 호출부가 preventDefault). 펜스 밖이면 false — 브라우저 기본으로 흘려보낸다. */
+  function toggleComment() {
+    var value = dom.body.value;
+    var a = dom.body.selectionStart;
+    var b = dom.body.selectionEnd;
+    var span = lineSpan(value, a, b);
+    if (!codeLines(span.start, span.end)) return false;
+    var style = commentStyle(fenceLangAbove(span.start));
+    var lines = value.slice(span.start, span.end).split('\n');
+
+    if (lines.every(isBlankLine)) {
+      if (lines.length !== 1) return true;               // 빈 줄 여럿 — 할 일이 없다(키는 먹는다)
+      var at = span.end;
+      var ins = style.line ? style.line + ' ' : style.open + '  ' + style.close;
+      var caret = at + (style.line ? ins.length : style.open.length + 1);
+      replaceRange(at, at, ins, caret, caret);
+      return true;
+    }
+    var edits = style.line ? lineCommentEdits(lines, style.line) : wrapCommentEdits(lines, style.open, style.close);
+    applyLineEdits(span, lines, edits, a, b);
+    return true;
+  }
+
+  /* ---------- 줄 복제 Ctrl/Cmd+D · 줄 이동 Alt+Shift+↑/↓ (v4.2, 본문 어디서나) ---------- */
+
+  /* 걸친 줄들을 바로 아래에 복제하고 커서·선택도 복제본으로 옮긴다. */
+  function duplicateLines() {
+    var value = dom.body.value;
+    var a = dom.body.selectionStart;
+    var b = dom.body.selectionEnd;
+    var span = lineSpan(value, a, b);
+    var block = value.slice(span.start, span.end);
+    var shift = block.length + 1;
+    replaceRange(span.end, span.end, '\n' + block, a + shift, b + shift);
+  }
+
+  /* 걸친 줄들을 위(-1)·아래(+1) 줄과 맞바꾼다. 선택은 줄과 함께 움직인다. 문서 끝에 닿았으면 아무것도 하지 않는다. */
+  function moveLines(dir) {
+    var value = dom.body.value;
+    var a = dom.body.selectionStart;
+    var b = dom.body.selectionEnd;
+    var span = lineSpan(value, a, b);
+    var block = value.slice(span.start, span.end);
+    if (dir < 0) {
+      if (span.start === 0) return;
+      var ps = value.lastIndexOf('\n', span.start - 2) + 1;
+      var prev = value.slice(ps, span.start - 1);
+      var up = prev.length + 1;
+      replaceRange(ps, span.end, block + '\n' + prev, a - up, b - up);
+      return;
+    }
+    if (span.end >= value.length) return;
+    var ne = value.indexOf('\n', span.end + 1);
+    if (ne === -1) ne = value.length;
+    var next = value.slice(span.end + 1, ne);
+    var down = next.length + 1;
+    replaceRange(span.start, ne, next + '\n' + block, Math.min(a + down, value.length), Math.min(b + down, value.length));
+  }
+
+  /* Ctrl/Cmd 조합의 글자 판정. 한글 자판이 켜져 있으면 브라우저에 따라 e.key가 'ㅇ'처럼 올 수 있어 물리 키(e.code)로 한 번 더 본다.
+     e.key가 라틴 글자면 그것만 믿는다 — 드보락 같은 배열에서 e.code는 다른 글자다. */
+  function keyIs(e, ch) {
+    var k = String(e.key || '');
+    if (k.toLowerCase() === ch) return true;
+    return k.length === 1 && !/[a-z]/i.test(k) && e.code === 'Key' + ch.toUpperCase();
+  }
+
   function onBodyKeydown(e) {
     /* 한글 조합 중에는 키를 가로채지 않는다.
        조합이 끝나기 전의 Tab/Ctrl+B는 IME가 "조합 확정"으로 쓰는 키일 수 있어서,
@@ -1326,6 +1671,8 @@
     /* Tab이 포커스를 옮겨 버리면 코드 들여쓰기를 쓸 수 없다. textarea 안에서만 가로챈다.
        단, 탈출 대기 상태라면 가로채지 않고 그대로 흘려보낸다(= 브라우저가 포커스를 옮긴다). */
     if (e.key === 'Tab') {
+      /* v4.2: Ctrl·Alt·Cmd가 붙은 Tab은 브라우저·OS 몫이다(탭 전환 등) — 보조키가 맞지 않으면 건드리지 않는다. */
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
       if (tabEscape) { setTabEscape(false); return; }
       e.preventDefault();
       var start = dom.body.selectionStart;
@@ -1341,15 +1688,27 @@
         teachTab();
         return;
       }
-      var lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      var lineEnd = value.indexOf('\n', end);
-      if (lineEnd === -1) lineEnd = value.length;
-      var block = value.slice(lineStart, lineEnd);
+      /* v4.2: 선택 없는 Shift+Tab — 현재 줄 첫머리의 공백(최대 2칸)만 지우고 커서는 같은 글자 앞에 남긴다.
+         v4.1까지는 아래 여러 줄 갈래를 타서 줄 전체가 선택된 채 끝났다 — 이어서 글자를 치면 그 줄이 통째로 사라졌다. */
+      if (start === end) {
+        var ls0 = value.lastIndexOf('\n', start - 1) + 1;
+        var lead = /^ {1,2}/.exec(value.slice(ls0, ls0 + 2));
+        if (lead) {
+          var col = start - ls0;
+          var caretAt = ls0 + Math.max(0, col - lead[0].length);
+          replaceRange(ls0, ls0 + lead[0].length, '', caretAt, caretAt);
+        }
+        teachTab();
+        return;
+      }
+      /* 선택이 걸친 줄마다(lineSpan — 다음 줄 0열에서 끝난 선택은 그 줄을 빼는 IDE 관행) 넣기/빼기, 선택은 그 줄들 전체로. */
+      var span = lineSpan(value, start, end);
+      var block = value.slice(span.start, span.end);
       var next = block.split('\n').map(function (line) {
         if (e.shiftKey) return line.replace(/^ {1,2}/, '');
         return '  ' + line;
       }).join('\n');
-      replaceRange(lineStart, lineEnd, next, lineStart, lineStart + next.length);
+      if (next !== block) replaceRange(span.start, span.end, next, span.start, span.start + next.length);
       teachTab();
       return;
     }
@@ -1364,13 +1723,36 @@
     var plain = !(e.shiftKey || e.ctrlKey || e.altKey || e.metaKey);
     var collapsed = dom.body.selectionStart === dom.body.selectionEnd;
     if (e.key === 'Enter' && plain && collapsed) { onBodyEnter(e); return; }
-    /* ⑤ — `}` `)`는 US 자판에서 Shift로 나오는 글자라 Shift는 보지 않는다(e.key가 이미 그 글자다). Ctrl·Alt·Meta만 거른다. */
-    if (CLOSE_KEYS.indexOf(e.key) !== -1 && !(e.ctrlKey || e.altKey || e.metaKey) && collapsed) { onBodyCloseBracket(e); return; }
 
-    if (!(e.ctrlKey || e.metaKey)) return;
-    var key = e.key.toLowerCase();
-    if (key === 'b') { e.preventDefault(); TOOLBAR.bold(); }
-    else if (key === 'i') { e.preventDefault(); TOOLBAR.italic(); }
+    /* v4.2 줄 이동 — Alt+Shift+↑/↓(Ctrl·Cmd 없이). 본문 어디서나. 문서 끝에 닿아도 키는 먹는다(선택 확장으로 새지 않게). */
+    if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      moveLines(e.key === 'ArrowUp' ? -1 : 1);
+      return;
+    }
+
+    /* 글자 키 — Ctrl·Alt·Meta 없음. `( { "` 같은 글자는 US 자판에서 Shift로 나오므로 Shift는 보지 않는다(e.key가 이미 그 글자다). */
+    if (!(e.ctrlKey || e.altKey || e.metaKey)) {
+      /* v4.2 쌍 지우기 — 보조키 없는 Backspace, 선택 없음. */
+      if (e.key === 'Backspace') {
+        if (!e.shiftKey && collapsed) onPairBackspace(e);
+        return;
+      }
+      /* v4.2 짝 넣기·건너뛰기(펜스 안). 처리하지 않았으면 ⑤로 넘어간다 — 닫는 괄호는 건너뛰기가 ⑤보다 먼저다. */
+      if (e.key.length === 1 && (PAIR_OPEN_KEYS + OVERTYPE_KEYS).indexOf(e.key) !== -1 && onPairKey(e)) return;
+      /* ⑤ 닫는 괄호 내어쓰기 */
+      if (CLOSE_KEYS.indexOf(e.key) !== -1 && collapsed) onBodyCloseBracket(e);
+      return;
+    }
+
+    /* Ctrl/Cmd 조합 — v4.2부터 Ctrl(또는 Cmd) "하나만"이다(Alt·Shift가 붙으면 브라우저 몫: Ctrl+Shift+B 북마크 바 등). */
+    if (e.ctrlKey === e.metaKey || e.altKey || e.shiftKey) return;
+    if (keyIs(e, 'b')) { e.preventDefault(); TOOLBAR.bold(); }
+    else if (keyIs(e, 'i')) { e.preventDefault(); TOOLBAR.italic(); }
+    /* v4.2 줄 복제 — 본문 어디서나. 브라우저의 "북마크 추가"를 막는다. */
+    else if (keyIs(e, 'd')) { e.preventDefault(); duplicateLines(); }
+    /* v4.2 주석 토글 — 펜스 안에서만. 펜스 밖이면 기본 동작 그대로(아무것도 막지 않는다). */
+    else if (e.key === '/' || e.code === 'Slash' || e.code === 'NumpadDivide') { if (toggleComment()) e.preventDefault(); }
   }
 
   /* ---------- 보기 방식 (v4.1 #141 — 계약서 §6-0 "작업 줄의 JS") ----------

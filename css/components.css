@@ -1587,10 +1587,16 @@ select.field {
   color: var(--c-text-dim);
 }
 
+/* v4.2: 문장 둘(요구사항 #16 + 사용자 추가 문구, 계약서 §10). 두 문장 모두 마침표가 없어서, 360에서 첫 문장이
+   두 줄로 꺾이면 "꺾인 줄"과 "다음 문장"이 같은 행간으로 이어져 한 문단처럼 읽힌다 — 문장 사이에만 한 칸(8)을 준다.
+   꺾인 줄 사이는 행간 그대로라 "한 문장 안"과 "문장 사이"가 구별된다. */
+.footer-note + .footer-note { margin-block-start: var(--sp-2); }
+
 /* 보조. 연도 하나(v4.0 — "사이트명 · 연도"에서 중복인 이름과 가운뎃점을 뺐다, 계약서 §3·§10). 흘려봐도 되는 정보라 한 단계 더 내린다.
-   v4.0(M1): 자간 확장을 뗐다. */
+   v4.0(M1): 자간 확장을 뗐다.
+   v4.2: 8 → 12. 문장 사이가 8이 됐으므로 연도까지는 한 단계 더 벌려야 "문장 묶음 / 연도"의 두 층이 간격으로도 읽힌다. */
 .footer-meta {
-  margin-block-start: var(--sp-2);
+  margin-block-start: var(--sp-3);
   font-size: var(--fs-xs);
   color: var(--c-text-mute);
   font-variant-numeric: tabular-nums;
