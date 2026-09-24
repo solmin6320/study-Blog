@@ -5,6 +5,12 @@
       "name": "Java",
       "description": "",
       "order": 0
+    },
+    {
+      "slug": "spring-core",
+      "name": "스프링 코어",
+      "description": "",
+      "order": 1
     }
   ]
 }
