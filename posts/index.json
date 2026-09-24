@@ -5,6 +5,18 @@
   },
   "posts": [
     {
+      "id": "2026-09-25-ioc-di",
+      "title": "IOC / DI",
+      "summary": "Ioc, DI",
+      "created": "2026-09-25T00:20:25+09:00",
+      "updated": "2026-09-25T00:20:25+09:00",
+      "tags": [
+        "spring"
+      ],
+      "category": "spring-core",
+      "pinned": false
+    },
+    {
       "id": "2026-09-21-note-125149",
       "title": "캡슐화",
       "summary": "캡슐화",
