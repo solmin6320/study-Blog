@@ -21,7 +21,7 @@
       post: function (id, slug) {
         return 'posts/' + (slug || Blog.config.category.fallbackSlug) + '/' + id + '.md';
       },
-      /* v1의 평면 구조(posts/<id>.md). 사용자가 폴더를 만들지 않고 파일만 떨군 경우의 마지막 폴백. */
+      /* v1의 평면 구조(posts/<id>.md). 사용자가 폴더를 만들지 않고 파일만 떨군 경우의 최후 폴백. */
       postFlat: function (id) { return 'posts/' + id + '.md'; }
     },
 
@@ -47,10 +47,12 @@
       /* 사이드바 상태 {"pinned":bool,"closed":[slug…]}. theme처럼 theme-init.js에도 문자열이 박혀 있다 —
          고정 도킹은 첫 페인트 전에 알아야 레이아웃이 튀지 않기 때문이다. 바꾸면 그 파일도 같이 바꾼다. */
       side: 'blogSide',
-      /* 인트로 전등을 이 세션에서 이미 봤다는 표시(sessionStorage, 계약서 §3-5).
-         theme-init.js에도 같은 문자열이 박혀 있다 — 첫 페인트 전에 막을 아예 안 그리려면 거기서 알아야 한다. */
+      /* 첫 방문 연출(페이지 올라오기 + 제목 타자)을 이 세션에서 이미 봤다는 표시 '1'(sessionStorage, 계약서 §3-5 · §3-2 저장 키 표).
+         쓰는 곳은 ui.js initIntro() — 첫 방문 연출의 페이지(index.html)에서만. 읽는 곳은 theme-init.js — 있으면 첫 페인트 전에
+         html[data-intro="done"]을 붙이고, 그 뒤로는 누구도 그 속성을 바꾸지 않는다.
+         theme-init.js는 config.js보다 먼저 돌아 같은 문자열을 따로 적어 둔다 — 여기를 바꾸면 그 파일도 같이 바꾼다. */
       intro: 'blogIntro',
-      /* 마지막으로 본 목록 {"search":"?cat=java&q=…","y":1234} (sessionStorage, 계약서 §4-6 ①).
+      /* 가장 최근에 본 목록 {"search":"?cat=java&q=…","y":1234} (sessionStorage, 계약서 §4-6 ①).
          app.js가 쓰고 post.js가 읽는다 — 상세의 "목록"이 필터 풀린 전체 목록 맨 위로 떨어지지 않게. */
       list: 'blogList',
       /* "목록" 링크로 돌아간다는 한 번짜리 표식(값 = 방금 읽은 글 id, §4-6 ③). post.js가 쓰고 app.js가 읽자마자 지운다.

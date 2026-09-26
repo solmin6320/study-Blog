@@ -3,7 +3,8 @@
    분류 필터(?cat=)는 유지하되 거는 쪽은 사이드바(ui.js .side-cat-name)다 — 분류 인덱스 행 #catRow는 v3.9에서 폐기됐다(§4-3).
    태그 필터(?tags=)도 유지하되 거는 쪽은 상세의 태그 링크(post.js)다 — 태그 인덱스 #tags는 v4.0에서 폐기됐다(사용자 판정, §4-3).
    걸린 필터를 보여 주고 푸는 일은 결과 줄 .list-bar(§4-5)가 한다.
-   정렬 컨트롤은 없다. 학습 기록의 순서는 시간순 하나다(계약서 §0-2). */
+   정렬 컨트롤은 없다. 학습 기록의 순서는 시간순 하나다(계약서 §0-2).
+   v4.4: 세션의 첫 로드에 h1.page-title을 한 글자씩 쓰는 일(제목 타자, §3-5 ②)도 여기다 — 그 h1이 이 페이지에만 있다. */
 (function (window, document) {
   'use strict';
 
@@ -521,10 +522,182 @@
     });
   }
 
+  /* ---------- 제목 타자 (계약서 §3-5 ②, v4.4 · 박자 v4.5) ----------
+     세션의 첫 index.html 로드에서 h1.page-title이 한 글자씩 쓰이고, 끝 글자 뒤 커서가 세 번 깜빡인 뒤 평문으로 돌아온다.
+     나눠 맡는다 — 대기(layout.css §10 title-wait)·커서·깜빡임(components.css §16)은 CSS, 글자를 옮기는 것만 여기.
+     첫 글자의 시각은 숫자로 세지 않는다. CSS 대기가 끝났다는 사건(Animation.finished)이 곧 첫 글자다 —
+     600을 여기 복사하면 tokens.css의 --dur-intro를 고칠 때 둘이 어긋난다. 여기 있는 시각은 CSS가 모르는 셋뿐이다(§8-1).
+     5초 예산(§3-5)은 첫 글자부터 잰다 — 상한 1600 + 깜빡임 3 × 1100(--dur-caret-blink) = 4900 < 안전망 5000.
+     간격·상한을 늘리려면 이 식이 5000 미만인지 먼저 본다 — 넘으면 안전망이 깜빡임 도중에 제목을 끊는다. */
+
+  var TYPE_STEP_MS = 160;    // 글자 간격(v4.5 — 120은 "쏟아지는" 속도였다) — 사람 흉내의 불규칙한 간격은 넣지 않는다
+  var TYPE_SPAN_MS = 1600;   // 첫 글자 ~ 끝 글자 상한(간격과 같은 4/3 비율 — 11글자까지는 간격이 줄지 않는다). 넘는 긴 제목은 간격을 줄인다 — 어떤 제목이든 5초 안에 끝나게(WCAG 2.2.2)
+  var TYPE_NET_MS = 5000;    // 안전망: 첫 글자 뒤 이만큼 지나면 깜빡임의 끝(animationend)을 못 받았어도 평문으로
+
+  /* 지금 타자 중인 h1과 그 제목. fillSite()가 이것을 보고 대입을 비킨다. 타자 DOM이 없으면 null. */
+  var typing = null;
+
+  /* 사용자가 보는 한 글자(grapheme) 단위로 자른다 — 코드 단위로 자르면 이모지는 반쪽 서로게이트가, NFD 한글은 자모가
+     한 박자씩 드러난다. Intl.Segmenter가 정답이고, 없는 브라우저에서는 graphemeFallback()이 흔한 경우를 맞춘다. */
+  function splitGraphemes(text) {
+    if (window.Intl && typeof window.Intl.Segmenter === 'function') {
+      var segments = new window.Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text);
+      return Array.from(segments, function (s) { return s.segment; });
+    }
+    return graphemeFallback(text);
+  }
+
+  /* 한글 자모 갈래 — 초성 L · 중성 V · 종성 T · 완성형 LV(받침 없음) · LVT(받침 있음). 한글이 아니면 ''. */
+  function hangulType(cp) {
+    if ((cp >= 0x1100 && cp <= 0x115F) || (cp >= 0xA960 && cp <= 0xA97C)) return 'L';
+    if ((cp >= 0x1160 && cp <= 0x11A7) || (cp >= 0xD7B0 && cp <= 0xD7C6)) return 'V';
+    if ((cp >= 0x11A8 && cp <= 0x11FF) || (cp >= 0xD7CB && cp <= 0xD7FB)) return 'T';
+    if (cp >= 0xAC00 && cp <= 0xD7A3) return (cp - 0xAC00) % 28 === 0 ? 'LV' : 'LVT';
+    return '';
+  }
+
+  /* 앞 갈래 뒤에 붙어 한 음절을 이루는 갈래(유니코드 음절 경계 규칙 GB6~GB8). */
+  var HANGUL_NEXT = { L: ['L', 'V', 'LV', 'LVT'], V: ['V', 'T'], LV: ['V', 'T'], T: ['T'], LVT: ['T'] };
+
+  /* 혼자서는 글자가 아니고 앞 글자에 얹히는 코드 포인트 — 결합 부호 · 변형 선택자 · 피부색 · 태그 문자 · ZWJ 자신. */
+  function isExtender(cp) {
+    return (cp >= 0x0300 && cp <= 0x036F) || (cp >= 0x1AB0 && cp <= 0x1AFF) || (cp >= 0x1DC0 && cp <= 0x1DFF) ||
+      (cp >= 0x20D0 && cp <= 0x20FF) || (cp >= 0xFE00 && cp <= 0xFE0F) || (cp >= 0xFE20 && cp <= 0xFE2F) ||
+      (cp >= 0x302E && cp <= 0x302F) || (cp >= 0x1F3FB && cp <= 0x1F3FF) || (cp >= 0xE0020 && cp <= 0xE007F) ||
+      (cp >= 0xE0100 && cp <= 0xE01EF) || cp === 0x200D;
+  }
+
+  /* Intl.Segmenter가 없는 브라우저용 근사. 코드 포인트(Array.from — 서로게이트 쌍은 이미 한 덩이)를 차례로 보며
+     앞 글자에 이어 붙일 것만 붙인다: 얹히는 코드 포인트 · ZWJ 뒤 글자(합성 이모지) · 국기 문자 둘째 · NFD 한글의 다음 자모.
+     완전한 규칙표가 아니다 — 제목에 드물게 올 모양(인도계 문자의 결합 등)은 코드 포인트 단위로 갈릴 수 있다. */
+  function graphemeFallback(text) {
+    var out = [];
+    var prev = -1;          // 바로 앞 코드 포인트
+    var flags = 0;          // 지금 글자 안의 국기 문자 수 — 둘이 한 국기다
+    Array.from(text).forEach(function (ch) {
+      var cp = ch.codePointAt(0);
+      var isFlag = cp >= 0x1F1E6 && cp <= 0x1F1FF;
+      var prevHangul = hangulType(prev);
+      var join = out.length > 0 && (
+        prev === 0x200D || isExtender(cp) || (isFlag && flags === 1) ||
+        (prevHangul !== '' && HANGUL_NEXT[prevHangul].indexOf(hangulType(cp)) !== -1)
+      );
+      if (join) {
+        out[out.length - 1] += ch;
+      } else {
+        out.push(ch);
+        flags = 0;
+      }
+      if (isFlag) flags += 1;
+      prev = cp;
+    });
+    return out;
+  }
+
+  /* 조건 1(§3-5) — 제목에 CSS 대기 title-wait가 걸려 있고 아직 끝나지 않았다. 이 한 조건이 index.html · 첫 방문(data-intro 없음) ·
+     reduced-motion 아님 · :has() 동작을 전부 담는다(CSS가 그때만 대기를 건다). 같은 판정을 여기 따로 두면 언젠가 어긋난다.
+     fill이 없는 CSS 애니메이션은 끝나면 getAnimations()에서 빠지므로 목록에 있으면 아직 기다리는 중이다.
+     끝났다면 완성된 제목이 이미 보였다 — 그 뒤에 비우고 다시 쓰면 "완성 → 빈칸 → 타자"로 깜빡인다(스크립트가 늦게 온 로드).
+     getAnimations가 없는 브라우저는 끝났는지 물을 길이 없다 — 타자하지 않는다(정적 제목 그대로가 안전한 쪽). */
+  function pendingTitleWait(h1) {
+    if (typeof h1.getAnimations !== 'function') return null;
+    return h1.getAnimations().filter(function (anim) {
+      return anim.animationName === 'title-wait' && anim.playState !== 'finished' && Boolean(anim.finished);
+    })[0] || null;
+  }
+
+  /* §3-5 ②의 DOM — 처음엔 제목 자리에 커서만(.title-typed 빈칸, .title-rest = 제목 전체, 투명). textContent만 쓴다.
+     스팬 사이에 공백 텍스트 노드를 두지 않는다 — 공백 하나가 제목 폭을 바꾼다.
+     .sr-only가 제목 전체를 한 번 들고 있고 글자가 옮겨 다니는 쪽은 aria-hidden이라, h1의 접근성 이름은 타자 전·중·후 같다. */
+  function buildTypingDom(h1, title) {
+    var typed = U.el('span', { class: 'title-typed' });
+    var rest = U.el('span', { class: 'title-rest', text: title });
+    var frag = document.createDocumentFragment();
+    frag.appendChild(U.el('span', { class: 'sr-only', text: title }));
+    frag.appendChild(U.el('span', { class: 'title-type', 'aria-hidden': 'true' }, [typed, rest]));
+    U.clear(h1);
+    h1.appendChild(frag);
+    return { typed: typed, rest: rest };
+  }
+
+  /* 평문으로 되돌린다 — 정적 마크업·재방문과 같은 DOM(자식 요소 0, textContent = 제목). text를 주면 그 제목으로(fillSite).
+     깜빡임 끝에서 오면 커서는 이미 꺼져 있고 폭도 같아 되돌리는 순간 보이는 변화가 없다. 타이머는 여기서 전부 거둔다. */
+  function endTyping(run, text) {
+    if (typing !== run) return;
+    typing = null;
+    window.clearTimeout(run.timer);
+    window.clearTimeout(run.net);
+    run.h1.textContent = text === undefined ? run.title : text;
+  }
+
+  /* 글자 시각은 첫 글자 기준 절대 시각이다(i번째 = t0 + i × step). setTimeout을 이어 붙이면 늦음이 쌓여 긴 제목이 상한을 넘는다
+     (web-designer 실측: 23글자 1379ms). 타이머가 늦게 와도(숨은 탭 등) 그 시각까지 나왔어야 할 글자를 한 번에 채운다.
+     글자는 즉시 나타난다 — 페이드·이동 없음(타자는 "쓰인다"이지 "들어온다"가 아니다). */
+  function typeChars(run, parts, chars) {
+    if (typing !== run) return;
+    var n = chars.length;
+    var step = n > 1 ? Math.min(TYPE_STEP_MS, TYPE_SPAN_MS / (n - 1)) : 0;
+    var t0 = window.performance.now();
+    var shown = 0;
+    run.net = window.setTimeout(function () { endTyping(run); }, TYPE_NET_MS);
+
+    function tick() {
+      if (typing !== run) return;
+      var due = step ? Math.min(n, Math.floor((window.performance.now() - t0) / step) + 1) : n;
+      if (due > shown) {
+        shown = due;
+        parts.typed.textContent = chars.slice(0, shown).join('');
+        /* 끝 글자에서 ''가 되면 자식 노드가 하나도 없다(:empty) — CSS가 그것을 "다 썼다"로 읽고 깜빡임을 건다(상태 클래스 없음, §8). */
+        parts.rest.textContent = chars.slice(shown).join('');
+      }
+      /* ceil — 타이머는 정수 ms라 내림하면 목표보다 먼저 와서 한 번 헛돈다. */
+      if (shown < n) run.timer = window.setTimeout(tick, Math.max(0, Math.ceil(t0 + shown * step - window.performance.now())));
+    }
+    tick();
+  }
+
+  /* 조건 셋(§3-5)이 모두 참일 때만 타자 DOM을 만든다. 하나라도 거짓이면 아무것도 하지 않는다 — 정적 제목 그대로, 커서 없음.
+     글자 단위는 DOM을 건드리기 전에 자른다 — 여기서 실패하면 제목이 커서만 남은 채로 멈추지 않고 정적 제목 그대로다. */
+  function startTitleTyping() {
+    var h1 = U.qs('.page-title[data-site-title]');
+    if (!h1) return;
+    var title = h1.textContent.trim();
+    /* 조건 3(빈 제목) · 조건 2(숨은 탭 — 뒤에서 연 탭·프리렌더는 타이머가 늘어져 반쯤 쓰인 제목으로 기다린다.
+       보러 왔을 때 완성돼 있는 편이 낫다) · 조건 1. */
+    if (!title || document.visibilityState !== 'visible') return;
+    var wait = pendingTitleWait(h1);
+    if (!wait) return;
+    var chars = splitGraphemes(title);
+
+    var run = { h1: h1, title: title, timer: 0, net: 0 };
+    var parts = buildTypingDom(h1, title);
+    typing = run;
+
+    /* 깜빡임이 끝나면 평문(§3-5 "끝 상태"). ::before의 animationend가 .title-rest로 온다 — 이름으로 가린다. */
+    parts.rest.addEventListener('animationend', function (e) {
+      if (e.animationName === 'title-caret-blink') endTyping(run);
+    });
+    /* 대기가 끝난 순간 = 첫 글자. 대기가 취소되면(로드 중에 모션 설정이 바뀌어 CSS 조건이 빠졌다) 타자 없이 평문. */
+    wait.finished.then(function () {
+      typeChars(run, parts, chars);
+    }, function () {
+      endTyping(run);
+    });
+  }
+
   /* ---------- 부트스트랩 ---------- */
 
+  /* index.json의 제목은 타자가 시작된 뒤에 올 수 있다(§3-5). 타자 중인 h1에 대입하면 타자 DOM이 통째로 지워진다 —
+     같은 제목이면 비킨다(끝나면 같은 평문이 된다). 다르면 타자를 그 자리에서 끝내고(커서 없이) 받은 제목을 평문으로 넣는다.
+     헤더 .brand의 [data-site-title]과 document.title은 늘 대입한다. */
   function fillSite(site) {
-    U.qsa('[data-site-title]').forEach(function (n) { n.textContent = site.title; });
+    U.qsa('[data-site-title]').forEach(function (n) {
+      if (typing && n === typing.h1) {
+        if (site.title !== typing.title) endTyping(typing, site.title);
+        return;
+      }
+      n.textContent = site.title;
+    });
     document.title = site.title;
   }
 
@@ -581,6 +754,11 @@
   }
 
   function start() {
+    /* 제목 타자는 무엇보다 먼저 — CSS 대기(title-wait) 안에 타자 DOM이 서야 조건 1이 참이고, 일찍 설수록 커서가 빨리 보인다.
+       initShell()과의 순서는 상관없다(누구도 data-intro를 바꾸지 않는다, §3-5). 타자는 장식이다 — 여기서 무엇이 던져져도
+       목록은 그려야 하므로 삼킨다. 삼키면 정적 제목이 그대로 남는다(DOM을 바꾸기 전에 던질 일은 끝나 있다). */
+    try { startTitleTyping(); } catch (err) { /* 정적 제목 그대로 */ }
+
     dom.list = document.getElementById('postList');
     dom.empty = document.getElementById('listEmpty');
     dom.loading = document.getElementById('listLoading');

@@ -110,7 +110,7 @@ address { font-style: normal; }
     --c-text, --c-text-dim, --c-text-mute,
     --c-accent, --c-accent-soft, --c-meta, --c-tag,
     --c-danger, --c-warn, --c-ok,
-    --c-on-accent, --c-focus, --c-scrim, --c-selection, --c-glow,
+    --c-on-accent, --c-focus, --c-scrim, --c-selection,
     --code-bg, --code-border, --code-text,
     --hl-comment, --hl-keyword, --hl-string, --hl-number, --hl-literal, --hl-function, --hl-title,
     --hl-attr, --hl-builtin, --hl-type, --hl-variable, --hl-tag, --hl-name, --hl-selector,
@@ -222,6 +222,9 @@ main[tabindex="-1"]:focus-visible { outline: none; }
    arrive 키프레임은 animation-duration 1ms + 반복 1회로 끝 상태(불투명·제자리)에 바로 앉는다.
    사이드바는 별도 규칙이 없다 — 아래 `*` 규칙이 translate·padding 전환도 1ms로 자르고,
    visibility에 걸어 둔 delay(--dur)도 transition-delay: 0ms가 지워 "즉시 열리고 즉시 닫힌다".
+   v4.4 첫 방문 연출(올라오기 · 제목 대기)은 이 블록에 기대지 않는다 — layout.css §10이 두 규칙을
+   (prefers-reduced-motion: no-preference) 안에만 두어 애니메이션 이름 자체가 없다. app.js가 "대기가 걸려 있는가"로
+   타자를 정하므로 1ms짜리 대기가 남으면 안 되기 때문이다(계약서 §3-5 ④). 커서 깜빡임은 타자 DOM이 없으면 걸릴 곳이 없다.
    · duration을 0이 아니라 1ms로 두는 이유:
      0이면 transitionend가 발화하지 않는 브라우저가 있다. JS가 그 이벤트를 기다리면
      화면이 멈춘다. 1ms는 사실상 즉시이면서 이벤트는 남는다.

@@ -69,7 +69,7 @@ netstat -ano | grep -E ":(5500|5501|5502|5503|5610)\s.*LISTENING"
 | 로컬 서버 | 5610(오케스트레이터) 등 떠 있던 포트 | 새 PC에선 무관 |
 
 ## 6. 주의
-- 이번 세션에서 알게 된, 다음 사람이 밟을 함정 1~3개 (예: "`animationend`는 버블링 — `e.target === intro` 필수")
+- 이번 세션에서 알게 된, 다음 사람이 밟을 함정 1~3개 (예: "`animationend`는 버블링하고 `::before`의 것도 호스트 요소에서 온다 — `e.animationName`으로 거른다(v4.4 제목 타자 `title-caret-blink`)")
 ```
 
 ### A-3. 검증 두 가지
