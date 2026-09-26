@@ -13,7 +13,7 @@ description: 학습 블로그를 로컬에서 띄워 브라우저로 확인한�
 $p = Start-Process -WindowStyle Hidden -FilePath powershell.exe -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','start.ps1','-NoBrowser' -WorkingDirectory "C:\Users\user\Downloads\기술 블로그\기술 블로그" -PassThru; Start-Sleep 2; "PID: $($p.Id)"; (Invoke-WebRequest http://localhost:5500/index.html -UseBasicParsing).StatusCode
 ```
 - 오케스트레이터는 **5500**. 에이전트 포트는 5501~5503(에이전트 정의 참조).
-- 5500이 이미 쓰이면 `netstat -ano | grep :5500`으로 PID를 찾아 이전 세션 잔재인지 확인하고 종료한다. 이 포트를 쓰는 다른 프로그램은 없다.
+- 5500이 이미 쓰이면 `netstat -ano | grep :5500`으로 PID를 찾고 `tasklist //FI "PID eq <PID>"`로 주인을 본다. `powershell`이면 이전 세션 잔재 → 종료. **그 밖의 프로그램이면 끄지 않는다** — 이 PC(2026-09-26 확인)는 Oracle XE EM Express의 `tnslsnr.exe`(서비스 `OracleOraDB21Home1TNSListener`, 자동 시작)가 `127.0.0.1:5500`을 늘 잡고 있다. 그때는 `start.ps1 -Port <빈 포트>`로 띄우고 아래 URL의 5500도 그 포트로 바꾼다(에이전트 포트 5501~5503과 겹치지 않게). 저장 API까지 보려면 `/serve` — 호스트 포트를 `BLOG_HOST_PORT`로 바꾼다.
 - `localhost`로만 응답한다(`127.0.0.1`은 400). 관리자 UI는 hostname이 `localhost`면 자동으로 켜진다 — `?admin=` 쿼리는 v3.0에서 폐기됐다.
 
 ## 보기

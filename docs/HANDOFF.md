@@ -256,6 +256,7 @@ write.html → 저장(Ctrl+S)       # PUT /api/posts/{id} → posts/<slug>/<id>.
 | 2026-09-25 | 사용자 | 인트로 전등 소리 | "전등 소리 추가만 해 / 소리는 인터넷 서치나 아무걸로 전등 소리만 가져와" → (안내: 첫 방문 0.85초 자동 점등은 첫 상호작용 전이라 브라우저 자동재생 차단으로 대부분 무음) → 아래 행으로 이어져 **소리 없음** | 음원 파일·새 의존성 없음. 계약 v4.4 §3-5 "하지 않는 것" |
 | 2026-09-25 | 사용자 | 인트로 전구 존폐 · 대체 연출 | "그냥 전등 빼고 자연스럽게 렌더링 되는 다른 애니메이션으로 바꿀까?" → (제안: 전구만 빼고 기존 `intro-arrive`를 0초 시작) → (한 메시지로) "페이지 올라오기로 ㄱㄱ / 그리고 그 학습 블로그라고 메인화면에 되어 있잖아 그거 한 글자씩 나오면서 마지막에 커서 깜빡거리는 것도 추가하자" → 재확인 "전구 자체를 빼". **결정: 인트로 전구 완전 폐기(v3.6~v4.3) · 첫 방문(세션당 1회, index.html) 페이지 올라오기 0.6초 · 제목 타자 + 커서 3회 깜빡임(5초 미만, WCAG 2.2.2) · 소리 없음.** 제목 문구는 불변 — 사용자가 말한 "학습 블로그"는 `h1.page-title`이고 실제 문구는 `메모 블로그` | 계약 v4.4 §3-5 · §12-20(#180-183 ✔ · #184-187 이행 중 — 끝나기 전 배포 금지). 확정 축 "인트로 전구" 해제 → `.claude/agents/web-designer.md` 축 목록 교체. v3.6~3.7 행 취소선 |
 | 2026-09-26 | 사용자(미리보기를 보고) | 제목 타자 박자 | "메모블로그 글자가 너무 빨리 나와 속도 조금만 줄이고 커서 깜빡이는 시간 살짝만 늘려" → **결정: 글자 간격 120→160ms(첫~끝 글자 상한 1200→1600ms) · 커서 깜빡임 주기 1000→1100ms, 횟수 3 유지(3.0→3.3초) · 안전망 5000ms 유지 · 5초 예산의 기점을 첫 글자로 명시(1600+3300=4900 < 5000) · 6글자 제목 평문 도달 4.2→4.7초.** 클래스·DOM·문구·저장 키·키 동작 변화 없음 | 계약 v4.5 §3-5 "5초 예산" · §12-21(#188-189). 위 2026-09-25 행의 박자 숫자를 대체 |
+| 2026-09-26 | 사용자 | 호스트 포트(이 PC는 Oracle XE EM Express `tnslsnr`가 `127.0.0.1:5500` 자동 점유 → compose가 5500을 못 잡거나 브라우저가 Oracle에 붙음) | "3번으로 고쳐 나중에 start.bat만 켜서 도커로 컨테이너 올리기만 해도 바로 접속 할 수 있게" → **결정: `BLOG_HOST_PORT` 도입(기본 5500, `.env` 또는 환경 변수 — 호스트 쪽만, 컨테이너 안 5500 불변) + `start.bat`이 5500이 막혀 있으면 5501~5509 중 빈 포트를 자동 선택해 넘기고 콘솔에 주소를 찍는다.** Oracle은 건드리지 않는다. 웹 화면·문구·키·저장 키 불변(같은 origin, Host 검사는 포트 무관) → 계약 개정 없음 | `docker-compose.yml` ports · `docs/api.md` §0 "바인딩" · `/serve`·`/preview` 스킬 · CLAUDE.md "글 추가 흐름"(pm). `start.bat` 자동 선택은 frontend-dev-2 |
 
 ### 사용자가 위임해 pm이 정한 것 (meeting-04 미결 → meeting-05, 뒤집으면 따른다)
 
@@ -284,7 +285,7 @@ write.html → 저장(Ctrl+S)       # PUT /api/posts/{id} → posts/<slug>/<id>.
 ### C. 로컬에서 확인하는 법
 - **Docker Desktop이 있으면** `docker compose up` → `http://localhost:5500` (저장 API 포함). 끝은 `Ctrl+C` / `docker compose down`. 처음이면 `/serve` §0(커밋 신원)부터.
 - **없으면** `start.bat` 더블클릭(PowerShell 5.1 내장, Python·Node 불필요) → 같은 주소, 저장 API 없음 — **미리보기 전용, 글 저장 불가**.
-- 둘 다 5500 — **하나만** 켠다. `file://`로 열면 fetch가 막혀 빈 화면이다.
+- 둘 다 기본 5500 — **하나만** 켠다. 5500이 막힌 PC에서는 서버의 호스트 포트가 달라진다(`BLOG_HOST_PORT`, start.bat 콘솔에 찍힌 주소로 접속). `file://`로 열면 fetch가 막혀 빈 화면이다.
 - 관리자 UI는 hostname이 `localhost`·`127.0.0.1`·`[::1]`일 때 자동(`?admin=`은 폐기).
 
 | 증상 | 원인 |
@@ -298,7 +299,7 @@ write.html → 저장(Ctrl+S)       # PUT /api/posts/{id} → posts/<slug>/<id>.
 | 로컬 서버에서 `/.env`·`/docs/…`·`/CSS/…`가 404 | 정상 — 정적 서빙은 허용 목록·대소문자 정확(api.md §1) |
 | `git push`가 인증 오류 | `gh auth login` 먼저(2026-09-22부터) |
 | 저장은 됐는데 "커밋 실패(커밋 신원 없음)" | `/serve` §0 — 저장소 로컬 `git config user.name/email` 또는 `.env`에 `BLOG_GIT_NAME`·`BLOG_GIT_EMAIL` 후 `docker compose up -d` 재기동 |
-| `docker compose up`이 "port is already allocated" | start.ps1이 5500을 잡고 있다. `netstat -ano \| findstr :5500` → 종료 |
+| `docker compose up`이 "port is already allocated" | `netstat -ano \| findstr :5500` → PID 주인 확인. start.ps1이면 종료. 다른 프로그램(예: Oracle XE `tnslsnr`)이면 끄지 말고 `BLOG_HOST_PORT=5501 docker compose up -d`(또는 `.env`) — `start.bat`은 5501~5509를 자동으로 고른다(§9 2026-09-26) |
 | Docker Desktop이 "unexpected error … sailor-ingest.sock" | Docker Desktop 자체 문제(2026-09-21 발생). 종료 → `%LOCALAPPDATA%\Docker\run\` 정리 → 재시작. 프로젝트와 무관 |
 | 스타일 없음 | CSS 5개 중 하나 404 |
 | 콘솔 CSP 위반 | 인라인 `<script>`/`style=`/`on*=`가 HTML에 들어감 |

@@ -97,5 +97,6 @@ server/      FastAPI 로컬 에디터 서버 (app.py 엔트리, posts.py 파일 
 
 `docker compose up` → `write.html`에서 작성 → "저장"(Ctrl+S)이 `posts/`에 바로 쓰고, **커밋 신원이 있으면** 그 저장이 쓴 파일만 자동으로 커밋한다(`docs/api.md` §2-1, `BLOG_AUTO_COMMIT`). 푸시는 사용자가 `/ship`.
 **커밋 신원이 없으면 저장은 되지만 커밋은 매번 건너뛴다**(응답 `git.reason: 커밋 신원 없음`) — 덮어쓴 글을 되돌릴 이력이 남지 않는다. 신원은 `.env`의 `BLOG_GIT_NAME`·`BLOG_GIT_EMAIL`, 또는 이 저장소의 로컬 `git config user.name`/`user.email`(컨테이너는 전역 설정을 못 본다). 2026-09-23 현재 이 PC에는 둘 다 없다(`/serve` §0).
+**5500이 막힌 PC**(예: Oracle XE `tnslsnr`)에서는 `start.bat`이 5501~5509 중 빈 포트를 골라(`BLOG_HOST_PORT`, 호스트 쪽만 — 컨테이너 안은 5500) 띄우고 콘솔에 접속 주소를 찍는다. 직접 띄울 때는 `BLOG_HOST_PORT=5501 docker compose up -d` 또는 `.env`(`docs/api.md` §0, `/serve`).
 **Docker가 없는 PC에서는 글을 저장할 수 없다** — `start.bat`은 미리보기 전용이고, 에디터의 저장 버튼은 `disabled`에 "서버 없음" 문구가 뜬다(계약 §6-1). 파일 내보내기(다운로드)는 없다.
 작성 중 초안은 localStorage에 자동 임시저장되지만, **서버에 저장하기 전까지는 영구 저장이 아니다.**

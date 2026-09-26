@@ -1,5 +1,8 @@
 # docker compose up  → http://localhost:5500  (Ctrl+C 로 종료)
-# start.bat 과 같은 5500 포트를 쓴다. 둘 중 하나만 켠다.
+# 호스트 포트는 BLOG_HOST_PORT(기본 5500, .env 또는 환경 변수). 컨테이너 안은 늘 5500 — 바꾸는 것은 호스트 쪽뿐이다.
+#   5500을 다른 프로그램(예: Oracle XE EM Express, tnslsnr)이 쓰는 PC → BLOG_HOST_PORT=5501 docker compose up -d
+#   start.bat 은 5500이 막혀 있으면 5501~5509 중 빈 포트를 골라 이 변수로 넘기고 콘솔에 주소를 찍는다.
+# start.ps1(정적 미리보기)과 둘 중 하나만 켠다.
 # name: 폴더명("기술 블로그")이 한글이라 compose가 프로젝트 이름을 만들지 못한다(빈 이름 오류). 고정한다.
 name: blog-editor
 services:
@@ -9,12 +12,12 @@ services:
     container_name: blog-editor
     init: true                        # Ctrl+C(SIGTERM)가 uvicorn까지 전달되도록
     ports:
-      - "127.0.0.1:5500:5500"         # 호스트의 localhost 에서만 접근
+      - "127.0.0.1:${BLOG_HOST_PORT:-5500}:5500"   # 호스트의 localhost 에서만 접근. 호스트 포트만 가변
     volumes:
       - .:/app                        # 저장이 호스트 파일에 바로 반영
     environment:
       BLOG_BIND: "0.0.0.0"            # 컨테이너 안 바인딩. 밖으로는 위 포트 매핑 하나뿐
-      BLOG_PORT: "5500"
+      BLOG_PORT: "5500"               # 컨테이너 안 포트. 고정(위 매핑의 오른쪽과 같아야 한다)
       # B-1 자동 커밋(docs/api.md §2-1): 저장·삭제 성공 뒤 posts/ 만 커밋한다. 푸시는 하지 않는다(/ship). "0"이면 끔.
       BLOG_AUTO_COMMIT: "${BLOG_AUTO_COMMIT:-1}"
       # 커밋 신원. 컨테이너는 호스트의 전역 git config를 못 보므로 .env(.gitignore)에 적는다.
