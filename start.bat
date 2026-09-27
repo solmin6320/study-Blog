@@ -11,9 +11,23 @@ rem       posts/ directly and auto-commits.
 rem    2. start.ps1 preview server: static files only, NO save API - write.html
 rem       cannot save (Save button disabled, "server missing").
 rem
-rem  This file picks for you: if the Docker daemon answers "docker info" within
-rem  5 seconds, it runs "docker compose up -d" and opens the browser. Otherwise
-rem  it starts start.ps1 exactly as before. Only one of the two may run at once.
+rem  This file picks for you: if Docker is installed it always goes for the
+rem  editor server (2026-09-27 - the user asked for Docker to be handled
+rem  automatically, and a silent fall back to the preview meant "server
+rem  missing" in the editor):
+rem    a. the daemon answers "docker info"         -> go on
+rem    b. it does not, Docker Desktop is not open  -> launch Docker Desktop.exe
+rem       (it does not, but Docker Desktop is open -> nudge with
+rem        "docker desktop start --detach", it may still be booting)
+rem    c. wait up to 120 seconds for the daemon, one progress line
+rem    d. still nothing (exe not found / timeout) -> say why, print a loud
+rem       "SAVING IS DISABLED" warning, then the preview server
+rem  Then "docker compose up -d" and the browser. Only one of the two servers
+rem  may run at once: a start.ps1 preview left on port 5500-5509 (or on
+rem  BLOG_HOST_PORT) is stopped first - a preview started earlier while Docker
+rem  was down would otherwise hold the port and push the editor elsewhere.
+rem  Previews started with -Root (agents' sandbox copies) are left alone.
+rem  Without Docker on PATH it starts start.ps1 as before, with the same warning.
 rem
 rem  Port (2026-09-26). 5500 is only the first choice - another program may own
 rem  it (on this PC Oracle XE's listener sits on 127.0.0.1:5500, and the browser
@@ -70,24 +84,73 @@ set "PK=%PK%   else { Write-Host (' [start.bat] ignoring ' + $src + '=' + $pin +
 set "PK=%PK% foreach ($p in 5500..5509) { if (Free $p) { if ($p -ne 5500) { Write-Host (' [start.bat] port 5500 is in use by another program - using ' + $p) }; exit $p } };"
 set "PK=%PK% Write-Host ' [start.bat] ports 5500-5509 are all in use by other programs.'; exit 0"
 
+rem  Docker waiter (2026-09-27). "docker info" hangs for a long time while
+rem  Docker Desktop is still booting, so each probe gets 5 seconds and is killed
+rem  after that. Exit 0 = the daemon answers, 2 = Docker Desktop.exe not found,
+rem  3 = no answer within 120 seconds. Same rule as PK: no double quotes.
+set "DW=$ErrorActionPreference = 'SilentlyContinue';"
+set "DW=%DW% function Up { $p = Start-Process -FilePath docker -ArgumentList 'info' -WindowStyle Hidden -PassThru;"
+set "DW=%DW%   if ($p.WaitForExit(5000) -and $p.ExitCode -eq 0) { return $true }; try { $p.Kill() } catch {}; return $false };"
+set "DW=%DW% if (Up) { exit 0 };"
+set "DW=%DW% if (Get-Process -Name 'Docker Desktop') {"
+set "DW=%DW%   Write-Host ' [start.bat] Docker Desktop is open but the engine does not answer yet - waiting for it.';"
+set "DW=%DW%   Start-Process -FilePath docker -ArgumentList 'desktop', 'start', '--detach' -WindowStyle Hidden }"
+set "DW=%DW% else { $c = @(); $d = (Get-Command docker).Source;"
+set "DW=%DW%   if ($d) { $c += Join-Path (Split-Path (Split-Path (Split-Path $d))) 'Docker Desktop.exe' };"
+set "DW=%DW%   foreach ($r in $env:ProgramFiles, $env:ProgramW6432) { if ($r) { $c += Join-Path $r 'Docker\Docker\Docker Desktop.exe' } };"
+set "DW=%DW%   if ($env:LOCALAPPDATA) { $c += Join-Path $env:LOCALAPPDATA 'Programs\Docker\Docker\Docker Desktop.exe'; $c += Join-Path $env:LOCALAPPDATA 'Docker\Docker Desktop.exe' };"
+set "DW=%DW%   $c = @($c | Select-Object -Unique); $x = $null; foreach ($f in $c) { if (-not $x -and (Test-Path -LiteralPath $f)) { $x = $f } };"
+set "DW=%DW%   if (-not $x) { Write-Host ' [start.bat] Docker is installed but not running, and Docker Desktop.exe was not found in:';"
+set "DW=%DW%     foreach ($f in $c) { Write-Host ('               ' + $f) }; exit 2 };"
+set "DW=%DW%   Write-Host (' [start.bat] Docker is not running - starting Docker Desktop: ' + $x); Start-Process -FilePath $x };"
+set "DW=%DW% $t = [Diagnostics.Stopwatch]::StartNew();"
+set "DW=%DW% while ($t.Elapsed.TotalSeconds -lt 120) { Write-Host -NoNewline ([string][char]13 + ' [start.bat] waiting for Docker Desktop to start... ' + [int]$t.Elapsed.TotalSeconds + 's   ');"
+set "DW=%DW%   if (Up) { Write-Host ''; Write-Host (' [start.bat] Docker is ready after ' + [int]$t.Elapsed.TotalSeconds + 's.'); exit 0 }; Start-Sleep -Seconds 2 };"
+set "DW=%DW% Write-Host ''; Write-Host ' [start.bat] Docker Desktop did not answer within 120 seconds.'; exit 3"
+
+rem  Preview stopper (2026-09-27). A start.ps1 preview holds its port through
+rem  http.sys (the port owner shows as PID 4), so it is found by command line:
+rem  powershell/pwsh running -File start.ps1 without -Root, whose -Port (default
+rem  5500) is in 5500-5509 or equals BLOG_HOST_PORT / .env. The cmd window that
+rem  launched it through start.bat is closed too, so no stale window is left
+rem  saying "the server exited". Same rule as PK: no double quotes.
+set "KP=$ErrorActionPreference = 'SilentlyContinue';"
+set "KP=%KP% $pin = [string]$env:BLOG_HOST_PORT;"
+set "KP=%KP% if (-not $pin -and (Test-Path -LiteralPath '.env')) { foreach ($ln in Get-Content -LiteralPath '.env') {"
+set "KP=%KP%   if ($ln -match '^\s*BLOG_HOST_PORT\s*=\s*[\x22\x27]?\s*([^\x22\x27\s#]*)') { $pin = $matches[1] } } };"
+set "KP=%KP% $pin = $pin.Trim(); $me = @($PID); $w = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $PID); if ($w) { $me += $w.ParentProcessId };"
+set "KP=%KP% $n = 0; foreach ($q in Get-CimInstance Win32_Process -Filter 'Name=''powershell.exe'' OR Name=''pwsh.exe''') {"
+set "KP=%KP%   $cl = [string]$q.CommandLine; if ($me -contains $q.ProcessId) { continue };"
+set "KP=%KP%   if ($cl -notmatch '-File\s+[\x22\x27]?[^\x22\x27]*start\.ps1' -or $cl -match '\s-Root\b') { continue };"
+set "KP=%KP%   $port = 5500; if ($cl -match '-Port\s+(\d+)') { $port = [int]$matches[1] };"
+set "KP=%KP%   if (-not (($port -ge 5500 -and $port -le 5509) -or [string]$port -eq $pin)) { continue };"
+set "KP=%KP%   Write-Host (' [start.bat] stopping the preview server on port ' + $port + ' (pid ' + $q.ProcessId + ') - only one server may run at a time.');"
+set "KP=%KP%   $pa = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $q.ParentProcessId);"
+set "KP=%KP%   if ($pa -and $pa.Name -eq 'cmd.exe' -and ([string]$pa.CommandLine) -match 'start\.bat' -and -not ($me -contains $pa.ProcessId)) { Stop-Process -Id $pa.ProcessId -Force };"
+set "KP=%KP%   Stop-Process -Id $q.ProcessId -Force; Wait-Process -Id $q.ProcessId -Timeout 5; $n++ };"
+set "KP=%KP% if ($n) { Start-Sleep -Milliseconds 500 }; exit 0"
+
 if not "%~1"=="" goto :preview_args
 
 where docker >nul 2>&1
-if errorlevel 1 goto :preview
-
-if not exist "docker-compose.yml" goto :preview
-
-rem  "docker info" hangs for a long time while Docker Desktop is still booting.
-rem  Give it 5 seconds through a tiny PowerShell wait; anything else = fallback.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -FilePath docker -ArgumentList 'info' -WindowStyle Hidden -PassThru; if ($p.WaitForExit(5000) -and $p.ExitCode -eq 0) { exit 0 } else { try { $p.Kill() } catch {}; exit 1 }"
 if errorlevel 1 (
     echo.
-    echo  [start.bat] Docker is installed but the daemon is not running - using the preview server.
-    echo              Start Docker Desktop and run start.bat again to enable saving.
-    goto :preview
+    echo  [start.bat] Docker was not found on this PC ^(no "docker" on PATH^).
+    goto :nosave
+)
+
+if not exist "docker-compose.yml" (
+    echo.
+    echo  [start.bat] docker-compose.yml is missing next to this file.
+    goto :nosave
 )
 
 echo.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "%DW%"
+if errorlevel 1 goto :nosave
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "%KP%"
+
 set "START_PICK=docker"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "%PK%"
 set "PORT=%ERRORLEVEL%"
@@ -98,8 +161,8 @@ echo  [start.bat] Docker is up - starting the editor server on port %PORT% ^(doc
 docker compose up -d
 if errorlevel 1 (
     echo.
-    echo  [start.bat] docker compose failed ^(see above^) - falling back to the preview server.
-    goto :preview
+    echo  [start.bat] docker compose failed ^(see above^).
+    goto :nosave
 )
 
 rem  Wait until /api/health answers (image build on first run can take a while).
@@ -128,6 +191,21 @@ echo              Close one of them, or set BLOG_HOST_PORT in .env to a port you
 echo.
 pause
 exit /b 1
+
+rem  Every way from the Docker path down to the preview comes through here:
+rem  the reason is already printed above, this makes the result impossible to
+rem  miss (2026-09-27 - a quiet fall back looked like "Docker is broken").
+:nosave
+echo.
+echo  ========================================================================
+echo   WARNING: the Docker editor server is NOT running - SAVING IS DISABLED.
+echo.
+echo   Falling back to the preview server ^(static files only, no save API^).
+echo   In write.html the Save button stays disabled ^("server missing"^);
+echo   drafts are kept only in this browser until you can save.
+echo   Fix the reason above ^(start Docker Desktop^), then run start.bat again.
+echo  ========================================================================
+echo.
 
 :preview
 if not exist "start.ps1" goto :noscript
