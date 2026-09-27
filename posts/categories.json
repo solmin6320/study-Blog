@@ -11,6 +11,12 @@
       "name": "스프링 코어",
       "description": "",
       "order": 1
+    },
+    {
+      "slug": "cloud",
+      "name": "클라우드",
+      "description": "",
+      "order": 2
     }
   ]
 }
