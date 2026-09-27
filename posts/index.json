@@ -5,6 +5,19 @@
   },
   "posts": [
     {
+      "id": "2026-09-27-aws",
+      "title": "AWS",
+      "summary": "AWS가 무엇인가?",
+      "created": "2026-09-27T22:39:14+09:00",
+      "updated": "2026-09-27T22:39:14+09:00",
+      "tags": [
+        "AWS",
+        "Cloud"
+      ],
+      "category": "cloud",
+      "pinned": false
+    },
+    {
       "id": "2026-09-25-ioc-di",
       "title": "IoC",
       "summary": "Ioc",
