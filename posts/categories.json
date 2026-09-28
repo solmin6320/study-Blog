@@ -17,6 +17,12 @@
       "name": "클라우드",
       "description": "",
       "order": 2
+    },
+    {
+      "slug": "aws",
+      "name": "AWS",
+      "description": "",
+      "order": 3
     }
   ]
 }

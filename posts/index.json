@@ -5,6 +5,30 @@
   },
   "posts": [
     {
+      "id": "2026-09-28-ec2",
+      "title": "EC2",
+      "summary": "AWS에 EC2가 무엇인가?",
+      "created": "2026-09-28T10:58:24+09:00",
+      "updated": "2026-09-28T13:25:12+09:00",
+      "tags": [
+        "AWS"
+      ],
+      "category": "aws",
+      "pinned": false
+    },
+    {
+      "id": "2026-09-28-di",
+      "title": "DI",
+      "summary": "DI가 무엇인가?",
+      "created": "2026-09-28T08:20:11+09:00",
+      "updated": "2026-09-28T08:52:21+09:00",
+      "tags": [
+        "Spring"
+      ],
+      "category": "spring-core",
+      "pinned": false
+    },
+    {
       "id": "2026-09-27-aws",
       "title": "AWS",
       "summary": "AWS가 무엇인가?",
@@ -21,9 +45,9 @@
       "title": "IoC",
       "summary": "Ioc",
       "created": "2026-09-25T00:20:25+09:00",
-      "updated": "2026-09-26T17:13:24+09:00",
+      "updated": "2026-09-28T08:54:52+09:00",
       "tags": [
-        "spring"
+        "Spring"
       ],
       "category": "spring-core",
       "pinned": false
