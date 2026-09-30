@@ -23,6 +23,12 @@
       "name": "AWS",
       "description": "",
       "order": 3
+    },
+    {
+      "slug": "docker",
+      "name": "Docker",
+      "description": "",
+      "order": 4
     }
   ]
 }
