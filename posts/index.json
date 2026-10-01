@@ -5,6 +5,18 @@
   },
   "posts": [
     {
+      "id": "2026-10-02-note-034716",
+      "title": "그래픽 카드",
+      "summary": "그래픽 카드가 무엇인가?",
+      "created": "2026-10-02T03:59:58+09:00",
+      "updated": "2026-10-02T03:59:58+09:00",
+      "tags": [
+        "CS"
+      ],
+      "category": "cs",
+      "pinned": false
+    },
+    {
       "id": "2026-10-02-cpu",
       "title": "CPU",
       "summary": "CPU가 무엇인가?",
