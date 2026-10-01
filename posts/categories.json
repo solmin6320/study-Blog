@@ -23,6 +23,12 @@
       "name": "Docker",
       "description": "",
       "order": 3
+    },
+    {
+      "slug": "cs",
+      "name": "CS",
+      "description": "",
+      "order": 4
     }
   ]
 }
