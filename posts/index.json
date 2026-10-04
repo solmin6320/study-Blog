@@ -5,6 +5,18 @@
   },
   "posts": [
     {
+      "id": "2026-10-04-ram",
+      "title": "RAM",
+      "summary": "RAM이 무엇인가?",
+      "created": "2026-10-04T22:16:56+09:00",
+      "updated": "2026-10-04T22:16:56+09:00",
+      "tags": [
+        "CS"
+      ],
+      "category": "cs",
+      "pinned": false
+    },
+    {
       "id": "2026-10-03-note-230825",
       "title": "디스크(저장장치)",
       "summary": "디스크가 무엇인가?",
