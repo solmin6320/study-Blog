@@ -5,6 +5,18 @@
   },
   "posts": [
     {
+      "id": "2026-10-27-spring-container",
+      "title": "Spring Container",
+      "summary": "Spring Container는 무엇일까?",
+      "created": "2026-10-27T00:43:34+09:00",
+      "updated": "2026-10-27T00:43:34+09:00",
+      "tags": [
+        "Spring"
+      ],
+      "category": "spring-core",
+      "pinned": false
+    },
+    {
       "id": "2026-10-23-ec2",
       "title": "VPC",
       "summary": "VPC가 무엇인가?",
