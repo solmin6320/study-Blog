@@ -3,7 +3,7 @@ id: 2026-10-27-spring-container
 title: Spring Container
 summary: "Spring Container는 무엇일까?"
 created: 2026-10-27T00:43:34+09:00
-updated: 2026-10-27T00:43:34+09:00
+updated: 2026-10-27T01:33:30+09:00
 tags: [Spring]
 category: spring-core
 pinned: false
@@ -75,3 +75,95 @@ ApplicationContext context = SpringApplication.run(Application.class, args);
 
 ---
 ## 코드
+
+```java
+package com.example.demo study;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+
+        ConfigurableApplicationContext context =
+                SpringApplication.run(Application.class, args);
+
+        System.out.println("Context 구현 클래스: " + context.getClass().getName());
+        
+        System.out.println("BeanFactory 구현 클래스: " + context.getBeanFactory().getClass().getName());
+
+UserService userService = context.getBean(UserService.class);
+      
+        userService.createUser();
+
+        context.close();
+    }
+}
+```
+-**주요 코드**-
+
+1. `SpringApplication.run()`
+ - ApplicationContext **구현 객체를 생성하고 초기화함**
+
+2. `context.getBeanFactory()`
+ - 컨테이너의 **BeanFactory 측 기능을 확인할 때 사용**
+
+3. `context.getBean(UserService.class)`
+ - 등록된 Bean을 타입으로 조회하는 코드
+ 
+```java
+package com.example.demo study;
+
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class UserRepository {
+
+    public void save() {
+        System.out.println("사용자 저장");
+    }
+}
+```
+
+```java
+package com.example.demo study;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    public void createUser() {
+        userRepository.save();
+    }
+}
+```
+
+> ApplicationContext -> BeanFactory 기능 -> UserRepository Bean 확보 -> UserService 생성자 호출 -> UserRepository 참조 전달 -> UserService 구성 완료
+
+---
+## 전체 흐름
+
+> main() 실행 -> SpringApplication.run() -> ApplicationContext 준비 -> BeanDefinition 등록 및 처리 -> BeanFactory 기반 Bean 생성 및 구성 -> Bean 사용 가능
+
+---
+## 핵심 정리 및 배운점
+
+| 구분 | 핵심 의미|
+| --- | --- |
+| BeanFactory | Spring Ioc 기능의 기반이 되는 Bean 관리 |
+| DefaultListableBeanFactory | BeanFactory의 대표 구현체 |
+| ApplicationContext | BeanFactory 기능을 포함하고 여러 애플리케이션 기능을 통합하는 컨테이너 인터페이스 |
+
+> ApplicationContext와 BeanFactory는 **서로 완전한 별개의 컨테이너가 아님**
+
+- ApplicationContext는 BeanFactory의 **기능을 포함**
