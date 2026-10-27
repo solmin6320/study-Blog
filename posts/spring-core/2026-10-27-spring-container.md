@@ -3,7 +3,7 @@ id: 2026-10-27-spring-container
 title: Spring Container
 summary: "Spring Container는 무엇일까?"
 created: 2026-10-27T00:43:34+09:00
-updated: 2026-10-27T23:51:22+09:00
+updated: 2026-10-27T23:53:42+09:00
 tags: [Spring]
 category: spring-core
 pinned: false
@@ -77,7 +77,7 @@ ApplicationContext context = SpringApplication.run(Application.class, args);
 ## 코드
 
 ```java
-package com.example.demo.study;
+package com.example.study;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -115,7 +115,7 @@ UserService userService = context.getBean(UserService.class);
  - 등록된 Bean을 타입으로 조회하는 코드
  
 ```java
-package com.example.demo.study.repository;
+package com.example.study.repository;
 
 import org.springframework.stereotype.Repository;
 
@@ -129,7 +129,7 @@ public class UserRepository {
 ```
 
 ```java
-package com.example.demo.study.service;
+package com.example.study.service;
 
 import org.springframework.stereotype.Service;
 
