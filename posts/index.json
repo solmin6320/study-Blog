@@ -5,6 +5,18 @@
   },
   "posts": [
     {
+      "id": "2026-10-27-bean",
+      "title": "Bean",
+      "summary": "Bean 객체는 뭘까?",
+      "created": "2026-10-27T23:52:55+09:00",
+      "updated": "2026-10-27T23:52:55+09:00",
+      "tags": [
+        "Spring"
+      ],
+      "category": "spring-core",
+      "pinned": false
+    },
+    {
       "id": "2026-10-27-spring-container",
       "title": "Spring Container",
       "summary": "Spring Container는 무엇일까?",
