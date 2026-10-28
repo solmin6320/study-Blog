@@ -2476,13 +2476,34 @@
     });
   }
 
-  /* 응답의 git(docs/api.md §2-1, BLOG_AUTO_COMMIT). 없으면 빈 문자열 — 필드가 없는 서버도 정상이다. */
+  /* 응답의 git(docs/api.md §2-1, BLOG_AUTO_COMMIT). 없으면 빈 문자열 — 필드가 없는 서버도 정상이다.
+     v4.6(§6-1 "저장 결과 줄과 자동 푸시" 조립 표 ② ③): 커밋 몫 뒤에 푸시 몫이 붙는다. */
   function gitNote(json) {
     var git = json && json.git;
     if (!git || typeof git !== 'object') return '';
-    if (git.committed === true) return ', 커밋 ' + String(git.hash || '').slice(0, 7);
+    if (git.committed === true) return ', 커밋 ' + String(git.hash || '').slice(0, 7) + pushNote(git);
     if (git.committed === false) return ', 커밋 실패(' + String(git.reason || '이유 없음') + ')';
     return '';
+  }
+
+  /* 조각 ③ 푸시. 세 가지를 지킨다(계약 §6-1):
+     - committed가 true가 아니면 보지 않는다(한 줄에 실패 둘이면 고칠 것이 흐려진다) — 호출 자리가 그 분기다.
+     - pushed 키 자체가 없으면 푸시를 모르는 옛 서버 → 아무것도 붙이지 않는다(v4.5와 글자 일치).
+     - pushDetail은 여기서 쓰지 않는다(상태줄 몫이 아니다 — 토스트는 pushFailToast가 만든다). */
+  function pushNote(git) {
+    if (git.pushed === true) return ', 푸시 완료';
+    if (git.pushed === false) return ', 푸시 실패(' + String(git.pushReason || '이유 없음') + ')';
+    return '';
+  }
+
+  /* v4.6(§6-1 "토스트는 하나다"): 푸시 실패일 때만 문구를 돌려준다 — 평소 성공 토스트를 대신하는 warn 하나.
+     푸시 성공에는 토스트를 더하지 않는다(성공은 상태줄 ③이 말한다). */
+  function pushFailToast(json) {
+    var git = json && json.git;
+    if (!git || typeof git !== 'object' || git.committed !== true || git.pushed !== false) return '';
+    var detail = String(git.pushDetail || '').trim();
+    if (detail) return '저장은 했지만 푸시하지 못했어요. ' + detail;
+    return '저장은 했지만 푸시하지 못했어요. 이유: ' + String(git.pushReason || '이유 없음');
   }
 
   /* 200 — 디스크 저장이 확인됐다. 초안을 지워도 된다.
@@ -2540,9 +2561,13 @@
     /* v4.3 결과 알림은 하나만:
        ifNew를 보냈는데 isNew:false — 서버가 ifNew를 모르는 옛 버전(v1.1)이라 기존 파일을 고쳤다. 확인 모달이 결과를 말한다(토스트 없음).
        자동 접미사를 썼다 — 조용히 비키지 않고 새 id를 알린다(`새 글을 저장했습니다`를 대신한다).
+       v4.6 — 푸시 실패는 평소 성공 토스트를 대신한다(§6-1 "겹칠 때의 순서": 모달 → 접미사 → 푸시 실패 → 평소 성공).
+       뒤로 밀려 토스트를 못 받아도 푸시 결과는 상태줄 ③에 남는다.
        그 밖 — v4.1 그대로. */
+    var pushFail = pushFailToast(json);
     if (info && info.ifNew && json.isNew === false) warnOverwrote(json);
     else if (info && info.suffixed) U.toast('같은 id의 글이 있어 새 id로 저장했습니다: ' + saved.id, 'ok');
+    else if (pushFail) U.toast(pushFail, 'warn');
     else U.toast(json.isNew ? '새 글을 저장했습니다' : '저장했습니다', 'ok');
 
     /* 저장 중에 더 친 글자는 아직 디스크에 없다. 저장이 끝난 지금 dirty로 올리고 새 슬롯에 초안을 확정한다. */

@@ -46,7 +46,7 @@
 - `/resume-agent` — 한도·필터로 끊긴 에이전트를 새로 띄우지 않고 재개
 - `/fixture` — 검증용 임시 글을 **에이전트별 샌드박스 사본**(`_tmp-<이름>`)에 넣고 흔적 없이 지우기. 검증 입력은 실제 글 사본 + 경계 문서 + 외부 마크다운. 프로젝트 `posts/`에는 아무도 픽스처를 쓰지 않는다
 - `/preview` — start.ps1로 띄워 Browser 도구로 확인, 끝나면 종료
-- `/ship` — 커밋 · 푸시 · Pages 반영 확인
+- `/ship` — **에디터 밖 변경**(코드·CSS·문서)을 커밋 · 푸시 · Pages 반영 확인. 글 저장은 서버가 스스로 커밋·푸시한다(아래 "글 추가 흐름")
 
 **작업 흐름**
 - `/blog-meeting` — 4인 통합 회의, 회의록 작성(이월 백로그 · 결정 대기 · 지시↔작업표 대조 포함)
@@ -73,8 +73,8 @@
 - `/dep-request` — 새 의존성 승인 절차
 
 **로컬 에디터 서버 (파이썬·Docker, pm-integrator 소유)**
-- `/serve` — 첫 기동 전 커밋 신원 확인 → `docker compose up -d` / `logs -f` / `down`, 헬스 확인, 5500 포트 충돌 처리(start.ps1과 둘 중 하나만)
-- `/api-check` — 헬스 → 픽스처 글 PUT → 409 `exists`·`stale` → GET → DELETE → `git status posts/` 비었는지. `/fixture` 규칙 준수
+- `/serve` — 첫 기동 전 커밋 신원·푸시 자격(`gh auth token`) 확인 → `docker compose up -d` / `logs -f` / `down`, 헬스 확인, 5500 포트 충돌 처리(start.ps1과 둘 중 하나만)
+- `/api-check` — 헬스 → 픽스처 글 PUT → 409 `exists`·`stale` → GET → DELETE → 자동 푸시 3경로(`pushed`·`원격이 앞서 있음`·`푸시 자격 없음`) → `git status posts/` 비었는지. `/fixture` 규칙 준수
 
 **디자인 참고 (외부에서 들여온 범용 스킬 8개 — `banner-design` `brand` `design` `design-system` `frontend-design` `slides` `ui-styling` `ui-ux-pro-max`)**
 - 감사 기준·어휘로만 쓴다. 권고가 절대 규칙 1·2(빌드·의존성)나 계약서와 부딪히면 **규칙과 계약서가 이긴다**.
@@ -95,8 +95,11 @@ server/      FastAPI 로컬 에디터 서버 (app.py 엔트리, posts.py 파일 
 
 ## 글 추가 흐름 (서버 단일 — v3.9에서 내보내기 폐지)
 
-`docker compose up` → `write.html`에서 작성 → "저장"(Ctrl+S)이 `posts/`에 바로 쓰고, **커밋 신원이 있으면** 그 저장이 쓴 파일만 자동으로 커밋한다(`docs/api.md` §2-1, `BLOG_AUTO_COMMIT`). 푸시는 사용자가 `/ship`.
-**커밋 신원이 없으면 저장은 되지만 커밋은 매번 건너뛴다**(응답 `git.reason: 커밋 신원 없음`) — 덮어쓴 글을 되돌릴 이력이 남지 않는다. 신원은 `.env`의 `BLOG_GIT_NAME`·`BLOG_GIT_EMAIL`, 또는 이 저장소의 로컬 `git config user.name`/`user.email`(컨테이너는 전역 설정을 못 본다). 2026-09-23 현재 이 PC에는 둘 다 없다(`/serve` §0).
+`start.bat`(또는 `docker compose up`) → `write.html`에서 작성 → **"저장"(Ctrl+S) 한 번으로 `posts/`에 쓰기 → 커밋 → `origin`으로 푸시**까지 간다(`docs/api.md` §2-1·§2-1-1, 2026-10-28 사용자 요구). 성공하면 1~2분 뒤 GitHub Pages에 글이 뜬다 — 사용자가 따로 올릴 일은 없다.
+**`/ship`은 에디터 밖에서 바꾼 것**(코드·CSS·문서·회의록)을 올릴 때만 쓴다.
+- **커밋 신원**(`.env`의 `BLOG_GIT_NAME`·`BLOG_GIT_EMAIL` 또는 이 저장소의 로컬 `git config user.name`/`user.email` — 컨테이너는 전역 설정을 못 본다)이 없으면 저장은 되지만 커밋이 매번 건너뛰어지고(응답 `git.reason: 커밋 신원 없음`) 푸시도 없다. 2026-10-28 현재 이 저장소 로컬 설정에 신원이 있다(`solmin6320`).
+- **푸시 자격**은 `BLOG_GIT_TOKEN` 환경 변수다. `start.bat`이 기동 직전 `gh auth token`으로 OS 키링에서 꺼내 넘기므로 **토큰을 파일(`.env`·compose)에 적지 않는다.** `gh`에 로그인이 없으면 저장·커밋만 되고 응답이 `pushed:false, pushReason:"푸시 자격 없음"`을 말한다 — 그때는 `gh auth login` 뒤 서버를 다시 켜거나 `/ship`으로 올린다.
+- 푸시 실패는 **저장 실패가 아니다.** 커밋은 남고 다음 저장이 함께 올린다. 다른 PC에서 먼저 올렸으면 `원격이 앞서 있음`이 뜨고 덮어쓰지 않는다(`/sync` 뒤 다시 저장).
 **5500이 막힌 PC**(예: Oracle XE `tnslsnr`)에서는 `start.bat`이 5501~5509 중 빈 포트를 골라(`BLOG_HOST_PORT`, 호스트 쪽만 — 컨테이너 안은 5500) 띄우고 콘솔에 접속 주소를 찍는다. 직접 띄울 때는 `BLOG_HOST_PORT=5501 docker compose up -d` 또는 `.env`(`docs/api.md` §0, `/serve`).
 **Docker가 없는 PC에서는 글을 저장할 수 없다** — `start.bat`은 미리보기 전용이고, 에디터의 저장 버튼은 `disabled`에 "서버 없음" 문구가 뜬다(계약 §6-1). 파일 내보내기(다운로드)는 없다.
 작성 중 초안은 localStorage에 자동 임시저장되지만, **서버에 저장하기 전까지는 영구 저장이 아니다.**

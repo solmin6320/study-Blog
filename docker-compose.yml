@@ -18,9 +18,16 @@ services:
     environment:
       BLOG_BIND: "0.0.0.0"            # 컨테이너 안 바인딩. 밖으로는 위 포트 매핑 하나뿐
       BLOG_PORT: "5500"               # 컨테이너 안 포트. 고정(위 매핑의 오른쪽과 같아야 한다)
-      # B-1 자동 커밋(docs/api.md §2-1): 저장·삭제 성공 뒤 posts/ 만 커밋한다. 푸시는 하지 않는다(/ship). "0"이면 끔.
+      # 자동 커밋 + 자동 푸시(docs/api.md §2-1): 저장·삭제·분류 저장 성공 뒤 **그 요청이 쓴 파일만** 커밋하고,
+      # 커밋이 됐으면 origin <현재 브랜치>로 푸시한다. "0"이면 커밋도 푸시도 끔.
       BLOG_AUTO_COMMIT: "${BLOG_AUTO_COMMIT:-1}"
       # 커밋 신원. 컨테이너는 호스트의 전역 git config를 못 보므로 .env(.gitignore)에 적는다.
       # 없으면 저장소 로컬 config(git config user.name/user.email) → 그것도 없으면 커밋을 건너뛰고 응답 git.reason에 이유를 적는다.
       BLOG_GIT_NAME: "${BLOG_GIT_NAME:-}"
       BLOG_GIT_EMAIL: "${BLOG_GIT_EMAIL:-}"
+      # 푸시 자격(2026-10-28). **이 파일에도 .env에도 토큰을 적지 않는다** — `start.bat`이 기동 직전
+      # `gh auth token`으로 OS 키링에서 꺼내 환경 변수로 넘기므로 디스크에 남지 않는다.
+      # 비어 있으면 저장·커밋만 하고 응답에 `pushed:false, pushReason:"푸시 자격 없음"`이 붙는다(저장은 성공).
+      # `.env`에 `BLOG_GIT_TOKEN=...`을 직접 적는 길은 열려 있지만 **비권장** — 평문으로 디스크에 남는다.
+      # 보안 경계: 이 값은 컨테이너 환경 변수라 이 PC에서 `docker inspect`로 보인다. 저장소·로그·API 응답에는 들어가지 않는다.
+      BLOG_GIT_TOKEN: "${BLOG_GIT_TOKEN:-}"

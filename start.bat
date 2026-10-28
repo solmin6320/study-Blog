@@ -47,6 +47,19 @@ rem  stable on one PC, so this only matters when the busy program changes.
 rem
 rem  BLOG_NO_BROWSER=1 skips opening the browser (checks and scripts).
 rem
+rem  Auto push (2026-10-28, contract v4.6 "save = commit + push"). The editor
+rem  server pushes posts/ right after it commits, but only when it is handed a
+rem  token. This file reads that token at start time from the GitHub CLI
+rem  ("gh auth token", the OS keyring) and passes it to docker compose as
+rem  BLOG_GIT_TOKEN. It is never written to a file and never printed. If gh is
+rem  not installed or not logged in, the variable stays unset: saving and
+rem  committing work exactly as before and the server reports that it had no
+rem  credentials (docs/api.md 2-1, the editor says so in one line). A token the
+rem  caller already set, in the shell or in .env, is used as it is - gh is not
+rem  asked. Security boundary: the token lives in this PC's container
+rem  environment (so "docker inspect" can show it); it never reaches the
+rem  repository, the logs or an API response.
+rem
 rem  No build step, no Node.js. Python lives only inside the Docker image.
 rem
 rem  Messages are in English on purpose: a .bat file written in UTF-8 can print
@@ -157,6 +170,27 @@ set "PORT=%ERRORLEVEL%"
 if %PORT% LSS 1024 goto :noport
 set "BLOG_HOST_PORT=%PORT%"
 
+rem  Push credentials, read quietly (see the header). Three outcomes, kept in
+rem  PUSHMODE for the banner below - the token itself is never echoed.
+rem    env = the caller already provided one (shell variable, or a non-empty
+rem          BLOG_GIT_TOKEN line in .env, which docker compose reads itself);
+rem          gh is not asked and the value is not touched. findstr only tells
+rem          us "there is a value" - its output goes to nul with the line.
+rem    gh  = taken from "gh auth token". stderr goes to nul, so a missing gh or
+rem          a logged-out gh prints nothing; the loop body simply never runs and
+rem          the variable stays UNSET (an empty one would hide .env from
+rem          compose). "eol=|" keeps a token that happens to start with ";".
+rem    off = no token. The server still saves and commits.
+set "PUSHMODE=off"
+if defined BLOG_GIT_TOKEN set "PUSHMODE=env"
+if "%PUSHMODE%"=="off" if exist ".env" (
+    findstr /b /i /r /c:" *BLOG_GIT_TOKEN *=." ".env" >nul 2>&1 && set "PUSHMODE=env"
+)
+if "%PUSHMODE%"=="off" (
+    for /f "eol=| delims=" %%t in ('gh auth token 2^>nul') do if not defined BLOG_GIT_TOKEN set "BLOG_GIT_TOKEN=%%t"
+    if defined BLOG_GIT_TOKEN set "PUSHMODE=gh"
+)
+
 echo  [start.bat] Docker is up - starting the editor server on port %PORT% ^(docker compose up -d^)...
 docker compose up -d
 if errorlevel 1 (
@@ -179,6 +213,9 @@ if errorlevel 1 (
 
 echo.
 echo  [start.bat] editor server : http://localhost:%PORT%/write.html   ^(save writes posts/ and commits^)
+if "%PUSHMODE%"=="gh" echo  [start.bat] auto push     : on ^(token read from gh auth token^)
+if "%PUSHMODE%"=="env" echo  [start.bat] auto push     : on ^(BLOG_GIT_TOKEN was set before start.bat^)
+if "%PUSHMODE%"=="off" echo  [start.bat] auto push     : off - run "gh auth login", then start.bat again
 echo  [start.bat] logs          : docker compose logs -f
 echo  [start.bat] stop          : docker compose down
 echo.

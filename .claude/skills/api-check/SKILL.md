@@ -1,13 +1,14 @@
 ---
 name: api-check
-description: 로컬 에디터 서버의 저장 API를 픽스처 글로 왕복 검증한다(헬스 → PUT → GET → DELETE → 자동 커밋 확인 → 흔적 0). "API 확인", "저장 서버 테스트", "서버 검증" 요청과 server/ 를 고친 뒤에 사용한다. /fixture v2 규칙(샌드박스 클론)을 따른다.
+description: 로컬 에디터 서버의 저장 API를 픽스처 글로 왕복 검증한다(헬스 → PUT → GET → DELETE → 자동 커밋·자동 푸시 확인 → 흔적 0). "API 확인", "저장 서버 테스트", "서버 검증" 요청과 server/ 를 고친 뒤에 사용한다. /fixture v2 규칙(샌드박스 클론)을 따른다.
 ---
 
-# /api-check — 저장 API 왕복 검증 (v3, 2026-09-23 — api.md v1.2)
+# /api-check — 저장 API 왕복 검증 (v4, 2026-10-28 — api.md v1.3)
 
 전제: Docker Desktop이 떠 있다(`docker info`). pm-integrator/오케스트레이터만 돌린다(Docker 서버는 한 대, 5500).
-규약은 `docs/api.md` v1.2. 스크립트는 세션 스크래치패드에 두고 프로젝트에 남기지 않는다.
-**v1.2는 아직 한 번도 실행되지 않았다**(2026-09-23 — Docker·커밋 신원 없음). 첫 실행에서 실패가 나오면 코드 결함일 가능성이 높다 — 결과를 `docs/api.md` §5에 그대로 적는다.
+규약은 `docs/api.md` v1.3. 스크립트는 세션 스크래치패드에 두고 프로젝트에 남기지 않는다.
+**v1.2·v1.3은 컨테이너에서 한 번도 실행되지 않았다**(2026-10-28 — Docker Desktop 꺼짐. v1.3의 푸시는 호스트 git + 샌드박스 원격으로만 확인됐다). 첫 실행에서 실패가 나오면 코드 결함일 가능성이 높다 — 결과를 `docs/api.md` §5에 그대로 적는다.
+**푸시 검증은 §0의 샌드박스 원격(`git init --bare`)으로만 한다** — 프로젝트의 GitHub 원격으로 테스트 푸시를 하지 않는다.
 
 ## 0. 샌드박스 클론 — 프로젝트 이력에 커밋을 남기지 않기 위해
 
@@ -15,14 +16,16 @@ description: 로컬 에디터 서버의 저장 API를 픽스처 글로 왕복 �
 (`/fixture` §5의 "프로젝트 `posts/`에 `_tmp-pm`" 예외는 이 방식으로 대체됐다 — 클론도 호스트 파일이라 bind mount 반영은 똑같이 검증된다.)
 
 ```bash
-P="C:/Users/user/Downloads/기술 블로그/기술 블로그"
+P="C:/study-Blog"
 S="<내 스크래치패드>/sandbox-api"     # 이 이름 하나 — pm/오케스트레이터 중 한 명만 돌린다. /fixture §0의 sandbox-<에이전트 이름>은 건드리지 않는다
 case "$S" in */sandbox-api) ;; *) echo "경로 확인: $S"; exit 1;; esac
 rm -rf "$S" && git clone --quiet "$P" "$S"
 ( cd "$P" && tar --exclude=.git --exclude='posts/_tmp*' --exclude='*.bak*' -cf - . ) | ( cd "$S" && tar -xf - )   # 미커밋 server/* 포함
 ( cd "$S" && git add -A . )          # 클론의 index를 작업 트리와 맞춘다(autocrlf 스탯 착시 제거)
 netstat -ano | grep :5500            # 비어 있어야 한다(start.ps1·프로젝트 compose 모두 꺼짐)
-cd "$S" && BLOG_GIT_NAME=pm-check BLOG_GIT_EMAIL=pm@check.local docker compose --project-directory "$S" -p blog-editor-test up -d
+git init --bare -q --initial-branch=main "$S/../remote-api.git"   # 테스트용 원격(프로젝트 원격을 쓰지 않는다)
+( cd "$S" && git remote set-url origin "$S/../remote-api.git" && git push -q origin HEAD:refs/heads/main && git branch -q --set-upstream-to=origin/main )
+cd "$S" && BLOG_GIT_NAME=pm-check BLOG_GIT_EMAIL=pm@check.local BLOG_GIT_TOKEN=dummy-token-for-local-remote   docker compose --project-directory "$S" -p blog-editor-test up -d
 ```
 `-p blog-editor-test`로 프로젝트 compose(`blog-editor`)와 이름을 가른다. `container_name: blog-editor`가 같으므로 프로젝트 쪽이 떠 있으면 먼저 내린다.
 
@@ -30,7 +33,7 @@ cd "$S" && BLOG_GIT_NAME=pm-check BLOG_GIT_EMAIL=pm@check.local docker compose -
 
 ```bash
 curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' http://localhost:5500/api/health   # 200, 0.1s 미만
-curl -s http://localhost:5500/api/health              # {"ok":true,"version":"1.2.0"} — git 필드 없음
+curl -s http://localhost:5500/api/health              # {"ok":true,"version":"1.3.0"} — git 필드 없음
 curl -s 'http://localhost:5500/api/health?git=1'      # git.branch·dirty 추가
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: evil.example:5500' http://localhost:5500/api/health   # 400 bad_host
 # 정적 허용 목록(api.md §1) — 전부 404
@@ -60,7 +63,30 @@ curl -s -X PUT "http://localhost:5500/api/posts/$ID" -H 'Content-Type: applicati
 - `cat "$S/posts/_tmp-pm/$ID.md"` — frontmatter 8줄 순서 `id, title, summary, created, updated, tags, category, pinned`, `tags: [css, layout]`, 끝 개행 1개.
 - `cd "$S" && git log --oneline -1` → `글: CSS Grid 메모 (<id>)`. `git show --stat --format= HEAD` → **정확히 두 파일**(`posts/_tmp-pm/<id>.md`·`posts/index.json`). `categories.json`은 앞의 분류 커밋에 이미 들어갔고, **손편집한 `posts/java/…md`는 없어야 한다**(v1.2 D25). `git status --short` → ` M posts/java/2026-09-21-note-125149.md`만 남는다.
 - **CRLF**: 커밋된 파일에 대해 `git status --short -- posts/_tmp-pm posts/index.json` 빈 출력, `git show HEAD -- posts/index.json | grep -c $'\r'` → 0.
-- 신원 없는 경우도 한 번: `BLOG_GIT_NAME`·`EMAIL` 없이 재기동해 PUT → `git.committed:false`, `reason:"커밋 신원 없음"`(**60자 이하**), `detail`에 해결 방법.
+- 신원 없는 경우도 한 번: `BLOG_GIT_NAME`·`EMAIL` 없이 재기동해 PUT → `git.committed:false`, `reason:"커밋 신원 없음"`(**60자 이하**), `detail`에 해결 방법. **이때 `pushed` 키는 없어야 한다**(커밋 안 된 요청 — 계약 v4.6 §6-1).
+
+## 2-1. 자동 푸시 3경로 (v1.3 — api.md §2-1-1)
+
+```bash
+R="$S/../remote-api.git"
+# ① 성공 — 위 §2의 PUT 응답에 "pushed":true 가 있어야 한다
+git -C "$R" rev-parse main; git -C "$S" rev-parse HEAD        # 두 해시가 같아야 한다
+# ② 원격이 앞서 있음 — 다른 클론이 먼저 올린 뒤 저장
+git clone -q "$R" "$S/../other" && ( cd "$S/../other" && git config user.name o && git config user.email o@x   && echo x > posts/index.json.other && git add -A && git commit -qm "다른 PC" && git push -q origin main )
+BEFORE=$(git -C "$R" rev-parse main)
+curl -s -X PUT "http://localhost:5500/api/posts/$ID" -H 'Content-Type: application/json'   -d "{\"title\":\"푸시 거절 확인\",\"body\":\"b\",\"category\":\"_tmp-pm\"}"
+# 기대: 200 · git.committed:true · pushed:false · pushReason:"원격이 앞서 있음" · pushDetail 한 문장(≤100자)
+[ "$BEFORE" = "$(git -C "$R" rev-parse main)" ] && echo "원격 불변 OK(force 아님)"
+# ③ 토큰 없음 — BLOG_GIT_TOKEN 없이 재기동해 저장
+cd "$S" && BLOG_GIT_NAME=pm-check BLOG_GIT_EMAIL=pm@check.local docker compose --project-directory "$S" -p blog-editor-test up -d
+# 기대: pushed:false · pushReason:"푸시 자격 없음" · 커밋은 그대로 committed:true
+# ④ 토큰 누출 — 셋 다 0건이어야 한다
+docker compose -p blog-editor-test logs --no-color | grep -ci "ghp_\|gho_\|AUTHORIZATION"
+grep -c "extraheader\|gho_\|ghp_" "$S/.git/config"
+```
+- `pushReason`은 **네 가지뿐**(`푸시 자격 없음`·`원격이 앞서 있음`·`원격에 연결 못 함`·`git push 실패`). 다른 문자열이 나오면 계약 위반이다(계약 §6-1·api.md §2-1-1).
+- `pushDetail`이 100자를 넘거나 두 문장이거나 URL·토큰을 담고 있으면 결함이다.
+- 푸시 때문에 저장 응답이 느려진 정도를 적는다: `curl -w '%{time_total}'`로 PUT 두 번(토큰 있음/없음) 비교.
 
 ## 3. 두 번째 PUT — created 불변
 
@@ -109,7 +135,7 @@ curl -s -X DELETE "http://localhost:5500/api/posts/$ID"     # ok:true, removed:[
 curl -s -X DELETE "http://localhost:5500/api/posts/$D-java"
 cd "$S" && docker compose -p blog-editor-test down
 netstat -ano | grep :5500                                   # 비어 있어야 한다
-rm -rf "$S"                                                 # 클론 삭제 = 검증 커밋도 함께 사라진다
+rm -rf "$S" "$S/../remote-api.git" "$S/../other"            # 클론·테스트 원격 삭제 = 검증 커밋도 함께 사라진다
 cd "$P" && git status --short posts/ && ls posts/           # 빈 출력, _tmp* 없음 — 프로젝트는 처음부터 손대지 않았다
 ```
 

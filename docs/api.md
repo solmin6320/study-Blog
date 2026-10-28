@@ -1,4 +1,4 @@
-# 로컬 에디터 서버 API v1.2
+# 로컬 에디터 서버 API v1.3
 
 > **글 저장은 이 서버(Docker, `docker compose up`) 하나로만 한다 — 저장 단일 모드(계약 v3.9 §6-1, 내보내기 폐지).**
 > Docker가 없는 PC의 `start.bat`은 `start.ps1`(정적 미리보기, 저장 API 없음)로 떨어진다 — 글을 쓸 수는 있지만 **저장할 수 없다.**
@@ -8,6 +8,11 @@
 이 문서는 `frontend-dev-2`가 `write.html`·`js/editor.js`를 서버에 연동할 때의 **단일 진실 공급원**이다.
 서버 코드(`server/`)는 이 문서에 맞춘다. 어긋나면 문서가 아니라 코드가 결함이다.
 
+> **v1.3 (2026-10-28, 자동 푸시 라운드)** — **저장 = 커밋 + 푸시.** 자동 커밋이 성공하면 같은 요청 안에서 `origin <현재 브랜치>`로 푸시한다.
+> 응답 `git`에 `pushed`·`pushReason`·`pushDetail` 추가(§2-1) — **기존 필드·엔드포인트·오류 코드는 그대로**다. 푸시 자격은 `BLOG_GIT_TOKEN` env(start.bat이 `gh auth token`으로 넘긴다, 파일에 적지 않는다).
+> 바뀐 절: 머리말 · §0 · §2 헬스 `version` · §2 PUT 동작 9·응답 예시 · §2-1 · §4-4 · §5.
+> 하위 호환: `pushed`가 **없으면** 푸시 기능이 없는 옛 서버(v1.2 이하)다 — 에디터는 커밋 결과만 보여 준다.
+> **실측: 샌드박스만**(2026-10-28, Docker Desktop 꺼짐 — 컨테이너 왕복은 미실시). §5.
 > **v1.2 (2026-09-23, 라운드 9 — meeting-08 D1·D11·D25·충돌 9·10)** — **덮어쓰기 차단**: PUT 선택 필드 `ifNew`·`expectedUpdated` 신설,
 > `previousId`로 기존 id를 덮는 길 차단 → 새 오류 코드 `409 exists`·`409 stale`(오류 객체에 추가 필드, §3-1) · **정적 서빙 허용 목록**(차단 목록 폐기, 대소문자까지 정확히) ·
 > **자동 커밋 범위 = 이번 요청이 쓴 파일만**, 분류 저장도 커밋 · `git.reason` 60자 상한 + `detail` · CORS 금지 규칙 명문화 · 골든 벡터는 **미구현**으로 정정.
@@ -28,7 +33,10 @@
   사용자가 재개를 결정했다(2026-09-23, HANDOFF §9 U4) — 이월 백로그 B8-11.
 - **서버 전용 규칙**은 "화면이 못 보는 상태·남의 글을 덮는 상태를 조용히 만들지 않는다" 하나뿐이다: §2 PUT 동작 2의 `409 conflict` 두 종류와 동작 3의 `409 exists`·`409 stale`. 전부 **저장하지 않고** 거절한다.
 - **`created`는 불변**(CLAUDE.md 절대 규칙 4). 디스크에 있는 글이면 요청의 `created`를 무시하고 디스크 값을 쓴다.
-- **커밋은 하고, push는 하지 않는다**(B-1, 사용자 결정 1 권장안 A). `BLOG_AUTO_COMMIT=1`(compose 기본)이면 저장·삭제·분류 저장 성공 뒤 **그 요청이 쓰거나 지운 파일만** 커밋한다(§2-1). 무엇을 언제 공개할지는 사용자가 호스트에서 `/ship`으로 정한다 — 컨테이너에 자격 증명을 넣지 않기 위해서다.
+- **커밋하고 푸시까지 한다**(v1.3, 2026-10-28 사용자 요구 "올리기만 하면 자동으로 커밋-푸시"). `BLOG_AUTO_COMMIT=1`(compose 기본)이면 저장·삭제·분류 저장 성공 뒤 **그 요청이 쓰거나 지운 파일만** 커밋하고, 커밋이 됐으면 `origin <현재 브랜치>`로 푸시한다(§2-1). 공개 판단을 사람이 `/ship`에서 하던 규칙(v1.1 B-1, 사용자 결정 1 권장안 A)은 이 라운드로 폐기됐다 — 글은 저장하는 순간 공개가 목적이다.
+  - **자격 증명은 디스크에 두지 않는다**(옛 규칙의 진짜 이유였다). 토큰은 `BLOG_GIT_TOKEN` 환경 변수로만 받고, `start.bat`이 기동 직전 `gh auth token`으로 OS 키링에서 꺼내 넘긴다. 없으면 **커밋까지만** 하고 응답이 그 사실을 말한다(`pushReason: "푸시 자격 없음"`).
+  - 보안 경계: 토큰은 이 PC의 컨테이너 환경 변수에 올라간다 — `docker inspect`로 보인다. **저장소·로그·API 응답에는 들어가지 않는다**(원격 URL 대신 `http.extraheader`, 응답에 넣기 전 치환).
+  - 코드·문서처럼 **에디터 밖에서 바꾼 것**은 여전히 사람이 `/ship`으로 올린다.
 - 바인딩: 호스트에서 `127.0.0.1:<호스트 포트>`만 열린다(`docker-compose.yml`의 `ports` — `"127.0.0.1:${BLOG_HOST_PORT:-5500}:5500"`). 컨테이너 안에서는 `0.0.0.0:5500`으로 듣지만 컨테이너 밖으로는 그 포트 매핑 하나뿐이다. 인증 없음.
   - **호스트 포트 = `BLOG_HOST_PORT`**(기본 **5500**). 프로젝트 루트 `.env`의 `BLOG_HOST_PORT=5501` 또는 셸 환경 변수(`BLOG_HOST_PORT=5501 docker compose up -d`)로 준다. 바뀌는 것은 매핑의 **왼쪽(호스트)뿐**이고, 컨테이너 안 `BLOG_PORT`는 5500 고정이다.
   - `start.bat`은 5500이 이미 쓰이면(예: Oracle XE EM Express의 `tnslsnr`가 `127.0.0.1:5500`을 자동 시작으로 점유) **5501~5509 중 빈 포트**를 골라 이 변수로 넘기고, 콘솔에 실제 주소를 찍는다(frontend-dev-2 소유).
@@ -58,7 +66,7 @@
 
 ### `GET /api/health`
 ```json
-{ "ok": true, "version": "1.2.0" }
+{ "ok": true, "version": "1.3.0" }
 ```
 - **이것뿐이다.** 프로세스를 띄우지 않으므로 항상 수 ms 안에 답한다(M4-1).
 - `version`: 서버 버전(`server/app.py`의 `SERVER_VERSION`). 에디터는 v1.2 필드를 쓰기 전에 이 값을 볼 필요가 없다 — v1.1 서버는 모르는 필드를 무시한다(보호만 꺼진다).
@@ -83,9 +91,9 @@ git commit --only -m "<메시지>" -- <위 경로>
 - **그 요청이 쓰거나 지운 파일만** 스테이징·커밋한다. v1.1은 `posts/` 전체를 쓸어 담아 **사용자가 손으로 고치던 다른 글까지** `글: 제목` 커밋에 섞였고, 분류 저장은 커밋하지 않아 다음 글 커밋에 `categories.json`이 섞였다(meeting-08 D25). 다른 경로에 사용자가 스테이징해 둔 것도 건드리지 않는다(`--only` + pathspec).
 - 추적된 적 없는 파일을 지운 경로, 스테이징만 됐다가 지워진 경로는 git이 모르는 경로라 pathspec에서 뺀다(넣으면 add·commit이 통째로 실패한다 — 2026-09-23 스크래치 저장소에서 확인).
 - **커밋 신원**: `BLOG_GIT_NAME`·`BLOG_GIT_EMAIL` env(`.env`, `.gitignore`됨) → 없으면 마운트된 저장소의 로컬 설정(`git config user.name`/`user.email` — 전역 설정은 컨테이너가 못 본다) → 그것도 없으면 **커밋을 건너뛰고** `reason`에 적는다. 첫 기동 전 확인 절차는 `/serve` §0.
-- **커밋 실패는 저장 실패가 아니다.** 응답은 여전히 `200`이고 `git.committed:false`다. 파일은 이미 디스크에 있다.
+- **커밋 실패는 저장 실패가 아니다.** 응답은 여전히 `200`이고 `git.committed:false`다. 파일은 이미 디스크에 있다. **커밋이 실패하면 푸시는 시도하지 않는다.**
 - 줄끝: 서버는 LF로 쓰고 `-c core.autocrlf=true`로 add하므로 인덱스는 LF다. 호스트(`autocrlf=true`)에서 커밋 직후 `git status --short posts/`가 비어야 한다 — **실측 대기**(§5).
-- **push는 하지 않는다.** 공개는 `/ship`.
+- **커밋이 되면 바로 푸시한다**(v1.3) — 아래 §2-1-1.
 
 응답의 `git` 필드(세 요청 공통, `BLOG_AUTO_COMMIT`이 꺼져 있으면 **필드 자체가 없다**):
 ```json
@@ -94,7 +102,44 @@ git commit --only -m "<메시지>" -- <위 경로>
 ```
 - **`reason`은 60자 이하의 짧은 명사구**다(v1.2, meeting-08 D11 — 에디터 상태줄에 그대로 붙어 줄 높이가 폭주했다). 지금 나오는 값은 다섯 개뿐이다: `커밋 신원 없음` · `커밋할 변경 없음` · `git add 실패` · `git commit 실패` · `git 실행 실패`.
 - **`detail`**(선택, 최대 300자)은 원인·해결 방법·git의 원문 오류다. 상태줄에 붙이지 않는다 — 보여 준다면 토스트·툴팁 같은 보조 자리에(계약 §6-1이 정한다).
-- 에디터(frontend-dev-2)는 `json.git`이 있으면 상태줄에 "· 커밋 abc1234" 또는 "· 커밋 실패: `reason`"을 덧붙인다.
+- 에디터(frontend-dev-2)가 상태줄에 쓰는 문구는 **계약서 §6-1**이 정한다(이 문서는 값만 정의한다).
+
+### 2-1-1. 자동 푸시 (v1.3, 2026-10-28)
+
+커밋이 **성공한 그 요청 안에서** 푸시한다 — 응답이 진실을 말해야 하기 때문이다(비동기로 미루면 "커밋됨"만 보고 나중에 조용히 실패한다).
+
+```
+git -c credential.helper= -c "http.extraheader=AUTHORIZATION: basic <base64(x-access-token:TOKEN)>"     push --no-verify origin refs/heads/<현재 브랜치>:refs/heads/<현재 브랜치>
+```
+- **현재 브랜치 → 같은 이름의 원격 브랜치**뿐이다. `--force`·`--force-with-lease`·`+refspec`은 쓰지 않는다 — 원격이 앞서 있으면 거절을 그대로 전한다.
+- 타임아웃 **15초**. 저장 전체가 스레드풀에서 돌기 때문에 다른 요청의 이벤트 루프를 막지는 않지만, **쓰기 락 안**이라 그 15초 동안 다음 저장은 기다린다(한 사용자 전제).
+- 자격: `BLOG_GIT_TOKEN` env. 원격 URL에 박지 않고 `http.extraheader`로 한 번만 넘기므로 `.git/config`·원격 URL·git 오류 문구에 남지 않는다. 응답·로그에 넣기 전 토큰과 그 base64 값을 `***`로 치환한다(이중 차단).
+- `GIT_TERMINAL_PROMPT=0`·`credential.helper=` — 자격이 틀려도 입력을 기다리며 멈추지 않는다.
+- **푸시 실패는 저장 실패가 아니다.** 응답은 `200`이고 파일·커밋은 그대로다. 다음 저장의 푸시가 **앞선 커밋까지 함께** 올린다.
+- `BLOG_AUTO_COMMIT=0`이면 커밋도 푸시도 없다(`git` 필드 자체가 없다).
+
+응답의 `git`에 더해지는 필드 — **커밋이 성공한 경우에만 붙는다**(커밋 실패 응답에는 `pushed` 키가 없다):
+
+| 필드 | 형 | 뜻 |
+|---|---|---|
+| `pushed` | bool | 원격에 올라갔는가. **키가 없으면** 푸시 기능이 없는 옛 서버(v1.2 이하)거나 커밋이 안 된 요청이다 |
+| `pushReason` | string | `pushed:false`일 때만. 아래 **네 가지 중 하나**(계약 v4.6 §6-1이 상태줄 괄호에 그대로 쓴다. 60자 이하) |
+| `pushDetail` | string | `pushed:false`일 때만, 선택. **한 문장 100자 이하**(토스트에 그대로 나간다). 토큰·URL·사용자 이름은 들어가지 않는다 |
+
+| `pushReason` | 언제 | `pushDetail` |
+|---|---|---|
+| `푸시 자격 없음` | `BLOG_GIT_TOKEN`이 비었거나 토큰이 만료·무효(401/403, git이 사용자 이름을 물으려 한 경우) | `gh auth login 뒤 서버를 다시 켜면 자동으로 푸시됩니다.` |
+| `원격이 앞서 있음` | non-fast-forward 거절(`fetch first`·`non-fast-forward`) — 다른 PC에서 먼저 올렸다 | `다른 PC에서 올린 글이 있습니다. /sync 뒤 다시 저장하세요.` |
+| `원격에 연결 못 함` | DNS·연결 실패, 또는 15초 타임아웃 | `인터넷 연결을 확인해 주세요. 다음 저장 때 함께 올라갑니다.` |
+| `git push 실패` | 그 밖(보호 브랜치·훅 거절, 원격 미설정, 분리된 HEAD, git 실행 불가) | git 오류의 **첫 줄**(URL이 든 줄은 건너뛴다) 또는 그 상황을 설명하는 한 문장 |
+
+```json
+"git": { "committed": true, "hash": "abc1234", "pushed": true }
+"git": { "committed": true, "hash": "abc1234", "pushed": false,
+         "pushReason": "원격이 앞서 있음", "pushDetail": "다른 PC에서 올린 글이 있습니다. /sync 뒤 다시 저장하세요." }
+"git": { "committed": false, "reason": "커밋 신원 없음", "detail": "…" }
+```
+**다섯째 `pushReason`은 만들지 않는다.** 필요해지면 계약서(§6-1)를 먼저 고친 뒤 이 표와 `server/app.py`의 `PUSH_*` 상수를 함께 바꾼다.
 
 ### `GET /api/posts`
 `posts/index.json`의 내용 **그대로**(가공 없음). 파일이 없으면 `404`, JSON이 깨졌으면 `409`.
@@ -149,7 +194,7 @@ git commit --only -m "<메시지>" -- <위 경로>
 6. `posts/<slug>/<id>.md`를 **원자적으로** 쓴다(임시 파일 → `os.replace`). 내용 = `toMarkdownFile(meta, body)`.
 7. 옛 파일이 다른 경로에 있었으면(분류 변경·id 변경) 지운다. 빈 폴더는 지우지 않는다.
 8. `index.json` 재생성 = `buildIndexJson(meta, currentIndex)` (기존 항목은 `normalizeMeta`로 정규화·중복 id 제거·같은 id 교체·`pinned` 우선 → `created` 내림차순). `index.json`이 없으면 `site`는 기본값(`메모 블로그`/`공부한 것을 기록하는 곳`)으로 새로 만든다. JSON이 깨졌으면 **쓰지 않고** `409 conflict`.
-9. 자동 커밋(§2-1).
+9. 자동 커밋 → 성공하면 자동 푸시(§2-1).
 
 > **v1.2 필드를 보내지 않으면 2·4단계는 건너뛴다(v1.1 upsert).** 서버는 요청만 보고 "새 글"인지 "같은 id를 다시 저장"인지 구별할 수 없다 — 의도를 말하는 것은 에디터의 몫이다(§4-3).
 
@@ -161,7 +206,7 @@ git commit --only -m "<메시지>" -- <위 경로>
   "path": "posts/css/2026-09-18-css-grid.md",
   "removed": [],
   "meta": { "id": "…", "title": "…", "summary": "", "created": "…", "updated": "…", "tags": [], "category": "css", "pinned": false },
-  "git": { "committed": true, "hash": "abc1234" }
+  "git": { "committed": true, "hash": "abc1234", "pushed": true }
 }
 ```
 `meta`는 실제로 디스크에 쓴 값이다 — 에디터는 응답의 `created`·`updated`로 화면 상태를 덮어쓴다(**다음 저장의 `expectedUpdated`는 이 `meta.updated`다**).
@@ -255,7 +300,7 @@ git commit --only -m "<메시지>" -- <위 경로>
    - **수정 중 id를 바꿈**(`state.originalId !== meta.id`): 위에 더해 `previousId: state.originalId`. `expectedUpdated`는 옛 글의 값 그대로.
    - **분류 PUT보다 먼저 충돌 확인**(meeting-08 충돌 2): 새 글이거나 id를 바꿨으면 `store.findMeta(meta.id)`(index 기준)로 겹치는지 먼저 본다. 서버 409가 최종 판정이고 사전 확인은 보조다 — 사전 확인을 통과해도 409 `exists`는 올 수 있다(index에 없는 파일, 다른 탭).
    - 새 분류(`cats.added.length > 0`)가 있으면 **글보다 먼저** `PUT /api/categories`에 `buildCategoriesJson()` 결과를 보낸다(순서가 바뀌면 글이 미등록 분류로 저장된다).
-4. **응답 처리** — `200`이면 `state.created = json.meta.created`, `state.originalId = json.meta.id`, `state.originalCategory = json.meta.category`, `state.originalPath = json.path`, **기준 `updated` = `json.meta.updated`**, `dirty=false`, `store.draft.clear(state.slot)`, 상태줄 "저장됨 · `json.path`", 그리고 `store.loadIndex(true)`·`store.loadCategories(true)` 뒤 사이드바를 다시 그린다(계약 §6-1 "저장 피드백"). `json.git`이 있으면 "· 커밋 `hash`" 또는 "· 커밋 실패: `reason`"을 덧붙인다(`reason`은 60자 이하, `detail`은 상태줄에 붙이지 않는다 — §2-1). 새 글 모드로 보냈는데 `isNew:false`가 오면(v1.1 서버·`ifNew` 누락) 계약 §6-1의 경고를 띄운다.
+4. **응답 처리** — `200`이면 `state.created = json.meta.created`, `state.originalId = json.meta.id`, `state.originalCategory = json.meta.category`, `state.originalPath = json.path`, **기준 `updated` = `json.meta.updated`**, `dirty=false`, `store.draft.clear(state.slot)`, 상태줄 "저장됨 · `json.path`", 그리고 `store.loadIndex(true)`·`store.loadCategories(true)` 뒤 사이드바를 다시 그린다(계약 §6-1 "저장 피드백"). `json.git`이 있으면 커밋 결과를, `json.git.pushed`가 **있으면** 푸시 결과까지 상태줄에 덧붙인다(문구·자리는 계약 §6-1 "저장 결과 줄과 자동 푸시". `pushReason`은 60자 이하로 그대로 쓸 수 있고, `pushDetail`·`detail`은 상태줄이 아니라 토스트 같은 보조 자리에 — §2-1·§2-1-1). `pushed` 키가 없으면 옛 서버이므로 **커밋 결과만** 보여 준다. 새 글 모드로 보냈는데 `isNew:false`가 오면(v1.1 서버·`ifNew` 누락) 계약 §6-1의 경고를 띄운다.
    - **4xx/5xx는 `json.error.code`로 분기한다**(§3). 문구·자리는 계약 §6-1이 정한다:
      - `exists` — 자동 id(`idTouched` false)면 `-2`…`-9` 접미사를 붙여 다시 `ifNew:true`로 저장하고 결과에 한 줄로 알린다. 손으로 친 id면 `#fIdError`에 알리고 저장하지 않는다. `error.title`·`error.path`를 문구에 쓸 수 있다.
      - `stale` — 덮어쓰지 않았다는 것을 알리고 초안은 남긴다. `currentUpdated:null`이면 "다른 곳에서 지워짐".
@@ -270,10 +315,12 @@ git commit --only -m "<메시지>" -- <위 경로>
 |---|---|---|
 | 2026-09-18 | v1.0, HEAD `e9a2843` | **통과** — 첫 기동(이미지 빌드), 헬스 200, 감춘 경로 404, 픽스처 PUT(새 글 `created`=now, 요청의 2000-01-01 무시) → 2차 PUT(`created` 불변·`updated`만 갱신) → 오류 4종 → DELETE → `git status --short posts/` 빈 출력 |
 | 2026-09-21 | v1.1, 라운드 6 | **미실측** — Docker Desktop이 stale 소켓 오류로 기동 실패(§5-1). 코드 리뷰만 |
+| 2026-10-28 | v1.3 자동 푸시 | **부분 통과(샌드박스)** — Docker Desktop 꺼짐으로 컨테이너 왕복은 미실시. 호스트 git + 스크래치패드 `git init --bare` 원격 + 클론 2개로 `app.py`의 `auto_push` 원문을 그대로 실행: 성공(원격 HEAD=로컬 HEAD) · non-fast-forward 거절(`원격이 앞서 있음`, 원격 불변) · 토큰 없음(`푸시 자격 없음`) · 연결 실패(`원격에 연결 못 함`) · 원격 미설정·분리된 HEAD(`git push 실패`) · 실제 git 오류 문구 9종 분류 9/9 · 응답·`.git/config`에 토큰 0건. `http.extraheader` 인증은 실제 원격에 **읽기 전용** `ls-remote`로 확인(좋은 토큰 200/약 0.8초, 틀린 토큰 401). **미확인: 컨테이너 안 git·GitHub로의 실제 푸시 소요 시간** |
 | 2026-09-23 | v1.2, 라운드 9 | **미실측** — Docker·커밋 신원 없음(meeting-08 U1, 사용자 답 "아직 없음"). 이 PC에 Python도 없어 **문법 검사·단위 호출도 못 했다.** 확인한 것: 코드 대조(파일:줄은 라운드 9 pm 보고) · `auto_commit`의 git 명령 순서를 스크래치 저장소(호스트 git)에서 재현 — 경로 한정 커밋이 손편집 파일·다른 스테이징을 섞지 않음, 추적 안 된 삭제 경로·스테이징 후 삭제 경로를 pathspec에 넣으면 add/commit이 실패함(= 필터가 필요함) |
 
 - [x] `docker compose up` → 로그에 `Uvicorn running on http://0.0.0.0:5500` → 브라우저 `http://localhost:5500/`에 목록 화면 (9/18)
-- [ ] `http://localhost:5500/api/health` → `{"ok":true,"version":"1.2.0"}` 수 ms · `?git=1` → `git.branch`·`dirty`
+- [ ] `http://localhost:5500/api/health` → `{"ok":true,"version":"1.3.0"}` 수 ms · `?git=1` → `git.branch`·`dirty`
+- [ ] 자동 푸시 3경로(v1.3): 토큰 주고 저장 → `pushed:true`이고 원격 HEAD = 로컬 HEAD · 다른 PC가 먼저 올린 상태에서 저장 → `pushReason:"원격이 앞서 있음"`이고 원격이 **안 바뀜** · 토큰 없이 저장 → `pushReason:"푸시 자격 없음"`이고 커밋은 그대로 · 응답·`docker compose logs`·`.git/config`에 토큰 문자열 0건
 - [ ] 허용 목록: `/server/app.py`, `/docs/api.md`, `/.git/HEAD`, `/.env`, `/Dockerfile`, `/CSS/tokens.css`, `/posts/java/.x.tmp` → 전부 404 · `/`, `/css/tokens.css`, `/posts/index.json`, `/.nojekyll` → 200 (v1.2)
 - [ ] `/api-check` 전체(v1.2): 한글 제목 새 글 · 같은 날 `Java 정리`→`Java 복습`(`ifNew` → 409 `exists`) · 수정 모드에서 기존 id로 바꾸기(409 `exists`, `via:"rename"`) · 다른 곳에서 저장 뒤 옛 `expectedUpdated`로 저장(409 `stale`) · created 불변 · 자동 커밋 파일 목록 = 이번 요청 파일만 · 손편집 파일이 커밋에 섞이지 않음 · 분류 저장 커밋 · `git.reason` ≤ 60자 · Host 400
 - [x] 컨테이너가 쓴 `posts/_tmp/*.md`가 호스트에서 사용자 소유로 열리고 지워짐 (9/18)

@@ -1,7 +1,9 @@
 """app.py — 로컬 에디터 서버 엔트리. 규약은 docs/api.md, 파일 규칙은 server/posts.py.
 
 역할은 둘뿐이다: (1) 사이트 파일을 정적으로 서빙(허용 목록), (2) 에디터가
-내보내던 .md / index.json / categories.json 을 대신 디스크에 쓴다. 인증·DB·세션·git push 없음.
+내보내던 .md / index.json / categories.json 을 대신 디스크에 쓴다. 인증·DB·세션 없음.
+(2026-10-28부터 셋째 역할 하나: 자동 커밋이 성공하면 그 커밋을 `origin`으로 **푸시**한다 — api.md §2-1.
+토큰은 `BLOG_GIT_TOKEN` env로만 받고 디스크·응답·로그에 남기지 않는다.)
 
 CORS 미들웨어를 붙이지 않는다(api.md §0). PUT·DELETE는 preflight 대상이라 CORS가 없으면 다른 origin의 페이지가
 저장 API를 부를 수 없다 — 인증이 없는 이 서버의 유일한 CSRF 방어다. "편의로" 열면 방어가 사라진다.
@@ -10,6 +12,7 @@ CORS 미들웨어를 붙이지 않는다(api.md §0). PUT·DELETE는 preflight �
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import subprocess
@@ -30,7 +33,7 @@ from server.posts import (
     to_markdown_file, validate_folder_slug, validate_post_payload,
 )
 
-SERVER_VERSION = "1.2.0"
+SERVER_VERSION = "1.3.0"
 ROOT = Path(__file__).resolve().parent.parent
 MAX_BODY = 2 * 1024 * 1024
 # 정적 서빙 **허용 목록**(v1.2, meeting-08 D25·충돌 9). docs/api.md §1
@@ -246,10 +249,110 @@ def auto_commit(message: str, paths: list[str]) -> dict:
         return _git_fail("git 실행 실패", type(err).__name__)
 
 
+# ---------- 자동 푸시 (저장 = 커밋 + 푸시, 2026-10-28) ----------
+# 커밋이 성공한 **그 요청 안에서** `origin <현재 브랜치>`로 올린다 — 응답이 진실을 말해야 한다(api.md §2-1).
+# 토큰은 `BLOG_GIT_TOKEN` env로만 받는다(start.bat이 `gh auth token`으로 넘긴다 — 파일에 적지 않는다).
+# 원격 URL에 박지 않고 `http.extraheader`로만 넘기므로 `.git/config`·원격 URL·git 오류 문구에 남지 않는다.
+# 그래도 git 출력을 응답에 넣기 전 `_scrub`으로 토큰과 base64 값을 지운다(이중 차단).
+# **푸시 실패는 저장 실패가 아니다.** 예외는 전부 잡아 {"pushed": false}로 돌려준다.
+PUSH_TIMEOUT = 15        # 초. 네트워크가 죽은 PC에서 저장 응답이 멈춰 있지 않도록
+PUSH_REMOTE = "origin"
+PUSH_DETAIL_MAX = 100    # 계약 v4.6 §6-1: pushDetail은 한 문장 100자 이하(토스트에 그대로 나간다)
+GIT_TOKEN = os.environ.get("BLOG_GIT_TOKEN", "").strip()
+# base64("x-access-token:<토큰>") — GitHub HTTPS Basic 인증. 기동 때 한 번 만든다.
+_AUTH_B64 = base64.b64encode(f"x-access-token:{GIT_TOKEN}".encode("utf-8")).decode("ascii") if GIT_TOKEN else ""
+
+# pushReason은 계약 v4.6 §6-1이 정한 **이 넷뿐**이다(상태줄 괄호에 그대로 나간다). 다섯째가 필요하면 계약서를 먼저 고친다.
+PUSH_NO_CRED = ("푸시 자격 없음", "gh auth login 뒤 서버를 다시 켜면 자동으로 푸시됩니다.")
+PUSH_BEHIND = ("원격이 앞서 있음", "다른 PC에서 올린 글이 있습니다. /sync 뒤 다시 저장하세요.")
+PUSH_OFFLINE = ("원격에 연결 못 함", "인터넷 연결을 확인해 주세요. 다음 저장 때 함께 올라갑니다.")
+PUSH_FAILED = "git push 실패"
+# 원격이 앞서 있을 때만 쓰는 판정어. `rejected`만 보면 보호 브랜치·훅 거절까지 "원격이 앞서 있음"으로 잘못 말한다.
+PUSH_BEHIND_HINTS = ("non-fast-forward", "fetch first")
+# 연결 실패 판정어(git·curl 문구). 한글 메시지는 쓰지 않는다 — 컨테이너의 git은 영어로 말한다.
+PUSH_OFFLINE_HINTS = ("could not resolve host", "couldn't connect to server", "failed to connect",
+                      "connection timed out", "connection refused", "network is unreachable",
+                      "operation timed out", "ssl connect error", "temporary failure in name resolution")
+# 토큰이 만료·무효면 GitHub가 401을 주고 git은 사용자 이름을 물으려 한다(GIT_TERMINAL_PROMPT=0이라 바로 실패).
+# 해결 방법이 "토큰 없음"과 같으므로(`gh auth login` 뒤 재기동) 같은 reason으로 모은다 — 계약의 네 가지를 넘지 않는다.
+PUSH_NO_CRED_HINTS = ("could not read username", "could not read password", "terminal prompts disabled",
+                      "authentication failed", "invalid username or password", "403 forbidden",
+                      "returned error: 401", "returned error: 403", "permission to", "denied to")
+
+
+def _scrub(text: str) -> str:
+    """토큰이 응답·로그로 새지 않게 치환한다. 토큰이 없으면 할 일도 없다."""
+    out = text or ""
+    for secret in (GIT_TOKEN, _AUTH_B64):
+        if secret:
+            out = out.replace(secret, "***")
+    return out
+
+
+def _first_line(text: str) -> str:
+    """git 오류의 **첫 줄**만(계약 v4.6). 토큰 치환 뒤 100자로 자른다. URL이 들어간 줄은 다음 줄로 넘긴다."""
+    for raw in _scrub(text).splitlines():
+        line = raw.strip()
+        if not line or line.startswith("hint:") or "://" in line:
+            continue
+        return line[:PUSH_DETAIL_MAX]
+    return ""
+
+
+def _push_fail(reason: str, detail: str = "") -> dict:
+    """{pushed: false, pushReason(≤60자), pushDetail?(≤100자)}. reason은 계약이 정한 넷 중 하나."""
+    out: dict = {"pushed": False, "pushReason": reason[:REASON_MAX]}
+    detail = _scrub(detail).strip()
+    if detail:
+        out["pushDetail"] = detail[:PUSH_DETAIL_MAX]
+    return out
+
+
+def auto_push() -> dict:
+    """현재 브랜치 → 같은 이름의 원격 브랜치. `--force` 계열은 쓰지 않는다(원격이 앞서면 거절을 그대로 전한다).
+    반환은 api.md §2-1의 `git` 필드에 합쳐지는 {pushed: true} 또는 {pushed: false, pushReason, pushDetail?}."""
+    try:
+        if not GIT_TOKEN:
+            return _push_fail(*PUSH_NO_CRED)
+        r = run_git(["rev-parse", "--abbrev-ref", "HEAD"], timeout=10)
+        branch = r.stdout.strip() if r.returncode == 0 else ""
+        if not branch or branch == "HEAD":
+            return _push_fail(PUSH_FAILED, "분리된 HEAD 상태라 올릴 브랜치를 알 수 없습니다.")
+        args = GIT_BASE + [
+            "-c", "credential.helper=",                       # 키링·헬퍼를 묻지 않는다(컨테이너엔 없다)
+            "-c", f"http.extraheader=AUTHORIZATION: basic {_AUTH_B64}",
+            "push", "--no-verify", PUSH_REMOTE, f"refs/heads/{branch}:refs/heads/{branch}",
+        ]
+        env = dict(os.environ)
+        env["GIT_TERMINAL_PROMPT"] = "0"                      # 자격이 틀려도 입력을 기다리며 멈추지 않는다
+        r = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True, timeout=PUSH_TIMEOUT, env=env)
+        if r.returncode == 0:
+            return {"pushed": True}
+        out = "\n".join(x for x in (r.stderr, r.stdout) if x and x.strip())
+        low = out.lower()
+        if any(k in low for k in PUSH_BEHIND_HINTS):
+            return _push_fail(*PUSH_BEHIND)
+        if any(k in low for k in PUSH_OFFLINE_HINTS):
+            return _push_fail(*PUSH_OFFLINE)
+        if any(k in low for k in PUSH_NO_CRED_HINTS):
+            return _push_fail(*PUSH_NO_CRED)
+        return _push_fail(PUSH_FAILED, _first_line(out) or "git push가 실패했습니다.")
+    except subprocess.TimeoutExpired:
+        # TimeoutExpired의 문자열에는 실행 인자(= 토큰이 든 extraheader)가 들어 있다 — 절대 detail로 쓰지 않는다.
+        return _push_fail(*PUSH_OFFLINE)                      # 15초 안에 못 끝낸 것도 사용자에게는 "연결 못 함"이다
+    except Exception as err:                                  # noqa: BLE001 - 푸시 실패가 저장 실패가 되어서는 안 된다
+        return _push_fail(PUSH_FAILED, f"git을 실행할 수 없습니다({type(err).__name__}).")
+
+
 def with_git(result: dict, message: str, paths: list[str]) -> dict:
-    """저장·삭제·분류 저장 응답에 자동 커밋 결과를 붙인다. BLOG_AUTO_COMMIT이 꺼져 있으면 필드 자체가 없다."""
+    """저장·삭제·분류 저장 응답에 자동 커밋 + 자동 푸시 결과를 붙인다. BLOG_AUTO_COMMIT이 꺼져 있으면 필드 자체가 없다.
+    **커밋이 안 된 요청에는 `pushed` 키를 넣지 않는다**(계약 v4.6 §6-1 — 에디터는 커밋 실패 문구만 보여 준다).
+    푸시는 커밋이 성공한 뒤에만, 같은 요청 안에서 한다(사양 "커밋 실패 → 푸시 시도하지 않음")."""
     if AUTO_COMMIT:
-        result["git"] = auto_commit(message, paths)
+        git = auto_commit(message, paths)
+        if git.get("committed"):
+            git.update(auto_push())
+        result["git"] = git
     return result
 
 

@@ -1,9 +1,10 @@
 # 로컬 에디터 서버 (docs/api.md). 공개 사이트(GitHub Pages)와 무관 — 글을 추가할 때만 켠다.
 FROM python:3.12-slim
 
-# git: /api/health 의 branch·dirty 계산에만 쓴다. push는 하지 않는다.
+# git: 헬스의 branch·dirty, 저장 뒤 자동 커밋, 그리고 자동 푸시(HTTPS)에 쓴다.
+# ca-certificates: 푸시가 https://github.com 인증서를 검증하는 데 필요하다(--no-install-recommends라 git이 끌고 오지 않는다).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git \
+ && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --create-home --uid 1000 blog
 
