@@ -29,6 +29,12 @@
       "name": "CS",
       "description": "",
       "order": 4
+    },
+    {
+      "slug": "os",
+      "name": "OS",
+      "description": "",
+      "order": 5
     }
   ]
 }
